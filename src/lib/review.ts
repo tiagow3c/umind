@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { parseNameHandle } from "@/lib/people-rules";
+import { fetchInstagramAvatar } from "@/lib/people.functions";
 
 export const transcriptQuery = (transcriptId: string | null) =>
   queryOptions({
