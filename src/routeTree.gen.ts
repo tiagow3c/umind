@@ -16,6 +16,8 @@ import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedBuscarRouteImport } from './routes/_authenticated/buscar'
 import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
+import { Route as AuthenticatedPessoasIndexRouteImport } from './routes/_authenticated/pessoas.index'
+import { Route as AuthenticatedPessoasIdRouteImport } from './routes/_authenticated/pessoas.$id'
 import { Route as AuthenticatedReunioesIndexRouteImport } from './routes/_authenticated/reunioes.index'
 import { Route as AuthenticatedReunioesNovaRouteImport } from './routes/_authenticated/reunioes.nova'
 import { Route as ApiPublicProcessQueueRouteImport } from './routes/api/public/process-queue'
@@ -56,6 +58,17 @@ const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
   path: '/tarefas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPessoasIndexRoute =
+  AuthenticatedPessoasIndexRouteImport.update({
+    id: '/pessoas/',
+    path: '/pessoas/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPessoasIdRoute = AuthenticatedPessoasIdRouteImport.update({
+  id: '/pessoas/$id',
+  path: '/pessoas/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedReunioesIndexRoute =
   AuthenticatedReunioesIndexRouteImport.update({
     id: '/reunioes/',
@@ -93,8 +106,10 @@ export interface FileRoutesByFullPath {
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
+  '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
   '/api/public/process-queue': typeof ApiPublicProcessQueueRoute
+  '/pessoas/': typeof AuthenticatedPessoasIndexRoute
   '/reunioes/': typeof AuthenticatedReunioesIndexRoute
   '/reunioes/$id/gravar': typeof AuthenticatedReunioesIdGravarRoute
   '/reunioes/$id/': typeof AuthenticatedReunioesIdIndexRoute
@@ -106,8 +121,10 @@ export interface FileRoutesByTo {
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
+  '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
   '/api/public/process-queue': typeof ApiPublicProcessQueueRoute
+  '/pessoas': typeof AuthenticatedPessoasIndexRoute
   '/reunioes': typeof AuthenticatedReunioesIndexRoute
   '/reunioes/$id/gravar': typeof AuthenticatedReunioesIdGravarRoute
   '/reunioes/$id': typeof AuthenticatedReunioesIdIndexRoute
@@ -121,8 +138,10 @@ export interface FileRoutesById {
   '/_authenticated/buscar': typeof AuthenticatedBuscarRoute
   '/_authenticated/hoje': typeof AuthenticatedHojeRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
+  '/_authenticated/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/_authenticated/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
   '/api/public/process-queue': typeof ApiPublicProcessQueueRoute
+  '/_authenticated/pessoas/': typeof AuthenticatedPessoasIndexRoute
   '/_authenticated/reunioes/': typeof AuthenticatedReunioesIndexRoute
   '/_authenticated/reunioes/$id/gravar': typeof AuthenticatedReunioesIdGravarRoute
   '/_authenticated/reunioes/$id/': typeof AuthenticatedReunioesIdIndexRoute
@@ -136,8 +155,10 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/hoje'
     | '/tarefas'
+    | '/pessoas/$id'
     | '/reunioes/nova'
     | '/api/public/process-queue'
+    | '/pessoas/'
     | '/reunioes/'
     | '/reunioes/$id/gravar'
     | '/reunioes/$id/'
@@ -149,8 +170,10 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/hoje'
     | '/tarefas'
+    | '/pessoas/$id'
     | '/reunioes/nova'
     | '/api/public/process-queue'
+    | '/pessoas'
     | '/reunioes'
     | '/reunioes/$id/gravar'
     | '/reunioes/$id'
@@ -163,8 +186,10 @@ export interface FileRouteTypes {
     | '/_authenticated/buscar'
     | '/_authenticated/hoje'
     | '/_authenticated/tarefas'
+    | '/_authenticated/pessoas/$id'
     | '/_authenticated/reunioes/nova'
     | '/api/public/process-queue'
+    | '/_authenticated/pessoas/'
     | '/_authenticated/reunioes/'
     | '/_authenticated/reunioes/$id/gravar'
     | '/_authenticated/reunioes/$id/'
@@ -228,6 +253,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTarefasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pessoas/': {
+      id: '/_authenticated/pessoas/'
+      path: '/pessoas'
+      fullPath: '/pessoas/'
+      preLoaderRoute: typeof AuthenticatedPessoasIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pessoas/$id': {
+      id: '/_authenticated/pessoas/$id'
+      path: '/pessoas/$id'
+      fullPath: '/pessoas/$id'
+      preLoaderRoute: typeof AuthenticatedPessoasIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reunioes/': {
       id: '/_authenticated/reunioes/'
       path: '/reunioes'
@@ -271,7 +310,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBuscarRoute: typeof AuthenticatedBuscarRoute
   AuthenticatedHojeRoute: typeof AuthenticatedHojeRoute
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
+  AuthenticatedPessoasIdRoute: typeof AuthenticatedPessoasIdRoute
   AuthenticatedReunioesNovaRoute: typeof AuthenticatedReunioesNovaRoute
+  AuthenticatedPessoasIndexRoute: typeof AuthenticatedPessoasIndexRoute
   AuthenticatedReunioesIndexRoute: typeof AuthenticatedReunioesIndexRoute
   AuthenticatedReunioesIdGravarRoute: typeof AuthenticatedReunioesIdGravarRoute
   AuthenticatedReunioesIdIndexRoute: typeof AuthenticatedReunioesIdIndexRoute
@@ -282,7 +323,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBuscarRoute: AuthenticatedBuscarRoute,
   AuthenticatedHojeRoute: AuthenticatedHojeRoute,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
+  AuthenticatedPessoasIdRoute: AuthenticatedPessoasIdRoute,
   AuthenticatedReunioesNovaRoute: AuthenticatedReunioesNovaRoute,
+  AuthenticatedPessoasIndexRoute: AuthenticatedPessoasIndexRoute,
   AuthenticatedReunioesIndexRoute: AuthenticatedReunioesIndexRoute,
   AuthenticatedReunioesIdGravarRoute: AuthenticatedReunioesIdGravarRoute,
   AuthenticatedReunioesIdIndexRoute: AuthenticatedReunioesIdIndexRoute,

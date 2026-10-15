@@ -398,6 +398,8 @@ export type Database = {
           email: string | null
           id: string
           meeting_id: string
+          person_confirmed: boolean
+          person_id: string | null
           source: string
           updated_at: string
           workspace_id: string
@@ -408,6 +410,8 @@ export type Database = {
           email?: string | null
           id?: string
           meeting_id: string
+          person_confirmed?: boolean
+          person_id?: string | null
           source?: string
           updated_at?: string
           workspace_id: string
@@ -418,6 +422,8 @@ export type Database = {
           email?: string | null
           id?: string
           meeting_id?: string
+          person_confirmed?: boolean
+          person_id?: string | null
           source?: string
           updated_at?: string
           workspace_id?: string
@@ -429,6 +435,54 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "participants_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      people: {
+        Row: {
+          aliases: string[]
+          created_at: string
+          display_name: string
+          id: string
+          is_self: boolean
+          notes: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          aliases?: string[]
+          created_at?: string
+          display_name: string
+          id?: string
+          is_self?: boolean
+          notes?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          aliases?: string[]
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_self?: boolean
+          notes?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -958,6 +1012,10 @@ export type Database = {
       }
       is_workspace_member: { Args: { _ws: string }; Returns: boolean }
       meeting_visible: { Args: { _meeting: string }; Returns: boolean }
+      merge_people: {
+        Args: { _from: string; _into: string }
+        Returns: undefined
+      }
       recording_visible: { Args: { _rec: string }; Returns: boolean }
       search_items: {
         Args: { _limit?: number; _query: unknown; _ws: string }

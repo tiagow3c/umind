@@ -1,11 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { toast } from "sonner";
-import { analysisQuery, meetingTasksQuery, nameSpeaker, speakersQuery, updateTask } from "@/lib/review";
+import { analysisQuery, meetingTasksQuery, speakersQuery, updateTask } from "@/lib/review";
 import { Button } from "@/components/ui/button";
+import { PersonPicker } from "@/components/PersonPicker";
 import { cn } from "@/lib/utils";
 
-type Meeting = { id: string; participants: { id: string; display_name: string }[] };
+type Meeting = { id: string; participants: { id: string; display_name: string; person_confirmed: boolean }[] };
 
 function firstSentences(text: string, n = 2) {
   const parts = text.match(/[^.!?]+[.!?]+/g) ?? [text];
@@ -17,7 +17,6 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
   const { data: speakers } = useQuery(speakersQuery(meeting.id));
   const { data: tasks } = useQuery(meetingTasksQuery(meeting.id));
   const qc = useQueryClient();
-  const [editing, setEditing] = useState<string | null>(null);
 
   const act = async (id: string, status: "accepted" | "done") => {
     try { await updateTask(id, { status }); qc.invalidateQueries({ queryKey: ["tasks"] }); }
@@ -36,32 +35,25 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
           <h2 className="text-3xl">Participantes</h2>
           <ul className="mt-8 flex flex-wrap gap-8">
             {speakers.map((s, i) => {
-              const name = meeting.participants.find((p) => p.id === s.participant_id)?.display_name ?? "";
+              const part = meeting.participants.find((p) => p.id === s.participant_id);
+              const name = part?.display_name ?? "";
+              const suggested = !!part && !part.person_confirmed && s.mapping_source === "ai";
               return (
                 <li key={s.id + name} className="flex w-24 flex-col items-center gap-3">
-                  <button
-                    onClick={() => setEditing(s.id)}
-                    aria-label={name ? `Renomear ${name}` : "Identificar participante"}
-                    className={cn("flex size-20 items-center justify-center rounded-full text-xl font-medium transition-transform hover:scale-105",
-                      name ? (i === 0 ? "bg-accent text-accent-foreground" : "bg-secondary text-foreground") : "bg-muted text-muted-foreground")}
-                  >
-                    {name ? name.slice(0, 1).toUpperCase() : "?"}
-                  </button>
-                  {editing === s.id ? (
-                    <input autoFocus defaultValue={name} placeholder="Nome"
-                      className="w-24 border-b bg-transparent text-center text-sm outline-none"
-                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setEditing(null); }}
-                      onBlur={async (e) => {
-                        setEditing(null);
-                        if (e.target.value.trim() === name) return;
-                        try { await nameSpeaker(s.id, e.target.value); qc.invalidateQueries(); }
-                        catch { toast.error("Não foi possível salvar o nome."); }
-                      }} />
-                  ) : (
-                    <button onClick={() => setEditing(s.id)} className="truncate text-sm underline underline-offset-4">
-                      {name || "Identificar"}
+                  <PersonPicker speakerId={s.id} participantId={part?.id ?? null} suggested={suggested}>
+                    <button
+                      aria-label={name ? `Alterar ${name}` : "Identificar participante"}
+                      className={cn("relative flex size-20 items-center justify-center rounded-full text-xl font-medium transition-transform hover:scale-105",
+                        name ? (i === 0 ? "bg-accent text-accent-foreground" : "bg-secondary text-foreground") : "bg-muted text-muted-foreground",
+                        suggested && "ring-2 ring-dashed ring-accent/50 ring-offset-2 ring-offset-background")}
+                    >
+                      {name ? name.slice(0, 1).toUpperCase() : "?"}
                     </button>
-                  )}
+                  </PersonPicker>
+                  <span className="max-w-24 truncate text-center text-sm">
+                    {name || <span className="text-muted-foreground">Identificar</span>}
+                    {suggested && <span className="block text-[11px] text-muted-foreground">sugerido</span>}
+                  </span>
                 </li>
               );
             })}

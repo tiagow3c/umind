@@ -131,3 +131,66 @@ export const ERROR_LABEL: Record<string, string> = {
   too_large: "Uma parte do áudio excede o limite de transcrição.",
   config: "Configuração do servidor ausente.",
 };
+
+export const peopleQuery = queryOptions({
+  queryKey: ["people"],
+  queryFn: async () => {
+    const { data, error } = await supabase.from("people").select("*, participants(id, meeting_id, meetings(id, title, created_at, status))").order("display_name");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((p) => {
+      const ms = (p.participants ?? []).map((x) => x.meetings).filter((m): m is NonNullable<typeof m> => !!m && m.status !== "deleting" && m.status !== "deleted");
+      const uniq = [...new Map(ms.map((m) => [m.id, m])).values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
+      return { ...p, meetings: uniq };
+    });
+  },
+});
+
+/** Link a detected speaker to a registry person (existing id, or a new name). Marks the link as confirmed by the user. */
+export async function assignSpeakerPerson(speakerId: string, target: { personId: string } | { newName: string }) {
+  const { data: sp, error } = await supabase.from("speakers").select("id, meeting_id, workspace_id, participant_id").eq("id", speakerId).single();
+  if (error || !sp) throw new Error(error?.message ?? "speaker");
+  let personId: string; let name: string;
+  if ("personId" in target) {
+    const { data: p, error: e } = await supabase.from("people").select("id, display_name").eq("id", target.personId).single();
+    if (e || !p) throw new Error("person");
+    personId = p.id; name = p.display_name;
+  } else {
+    name = target.newName.trim().slice(0, 120);
+    if (!name) throw new Error("name");
+    const { data: p, error: e } = await supabase.from("people").insert({ workspace_id: sp.workspace_id, display_name: name }).select("id").single();
+    if (e || !p) throw new Error(e?.message ?? "person");
+    personId = p.id;
+  }
+  if (sp.participant_id) {
+    const r = await supabase.from("participants").update({ display_name: name, person_id: personId, person_confirmed: true }).eq("id", sp.participant_id);
+    if (r.error) throw new Error(r.error.message);
+    await supabase.from("speakers").update({ mapping_source: "user" }).eq("id", speakerId);
+    return;
+  }
+  const { data: part, error: e2 } = await supabase.from("participants").insert({ workspace_id: sp.workspace_id, meeting_id: sp.meeting_id, display_name: name, person_id: personId, person_confirmed: true }).select("id").single();
+  if (e2 || !part) throw new Error(e2?.message ?? "participant");
+  await mapSpeaker(speakerId, part.id);
+}
+
+export async function confirmParticipant(participantId: string) {
+  const { error } = await supabase.from("participants").update({ person_confirmed: true }).eq("id", participantId);
+  if (error) throw new Error(error.message);
+}
+
+export async function renamePerson(id: string, name: string) {
+  const n = name.trim().slice(0, 120);
+  if (!n) return;
+  const { error } = await supabase.from("people").update({ display_name: n }).eq("id", id);
+  if (error) throw new Error(error.message);
+  await supabase.from("participants").update({ display_name: n }).eq("person_id", id);
+}
+
+export async function deletePerson(id: string) {
+  const { error } = await supabase.from("people").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function mergePeople(from: string, into: string) {
+  const { error } = await supabase.rpc("merge_people", { _from: from, _into: into });
+  if (error) throw new Error(error.message);
+}
