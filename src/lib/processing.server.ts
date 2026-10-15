@@ -1,18 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { alignTranscripts, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
+import { joinChunkTexts, planChunks, MAX_TRANSCRIBE_BYTES } from "./chunking-rules";
 
 type Admin = SupabaseClient<Database>;
 const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const TRANSCRIBE_MODEL = "openai/gpt-transcribe";
 const ANALYSIS_MODEL = "openai/gpt-6-astra";
+const EMBED_MODEL = "google/gemini-embedding-2";
 const CONFIG_VERSION = "v1";
 const ANALYSIS_SCHEMA_VERSION = "analysis-v1";
-const MAX_TRANSCRIBE_BYTES = 24 * 1024 * 1024;
 const MAX_ATTEMPTS = 5;
 const LEASE_MS = 5 * 60 * 1000;
+const JOB_KEY = "processing";
 
-export const STAGES = ["transcribe", "diarize", "align", "analyze"] as const;
+export const STAGES = ["transcribe", "diarize", "align", "analyze", "embed"] as const;
 export type Stage = (typeof STAGES)[number];
 
 class StageError extends Error {
@@ -33,20 +35,29 @@ async function meetingAlive(admin: Admin, meetingId: string) {
   return !!data && data.status !== "deleting" && data.status !== "deleted";
 }
 
-async function loadAudio(admin: Admin, recordingId: string) {
+async function loadParts(admin: Admin, recordingId: string) {
   const { data: rec } = await admin.from("recordings").select("codec").eq("id", recordingId).single();
   const { data: parts, error } = await admin
-    .from("recording_parts").select("object_key, sequence").eq("recording_id", recordingId).eq("status", "confirmed").order("sequence");
+    .from("recording_parts").select("object_key, sequence, bytes").eq("recording_id", recordingId).eq("status", "confirmed").order("sequence");
   if (error || !parts?.length) throw new StageError("no audio", "no_audio", false);
+  const codec = rec?.codec ?? "";
+  const type = codec.startsWith("audio/") ? codec.split(";")[0]! : "audio/webm";
+  return { parts, type };
+}
+
+async function downloadParts(admin: Admin, parts: { object_key: string }[], type: string) {
   const blobs: Blob[] = [];
   for (const p of parts) {
     const d = await admin.storage.from("recordings").download(p.object_key);
     if (d.error || !d.data) throw new StageError("download failed", "storage", true);
     blobs.push(d.data);
   }
-  const codec = rec?.codec ?? "";
-  const type = codec.startsWith("audio/") ? codec.split(";")[0]! : "audio/webm";
   return new Blob(blobs, { type });
+}
+
+async function loadAudio(admin: Admin, recordingId: string) {
+  const { parts, type } = await loadParts(admin, recordingId);
+  return downloadParts(admin, parts, type);
 }
 
 async function readSSE(res: Response, onEvent: (type: string, data: Record<string, unknown>) => void) {
@@ -71,11 +82,7 @@ async function readSSE(res: Response, onEvent: (type: string, data: Record<strin
   }
 }
 
-async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
-  const audio = await loadAudio(admin, recordingId);
-  if (audio.size > MAX_TRANSCRIBE_BYTES) return { skipped: "too_large", bytes: audio.size };
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) throw new StageError("missing key", "config", false);
+async function transcribeChunk(audio: Blob, key: string) {
   const form = new FormData();
   form.append("model", TRANSCRIBE_MODEL);
   form.append("file", new File([audio], "audio.webm", { type: audio.type }));
@@ -90,10 +97,24 @@ async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id:
     if (type === "transcript.text.delta") deltas += String(d["delta"] ?? "");
     if (type === "transcript.text.done") text = String(d["text"] ?? "");
   });
-  text = text || deltas;
-  if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
+  return text || deltas;
+}
+
+async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
+  const { parts, type } = await loadParts(admin, recordingId);
+  const chunks = planChunks(parts);
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) throw new StageError("missing key", "config", false);
+  const texts: string[] = [];
+  for (const chunk of chunks) {
+    const audio = await downloadParts(admin, chunk, type);
+    if (audio.size > MAX_TRANSCRIBE_BYTES) throw new StageError("chunk too large", "too_large", false);
+    texts.push(await transcribeChunk(audio, key));
+    if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
+  }
+  const text = joinChunkTexts(texts);
   await admin.from("transcripts").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: "openai", kind: "raw_openai", raw_text: text });
-  return { chars: text.length };
+  return { chars: text.length, chunks: chunks.length };
 }
 
 async function stageDiarize(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
@@ -252,24 +273,102 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
   return { analysis_id: an.id, tasks: v.tasks.length, decisions: v.decisions.length };
 }
 
+async function embedTexts(texts: string[]): Promise<number[][]> {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) throw new StageError("missing key", "config", false);
+  const res = await fetch(`${GATEWAY}/embeddings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, "X-Lovable-AIG-SDK": "fetch" },
+    body: JSON.stringify({ model: EMBED_MODEL, input: texts }),
+  });
+  if (!res.ok) throw providerError("embeddings", res.status, await res.text());
+  const json = (await res.json()) as { data?: { embedding: number[] }[] };
+  if (!json.data || json.data.length !== texts.length) throw new StageError("bad embeddings response", "embed_invalid", true);
+  return json.data.map((d) => d.embedding);
+}
+
+const EMBED_BATCH = 96;
+
+/** Generate embeddings for the canonical transcript segments and the latest analysis items. */
+async function stageEmbed(admin: Admin, meeting: { id: string; workspace_id: string; current_transcript_id: string | null }) {
+  if (!meeting.current_transcript_id) throw new StageError("no transcript", "no_transcript", false);
+  let embedded = 0;
+  const { data: segs } = await admin.from("transcript_segments").select("id, text")
+    .eq("transcript_id", meeting.current_transcript_id).is("embedding", null).order("position");
+  for (let i = 0; i < (segs?.length ?? 0); i += EMBED_BATCH) {
+    const batch = segs!.slice(i, i + EMBED_BATCH);
+    const vecs = await embedTexts(batch.map((s) => s.text));
+    for (let j = 0; j < batch.length; j++) {
+      await admin.from("transcript_segments").update({ embedding: JSON.stringify(vecs[j]) }).eq("id", batch[j]!.id);
+    }
+    embedded += batch.length;
+    if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
+  }
+  const { data: an } = await admin.from("analyses").select("id").eq("meeting_id", meeting.id).eq("stale", false)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (an) {
+    const { data: items } = await admin.from("analysis_items").select("id, text").eq("analysis_id", an.id).is("embedding", null);
+    for (let i = 0; i < (items?.length ?? 0); i += EMBED_BATCH) {
+      const batch = items!.slice(i, i + EMBED_BATCH);
+      const vecs = await embedTexts(batch.map((s) => s.text));
+      for (let j = 0; j < batch.length; j++) {
+        await admin.from("analysis_items").update({ embedding: JSON.stringify(vecs[j]) }).eq("id", batch[j]!.id);
+      }
+      embedded += batch.length;
+    }
+  }
+  return { embedded };
+}
+
+// ---- Background job state (single-flight lease + circuit breaker) ----
+
+export type JobState = { key: string; lease_until: string | null; paused: boolean; pause_reason: string | null };
+
+export async function getJobState(admin: Admin): Promise<JobState | null> {
+  const { data } = await admin.from("job_state").select("key, lease_until, paused, pause_reason").eq("key", JOB_KEY).maybeSingle();
+  return data;
+}
+
+async function setJobPaused(admin: Admin, paused: boolean, reason: string | null) {
+  await admin.from("job_state").upsert({ key: JOB_KEY, paused, pause_reason: reason, updated_at: new Date().toISOString() });
+}
+
+/** Acquire the single-flight lease for the background processor. */
+export async function tryAcquireLease(admin: Admin, ttlMs: number): Promise<boolean> {
+  await admin.from("job_state").upsert({ key: JOB_KEY, updated_at: new Date().toISOString() }, { onConflict: "key", ignoreDuplicates: true });
+  const now = new Date().toISOString();
+  const { data } = await admin.from("job_state")
+    .update({ lease_until: new Date(Date.now() + ttlMs).toISOString() })
+    .eq("key", JOB_KEY).or(`lease_until.is.null,lease_until.lt.${now}`).select("key");
+  return !!data?.length;
+}
+
+export async function releaseLease(admin: Admin) {
+  await admin.from("job_state").update({ lease_until: null }).eq("key", JOB_KEY);
+}
+
 export type StageState = { stage: Stage; status: string; error_code: string | null; attempt: number };
 
 /** Run at most one pending stage for the meeting. Safe to call repeatedly and concurrently. */
-export async function advanceMeeting(admin: Admin, meetingId: string): Promise<{ stages: StageState[]; meetingStatus: string }> {
+export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { probe?: boolean }): Promise<{ stages: StageState[]; meetingStatus: string; paused: boolean; pauseReason: string | null }> {
   const { data: m } = await admin.from("meetings").select("*").eq("id", meetingId).single();
   if (!m) throw new Error("not_found");
   const { data: rec } = await admin.from("recordings").select("id, manifest_hash, status").eq("meeting_id", meetingId).not("finalized_at", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
   const summarize = async () => {
     const { data: runs } = await admin.from("processing_runs").select("stage, status, error_code, attempt, input_version").eq("meeting_id", meetingId).order("created_at");
     const { data: fresh } = await admin.from("meetings").select("status").eq("id", meetingId).single();
+    const state = await getJobState(admin);
     const latest = new Map<string, StageState>();
     for (const r of runs ?? []) latest.set(r.stage, { stage: r.stage as Stage, status: r.status, error_code: r.error_code, attempt: r.attempt });
-    return { stages: STAGES.map((s) => latest.get(s) ?? { stage: s, status: "queued", error_code: null, attempt: 0 }), meetingStatus: fresh?.status ?? m.status };
+    return { stages: STAGES.map((s) => latest.get(s) ?? { stage: s, status: "queued", error_code: null, attempt: 0 }), meetingStatus: fresh?.status ?? m.status, paused: state?.paused ?? false, pauseReason: state?.pause_reason ?? null };
   };
-  if (!rec || m.status !== "processing") return summarize();
+  if (!rec || (m.status !== "processing" && m.status !== "review_ready" && m.status !== "completed")) return summarize();
+  const job = await getJobState(admin);
+  if (job?.paused && !opts?.probe) return summarize();
 
   for (const stage of STAGES) {
-    const inputVersion = stage === "analyze" ? m.current_transcript_id ?? "none" : rec.manifest_hash ?? rec.id;
+    if (m.status !== "processing" && stage !== "embed") continue;
+    const inputVersion = stage === "analyze" || stage === "embed" ? m.current_transcript_id ?? "none" : rec.manifest_hash ?? rec.id;
     const key = { recording_id: rec.id, stage, input_version: inputVersion, config_version: CONFIG_VERSION };
     let { data: run } = await admin.from("processing_runs").select("*").match(key).maybeSingle();
     if (run?.status === "succeeded") continue;
@@ -292,9 +391,10 @@ export async function advanceMeeting(admin: Admin, meetingId: string): Promise<{
       else if (stage === "align") output = await stageAlign(admin, rec.id, m, run.id, rec.manifest_hash ?? rec.id);
       else {
         const { data: fresh } = await admin.from("meetings").select("*").eq("id", m.id).single();
-        output = await stageAnalyze(admin, fresh ?? m, rec.status === "partial");
+        output = stage === "embed" ? await stageEmbed(admin, fresh ?? m) : await stageAnalyze(admin, fresh ?? m, rec.status === "partial");
       }
       await admin.from("processing_runs").update({ status: "succeeded", output: output as Json, lease_until: null }).eq("id", run.id);
+      if (job?.paused) await setJobPaused(admin, false, null);
     } catch (e) {
       const err = e instanceof StageError ? e : new StageError(e instanceof Error ? e.message : "erro", "internal", true);
       const attempt = run.attempt + 1;
@@ -305,6 +405,7 @@ export async function advanceMeeting(admin: Admin, meetingId: string): Promise<{
         error_code: err.code, error_message: err.message.slice(0, 300),
         lease_until: terminal ? null : new Date(Date.now() + backoff).toISOString(),
       }).eq("id", run.id);
+      if (err.code === "credits" || err.code === "forbidden") await setJobPaused(admin, true, err.code);
       if (terminal && err.code !== "cancelled") await admin.from("meetings").update({ status: "failed" }).eq("id", m.id).eq("status", "processing");
     }
     return summarize();
@@ -316,4 +417,6 @@ export async function advanceMeeting(admin: Admin, meetingId: string): Promise<{
 export async function retryMeeting(admin: Admin, meetingId: string) {
   await admin.from("processing_runs").update({ status: "queued", attempt: 0, lease_until: null, error_code: null }).eq("meeting_id", meetingId).eq("status", "failed");
   await admin.from("meetings").update({ status: "processing" }).eq("id", meetingId).in("status", ["failed", "review_ready", "completed"]);
+  // explicit user action also resumes a paused background processor
+  await setJobPaused(admin, false, null);
 }

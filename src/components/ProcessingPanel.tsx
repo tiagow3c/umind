@@ -14,6 +14,7 @@ export function ProcessingPanel({ meetingId, status }: { meetingId: string; stat
   const retry = useServerFn(retryProcessing);
   const qc = useQueryClient();
   const [stages, setStages] = useState<StageState[] | null>(null);
+  const [paused, setPaused] = useState<string | null>(null);
   const busy = useRef(false);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export function ProcessingPanel({ meetingId, status }: { meetingId: string; stat
         const r = await advance({ data: { meetingId } });
         if (!alive) return;
         setStages(r.stages);
+        setPaused(r.paused ? r.pauseReason ?? "paused" : null);
         if (r.meetingStatus !== "processing") {
           qc.invalidateQueries();
           return;
@@ -45,9 +47,14 @@ export function ProcessingPanel({ meetingId, status }: { meetingId: string; stat
   return (
     <section className="rounded-md border bg-card p-5" aria-live="polite">
       <p className="font-serif text-2xl">{status === "failed" ? "O processamento falhou" : "Processando a reunião"}</p>
-      <p className="mt-1 text-sm text-muted-foreground">Você pode sair desta página; o progresso continua quando voltar.</p>
-      <ol className="mt-5 grid gap-3 md:grid-cols-4">
-        {(stages ?? ["transcribe", "diarize", "align", "analyze"].map((s) => ({ stage: s, status: "queued", error_code: null, attempt: 0 }))).map((s) => (
+      <p className="mt-1 text-sm text-muted-foreground">Você pode sair desta página; o processamento continua sozinho em segundo plano.</p>
+      {paused && (
+        <p className="mt-3 rounded-md border border-accent bg-accent/10 p-3 text-sm">
+          Processamento pausado: {(ERROR_LABEL[paused] ?? "limite do provedor atingido")} Use “Tentar novamente” para retomar.
+        </p>
+      )}
+      <ol className="mt-5 grid gap-3 md:grid-cols-5">
+        {(stages ?? ["transcribe", "diarize", "align", "analyze", "embed"].map((s) => ({ stage: s, status: "queued", error_code: null, attempt: 0 }))).map((s) => (
           <li key={s.stage} className={cn("rounded-md border p-3 text-sm", s.status === "running" && "border-accent", s.status === "failed" && "border-destructive")}>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">{STAGE_LABEL[s.stage]}</p>
             <p className="mt-1">{RUN_LABEL[s.status] ?? s.status}{s.status === "running" && "…"}</p>
