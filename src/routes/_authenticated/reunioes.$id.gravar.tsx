@@ -1,3 +1,4 @@
+import { VoiceOrb } from "@/components/VoiceOrb";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -171,8 +172,8 @@ function Gravar() {
             {phase === "recording" ? "Gravando" : phase === "paused" ? "Pausada" : phase === "uploading" ? "Enviando" : "Pronto para gravar"}
           </p>
           <p className="mt-3 font-serif text-7xl tabular-nums">{formatDuration(elapsed) === "—" ? "0:00" : formatDuration(elapsed)}</p>
-          <div className="mx-auto mt-6 h-2 max-w-xs overflow-hidden rounded-full bg-muted" role="meter" aria-label="Nível do microfone" aria-valuenow={Math.round(level * 100)}>
-            <div className="h-full bg-accent transition-[width]" style={{ width: `${phase === "recording" ? Math.min(100, level * 250) : 0}%` }} />
+          <div className="mt-6" role="meter" aria-label="Nível do microfone" aria-valuenow={Math.round(level * 100)}>
+            <VoiceOrb level={phase === "recording" ? level : 0} active={phase === "recording"} />
           </div>
           <div className="mt-8 flex justify-center gap-3">
             {phase === "idle" && <Button size="lg" onClick={start} className="bg-accent text-accent-foreground hover:bg-accent/90">Iniciar gravação</Button>}
