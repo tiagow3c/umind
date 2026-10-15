@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { parseNameHandle } from "@/lib/people-rules";
 
 export const transcriptQuery = (transcriptId: string | null) =>
   queryOptions({
@@ -137,10 +138,13 @@ export const peopleQuery = queryOptions({
   queryFn: async () => {
     const { data, error } = await supabase.from("people").select("*, participants(id, meeting_id, meetings(id, title, created_at, status))").order("display_name");
     if (error) throw new Error(error.message);
+    const paths = (data ?? []).map((p) => p.avatar_path).filter((x): x is string => !!x);
+    const signed = paths.length ? (await supabase.storage.from("avatars").createSignedUrls(paths, 60 * 60 * 24)).data ?? [] : [];
+    const urls = new Map(signed.map((s) => [s.path, s.signedUrl]));
     return (data ?? []).map((p) => {
       const ms = (p.participants ?? []).map((x) => x.meetings).filter((m): m is NonNullable<typeof m> => !!m && m.status !== "deleting" && m.status !== "deleted");
       const uniq = [...new Map(ms.map((m) => [m.id, m])).values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
-      return { ...p, meetings: uniq };
+      return { ...p, photo_url: p.avatar_path ? urls.get(p.avatar_path) ?? null : null, meetings: uniq };
     });
   },
 });
@@ -155,9 +159,10 @@ export async function assignSpeakerPerson(speakerId: string, target: { personId:
     if (e || !p) throw new Error("person");
     personId = p.id; name = p.display_name;
   } else {
-    name = target.newName.trim().slice(0, 120);
+    const parsed = parseNameHandle(target.newName);
+    name = parsed.name.slice(0, 120);
     if (!name) throw new Error("name");
-    const { data: p, error: e } = await supabase.from("people").insert({ workspace_id: sp.workspace_id, display_name: name }).select("id").single();
+    const { data: p, error: e } = await supabase.from("people").insert({ workspace_id: sp.workspace_id, display_name: name, instagram: parsed.instagram }).select("id").single();
     if (e || !p) throw new Error(e?.message ?? "person");
     personId = p.id;
   }
@@ -192,5 +197,27 @@ export async function deletePerson(id: string) {
 
 export async function mergePeople(from: string, into: string) {
   const { error } = await supabase.rpc("merge_people", { _from: from, _into: into });
+  if (error) throw new Error(error.message);
+}
+
+/** Uploads a real photo for a person; it replaces the Instagram picture. */
+export async function uploadPersonPhoto(person: { id: string; workspace_id: string }, file: File) {
+  if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) throw new Error("invalid");
+  const path = `${person.workspace_id}/${person.id}-${Date.now()}`;
+  const up = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type });
+  if (up.error) throw new Error(up.error.message);
+  const { error } = await supabase.from("people").update({ avatar_path: path }).eq("id", person.id);
+  if (error) throw new Error(error.message);
+}
+
+export async function removePersonPhoto(id: string) {
+  const { error } = await supabase.from("people").update({ avatar_path: null }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function setPersonInstagram(id: string, handle: string) {
+  const h = handle.replace(/^@/, "").trim().toLowerCase();
+  if (h && !/^[a-z0-9._]{1,30}$/.test(h)) throw new Error("invalid");
+  const { error } = await supabase.from("people").update({ instagram: h || null }).eq("id", id);
   if (error) throw new Error(error.message);
 }

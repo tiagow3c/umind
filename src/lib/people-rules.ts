@@ -24,3 +24,22 @@ export function matchPerson(name: string, people: Person[]): Person | null {
   }
   return null;
 }
+
+/**
+ * Splits "Nome @handle" into a display name and an Instagram handle.
+ * Only "@handle" → the handle is also the name. No @ → no handle.
+ */
+export function parseNameHandle(input: string): { name: string; instagram: string | null } {
+  const m = input.match(/@([A-Za-z0-9._]{1,30})/);
+  const instagram = m ? m[1]!.replace(/\.+$/, "").toLowerCase() || null : null;
+  const name = input.replace(/@[A-Za-z0-9._]{1,30}/, " ").replace(/\s+/g, " ").trim() || instagram || "";
+  return { name, instagram };
+}
+
+/** Avatar source: an uploaded photo wins over the Instagram profile picture. */
+export function avatarSrc(p: { photo_url?: string | null; instagram?: string | null } | null | undefined): string | null {
+  if (!p) return null;
+  if (p.photo_url) return p.photo_url;
+  if (p.instagram) return `https://unavatar.io/instagram/${encodeURIComponent(p.instagram)}?fallback=false`;
+  return null;
+}
