@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/hoje")({
 function Hoje() {
   const { data: meetings } = useSuspenseQuery(meetingsQuery);
   const { data: ws } = useSuspenseQuery(workspaceQuery);
-  const pending = meetings.filter((m) => ["consent_pending", "recording", "paused", "uploading", "failed"].includes(m.status));
+  const pending = meetings.filter((m) => ["consent_pending", "recording", "paused", "uploading", "processing", "review_ready", "failed"].includes(m.status));
   const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
   return (
     <div className="space-y-12">

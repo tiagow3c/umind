@@ -5,6 +5,9 @@ import { deleteMeeting, friendlyError, meetingQuery } from "@/lib/meetings";
 import { canStartCapture } from "@/lib/meeting-rules";
 import { StatusBadge, formatDuration } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { ProcessingPanel } from "@/components/ProcessingPanel";
+import { MeetingReview } from "@/components/MeetingReview";
+import { markCompleted } from "@/lib/review";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -51,8 +54,19 @@ function Detalhe() {
       <section className="grid gap-4 md:grid-cols-3">
         <Stage label="Captura" value={rec ? (m.source_type === "import" ? "Arquivo importado" : "Gravada no navegador") : "Não iniciada"} />
         <Stage label="Envio" value={rec ? `${REC_LABEL[rec.status]} · ${confirmed}/${parts.length} partes` : "—"} />
-        <Stage label="Processamento" value={m.status === "processing" ? "Na fila (transcrição chega na próxima etapa)" : m.processing_runs.length ? `${m.processing_runs.length} etapas` : "—"} />
+        <Stage label="Processamento" value={m.status === "processing" ? "Em andamento" : m.status === "failed" ? "Falhou" : m.current_transcript_id ? "Concluído" : "—"} />
       </section>
+
+      {(m.status === "processing" || m.status === "failed") && rec?.finalized_at && <ProcessingPanel meetingId={m.id} status={m.status} />}
+
+      {m.status === "review_ready" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-success p-4 text-sm">
+          <span>Conteúdo gerado e pronto para sua revisão.</span>
+          <Button size="sm" variant="outline" onClick={async () => { await markCompleted(m.id); qc.invalidateQueries(); toast.success("Revisão concluída."); }}>Marcar revisão como concluída</Button>
+        </div>
+      )}
+
+      {m.current_transcript_id && <MeetingReview meeting={m} />}
 
       {canStartCapture(m.status, m.consent_records) && (
         <Button asChild size="lg"><Link to="/reunioes/$id/gravar" params={{ id }}>{m.source_type === "import" ? "Importar áudio" : "Ir para o gravador"}</Link></Button>
