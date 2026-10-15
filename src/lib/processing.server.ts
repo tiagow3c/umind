@@ -273,6 +273,80 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
   return { analysis_id: an.id, tasks: v.tasks.length, decisions: v.decisions.length };
 }
 
+async function embedTexts(texts: string[]): Promise<number[][]> {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) throw new StageError("missing key", "config", false);
+  const res = await fetch(`${GATEWAY}/embeddings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, "X-Lovable-AIG-SDK": "fetch" },
+    body: JSON.stringify({ model: EMBED_MODEL, input: texts }),
+  });
+  if (!res.ok) throw providerError("embeddings", res.status, await res.text());
+  const json = (await res.json()) as { data?: { embedding: number[] }[] };
+  if (!json.data || json.data.length !== texts.length) throw new StageError("bad embeddings response", "embed_invalid", true);
+  return json.data.map((d) => d.embedding);
+}
+
+const EMBED_BATCH = 96;
+
+/** Generate embeddings for the canonical transcript segments and the latest analysis items. */
+async function stageEmbed(admin: Admin, meeting: { id: string; workspace_id: string; current_transcript_id: string | null }) {
+  if (!meeting.current_transcript_id) throw new StageError("no transcript", "no_transcript", false);
+  let embedded = 0;
+  const { data: segs } = await admin.from("transcript_segments").select("id, text")
+    .eq("transcript_id", meeting.current_transcript_id).is("embedding", null).order("position");
+  for (let i = 0; i < (segs?.length ?? 0); i += EMBED_BATCH) {
+    const batch = segs!.slice(i, i + EMBED_BATCH);
+    const vecs = await embedTexts(batch.map((s) => s.text));
+    for (let j = 0; j < batch.length; j++) {
+      await admin.from("transcript_segments").update({ embedding: JSON.stringify(vecs[j]) }).eq("id", batch[j]!.id);
+    }
+    embedded += batch.length;
+    if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
+  }
+  const { data: an } = await admin.from("analyses").select("id").eq("meeting_id", meeting.id).eq("stale", false)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (an) {
+    const { data: items } = await admin.from("analysis_items").select("id, text").eq("analysis_id", an.id).is("embedding", null);
+    for (let i = 0; i < (items?.length ?? 0); i += EMBED_BATCH) {
+      const batch = items!.slice(i, i + EMBED_BATCH);
+      const vecs = await embedTexts(batch.map((s) => s.text));
+      for (let j = 0; j < batch.length; j++) {
+        await admin.from("analysis_items").update({ embedding: JSON.stringify(vecs[j]) }).eq("id", batch[j]!.id);
+      }
+      embedded += batch.length;
+    }
+  }
+  return { embedded };
+}
+
+// ---- Background job state (single-flight lease + circuit breaker) ----
+
+export type JobState = { key: string; lease_until: string | null; paused: boolean; pause_reason: string | null };
+
+export async function getJobState(admin: Admin): Promise<JobState | null> {
+  const { data } = await admin.from("job_state").select("key, lease_until, paused, pause_reason").eq("key", JOB_KEY).maybeSingle();
+  return data;
+}
+
+async function setJobPaused(admin: Admin, paused: boolean, reason: string | null) {
+  await admin.from("job_state").upsert({ key: JOB_KEY, paused, pause_reason: reason, updated_at: new Date().toISOString() });
+}
+
+/** Acquire the single-flight lease for the background processor. */
+export async function tryAcquireLease(admin: Admin, ttlMs: number): Promise<boolean> {
+  await admin.from("job_state").upsert({ key: JOB_KEY, updated_at: new Date().toISOString() }, { onConflict: "key", ignoreDuplicates: true });
+  const now = new Date().toISOString();
+  const { data } = await admin.from("job_state")
+    .update({ lease_until: new Date(Date.now() + ttlMs).toISOString() })
+    .eq("key", JOB_KEY).or(`lease_until.is.null,lease_until.lt.${now}`).select("key");
+  return !!data?.length;
+}
+
+export async function releaseLease(admin: Admin) {
+  await admin.from("job_state").update({ lease_until: null }).eq("key", JOB_KEY);
+}
+
 export type StageState = { stage: Stage; status: string; error_code: string | null; attempt: number };
 
 /** Run at most one pending stage for the meeting. Safe to call repeatedly and concurrently. */
