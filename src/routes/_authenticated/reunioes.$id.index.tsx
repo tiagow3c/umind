@@ -46,11 +46,13 @@ function Detalhe() {
     } catch (e) { toast.error(friendlyError(e)); }
   }
 
-  if (m.current_transcript_id && !full && m.status !== "processing" && m.status !== "failed") {
+  const processingLive = m.status === "processing" && !!rec?.finalized_at;
+  if ((m.current_transcript_id || processingLive) && !full && m.status !== "failed") {
     return (
       <div className="space-y-6 py-4">
         <h1 className="text-5xl">{m.title}</h1>
-        <MeetingOverview meeting={m} onFull={() => setFull(true)} />
+        {processingLive && <ProcessingPanel meetingId={m.id} status={m.status} compact />}
+        <MeetingOverview meeting={m} processing={processingLive} onFull={() => setFull(true)} />
       </div>
     );
   }

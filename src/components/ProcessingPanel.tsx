@@ -61,6 +61,19 @@ export function ProcessingPanel({ meetingId, status, compact = false }: { meetin
     try { await deleteMeeting(meetingId); qc.invalidateQueries(); toast.success("Reunião excluída."); navigate({ to: "/reunioes" }); }
     catch { toast.error("Não foi possível excluir."); }
   }
+  if (compact && status === "processing") {
+    const current = stages?.find((s) => s.status === "running" || s.status === "queued" || s.status === "retry_wait");
+    const label: Record<string, string> = { transcribe: "Transcrevendo", diarize: "Identificando vozes", align: "Separando participantes", analyze: "Analisando a conversa", embed: "Preparando a busca" };
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground" aria-live="polite">
+        <span className="flex items-center gap-2">
+          <span className="size-1.5 animate-pulse rounded-full bg-accent" />
+          {paused ? "Processamento pausado — limite do provedor atingido." : `${label[current?.stage ?? "transcribe"] ?? "Processando"}…`}
+        </span>
+        <button onClick={cancel} className="underline-offset-4 hover:text-foreground hover:underline">Cancelar processamento</button>
+      </div>
+    );
+  }
   return (
     <section className="rounded-md border bg-card p-5" aria-live="polite">
       <p className="font-serif text-2xl">{cancelled ? "Processamento cancelado" : status === "failed" ? "O processamento falhou" : "Processando a reunião"}</p>
