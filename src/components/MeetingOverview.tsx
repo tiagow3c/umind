@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { analysisQuery, assignSpeakerPerson, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { Button } from "@/components/ui/button";
 import { PersonPicker } from "@/components/PersonPicker";
-import { avatarSrc } from "@/lib/people-rules";
+import { personAvatarSrc } from "@/lib/default-avatars";
 import { VoiceAvatar, pickSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
 
 type Meeting = {
