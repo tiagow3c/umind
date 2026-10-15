@@ -2,9 +2,9 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { listChunks, putChunk, sha256Hex, type LocalChunk } from "./local-store";
 
-function ok<T>(r: { data: T | null; error: { message: string } | null }): T {
+function ok<R extends { data: unknown; error: { message: string } | null }>(r: R): NonNullable<R["data"]> {
   if (r.error) throw new Error(r.error.message);
-  return r.data as T;
+  return r.data as NonNullable<R["data"]>;
 }
 
 export const workspaceQuery = queryOptions({
@@ -26,14 +26,13 @@ export const meetingQuery = (id: string) =>
   queryOptions({
     queryKey: ["meeting", id],
     queryFn: async () => {
-      const m = ok(
-        await supabase
+      const r = await supabase
           .from("meetings")
           .select("*, participants(*), consent_records(*), recordings(*, recording_parts(*)), processing_runs(*)")
           .eq("id", id)
-          .maybeSingle(),
-      );
-      return m;
+          .maybeSingle();
+      if (r.error) throw new Error(r.error.message);
+      return r.data;
     },
   });
 
