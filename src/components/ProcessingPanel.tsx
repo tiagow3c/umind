@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type StageState = { stage: string; status: string; error_code: string | null; attempt: number };
 
-export function ProcessingPanel({ meetingId, status }: { meetingId: string; status: string }) {
+export function ProcessingPanel({ meetingId, status, compact = false }: { meetingId: string; status: string; compact?: boolean }) {
   const advance = useServerFn(advanceProcessing);
   const retry = useServerFn(retryProcessing);
   const qc = useQueryClient();
@@ -34,6 +34,10 @@ export function ProcessingPanel({ meetingId, status }: { meetingId: string; stat
           qc.invalidateQueries();
           return;
         }
+        if (compact) {
+          // Keep the overview live: new speakers, transcript and analysis appear as stages finish.
+          for (const k of [["meeting", meetingId], ["speakers", meetingId], ["analysis", meetingId], ["tasks", "meeting", meetingId]]) qc.invalidateQueries({ queryKey: k });
+        }
       } catch {
         /* keep polling */
       } finally {
@@ -43,7 +47,7 @@ export function ProcessingPanel({ meetingId, status }: { meetingId: string; stat
     };
     void tick();
     return () => { alive = false; clearTimeout(timer); };
-  }, [meetingId, status, advance, qc]);
+  }, [meetingId, status, advance, qc, compact]);
 
   const failed = stages?.find((s) => s.status === "failed");
   const cancelled = status === "failed" && !failed && stages?.some((s) => s.error_code === "user_cancelled");
@@ -56,6 +60,19 @@ export function ProcessingPanel({ meetingId, status }: { meetingId: string; stat
     if (!confirm("Excluir esta reunião? O áudio, a transcrição e o resumo serão apagados.")) return;
     try { await deleteMeeting(meetingId); qc.invalidateQueries(); toast.success("Reunião excluída."); navigate({ to: "/reunioes" }); }
     catch { toast.error("Não foi possível excluir."); }
+  }
+  if (compact && status === "processing") {
+    const current = stages?.find((s) => s.status === "running" || s.status === "queued" || s.status === "retry_wait");
+    const label: Record<string, string> = { transcribe: "Transcrevendo", diarize: "Identificando vozes", align: "Separando participantes", analyze: "Analisando a conversa", embed: "Preparando a busca" };
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground" aria-live="polite">
+        <span className="flex items-center gap-2">
+          <span className="size-1.5 animate-pulse rounded-full bg-accent" />
+          {paused ? "Processamento pausado — limite do provedor atingido." : `${label[current?.stage ?? "transcribe"] ?? "Processando"}…`}
+        </span>
+        <button onClick={cancel} className="underline-offset-4 hover:text-foreground hover:underline">Cancelar processamento</button>
+      </div>
+    );
   }
   return (
     <section className="rounded-md border bg-card p-5" aria-live="polite">

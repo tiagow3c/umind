@@ -20,7 +20,7 @@ function firstSentences(text: string, n = 2) {
   return parts.slice(0, n).join(" ").trim();
 }
 
-export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull: () => void }) {
+export function MeetingOverview({ meeting, onFull, processing = false }: { meeting: Meeting; onFull: () => void; processing?: boolean }) {
   const { data: an } = useQuery(analysisQuery(meeting.id));
   const { data: speakers } = useQuery(speakersQuery(meeting.id));
   const { data: tasks } = useQuery(meetingTasksQuery(meeting.id));
@@ -52,9 +52,28 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
   return (
     <div className="max-w-3xl space-y-16">
       <section>
-        <p className="font-serif text-2xl leading-snug">{an?.summary ? firstSentences(an.summary) : "Resumo sendo preparado."}</p>
-        <button onClick={onFull} className="mt-6 text-sm underline underline-offset-4 hover:text-accent">Ver resumo completo</button>
+        {an?.summary ? (
+          <p className="font-serif text-2xl leading-snug">{firstSentences(an.summary)}</p>
+        ) : processing ? (
+          <div className="space-y-3" aria-label="Resumo sendo preparado">
+            <div className="h-6 w-11/12 animate-pulse rounded bg-muted" />
+            <div className="h-6 w-3/5 animate-pulse rounded bg-muted [animation-delay:300ms]" />
+          </div>
+        ) : (
+          <p className="font-serif text-2xl leading-snug">Resumo sendo preparado.</p>
+        )}
+        {!processing && <button onClick={onFull} className="mt-6 text-sm underline underline-offset-4 hover:text-accent">Ver resumo completo</button>}
       </section>
+
+      {processing && !speakers?.length && (
+        <section>
+          <h2 className="text-3xl">Participantes</h2>
+          <p className="mt-4 text-sm text-muted-foreground">As vozes aparecem aqui assim que a transcrição separar quem falou.</p>
+          <ul className="mt-8 flex gap-8">
+            {[0, 1].map((i) => <li key={i} className="size-20 animate-pulse rounded-full bg-muted" style={{ animationDelay: `${i * 250}ms` }} />)}
+          </ul>
+        </section>
+      )}
 
       {speakers && speakers.length > 0 && (
         <section>
@@ -112,7 +131,7 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
 
       <section>
         <h2 className="text-3xl">Tarefas</h2>
-        {!tasks?.length ? <p className="mt-6 text-sm text-muted-foreground">Nenhuma tarefa identificada.</p> : (
+        {!tasks?.length ? (processing ? <div className="mt-6 space-y-3"><div className="h-5 w-2/3 animate-pulse rounded bg-muted" /><div className="h-5 w-1/2 animate-pulse rounded bg-muted [animation-delay:300ms]" /></div> : <p className="mt-6 text-sm text-muted-foreground">Nenhuma tarefa identificada.</p>) : (
           <ul className="mt-6 divide-y">
             {tasks.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center justify-between gap-4 py-6">
