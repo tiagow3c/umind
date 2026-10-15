@@ -117,7 +117,6 @@ function Gravar() {
     } catch (e) {
       toast.error(friendlyError(e) + " O áudio continua salvo neste navegador.");
       setPhase("uploading");
-      (window as unknown as { __retry?: () => void }).__retry = () => finishUpload(recordingId, durationMs);
       setRetry(() => () => finishUpload(recordingId, durationMs));
     }
   }
