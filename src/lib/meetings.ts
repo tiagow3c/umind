@@ -2,9 +2,9 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { listChunks, putChunk, sha256Hex, type LocalChunk } from "./local-store";
 
-function ok<T>(r: { data: T; error: { message: string } | null }): T {
+function ok<T>(r: { data: T | null; error: { message: string } | null }): T {
   if (r.error) throw new Error(r.error.message);
-  return r.data;
+  return r.data as T;
 }
 
 export const workspaceQuery = queryOptions({
@@ -41,7 +41,7 @@ export async function createMeeting(input: {
   title: string;
   timezone: string;
   sourceType: "live" | "import";
-  participants: { display_name: string; email?: string }[];
+  participants: { display_name: string; email?: string | undefined }[];
   consentMethod: "verbal" | "written" | "file_authorization";
 }) {
   const { data: u } = await supabase.auth.getUser();

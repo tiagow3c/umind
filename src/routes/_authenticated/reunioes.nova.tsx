@@ -32,7 +32,7 @@ function Nova() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const parsed = schema.safeParse({ title, participants: people.filter((p) => p.display_name.trim()) });
-    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
+    if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos"); return; }
     if (!consent) { toast.error("Confirme o consentimento para continuar."); return; }
     setBusy(true);
     try {
