@@ -93,14 +93,22 @@ export const VoiceAvatar = forwardRef<VoiceAvatarHandle, {
   );
 });
 
-/** Pick a representative sample per speaker: their longest utterance, capped at 10 s. */
-export function pickSamples(segments: { speaker_id: string | null; start_ms: number; end_ms: number }[]) {
+/** Pick a representative sample per speaker: their longest solo utterance, capped at 10 s,
+ *  never crossing into another speaker's turn or an overlapped region. */
+export function pickSamples(segments: { speaker_id: string | null; start_ms: number; end_ms: number; overlap?: boolean }[]) {
   const best = new Map<string, { start: number; end: number }>();
   for (const s of segments) {
-    if (!s.speaker_id) continue;
+    if (!s.speaker_id || s.overlap) continue;
     const cur = best.get(s.speaker_id);
     if (!cur || s.end_ms - s.start_ms > cur.end - cur.start) best.set(s.speaker_id, { start: s.start_ms, end: s.end_ms });
   }
-  for (const [k, v] of best) best.set(k, { start: v.start, end: Math.min(v.end, v.start + 10_000) });
+  for (const [k, v] of best) {
+    let end = Math.min(v.end, v.start + 10_000);
+    for (const s of segments) {
+      if (s.speaker_id === k || !s.speaker_id) continue;
+      if (s.start_ms > v.start && s.start_ms < end) end = s.start_ms;
+    }
+    best.set(k, { start: v.start, end });
+  }
   return best;
 }
