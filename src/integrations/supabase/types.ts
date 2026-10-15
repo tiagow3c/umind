@@ -496,6 +496,16 @@ export type Database = {
       is_workspace_member: { Args: { _ws: string }; Returns: boolean }
       meeting_visible: { Args: { _meeting: string }; Returns: boolean }
       recording_visible: { Args: { _rec: string }; Returns: boolean }
+      start_recording: {
+        Args: {
+          _channels: number
+          _codec: string
+          _device: string
+          _meeting: string
+          _source: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "user"
