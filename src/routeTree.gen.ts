@@ -10,33 +10,158 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticated/ajustes'
+import { Route as AuthenticatedBuscarRouteImport } from './routes/_authenticated/buscar'
+import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
+import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
+import { Route as AuthenticatedReunioesIndexRouteImport } from './routes/_authenticated/reunioes.index'
+import { Route as AuthenticatedReunioesNovaRouteImport } from './routes/_authenticated/reunioes.nova'
+import { Route as AuthenticatedReunioesIdIndexRouteImport } from './routes/_authenticated/reunioes.$id.index'
+import { Route as AuthenticatedReunioesIdGravarRouteImport } from './routes/_authenticated/reunioes.$id.gravar'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAjustesRoute = AuthenticatedAjustesRouteImport.update({
+  id: '/ajustes',
+  path: '/ajustes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBuscarRoute = AuthenticatedBuscarRouteImport.update({
+  id: '/buscar',
+  path: '/buscar',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHojeRoute = AuthenticatedHojeRouteImport.update({
+  id: '/hoje',
+  path: '/hoje',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
+  id: '/tarefas',
+  path: '/tarefas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReunioesIndexRoute =
+  AuthenticatedReunioesIndexRouteImport.update({
+    id: '/reunioes/',
+    path: '/reunioes/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedReunioesNovaRoute =
+  AuthenticatedReunioesNovaRouteImport.update({
+    id: '/reunioes/nova',
+    path: '/reunioes/nova',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedReunioesIdIndexRoute =
+  AuthenticatedReunioesIdIndexRouteImport.update({
+    id: '/reunioes/$id/',
+    path: '/reunioes/$id/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedReunioesIdGravarRoute =
+  AuthenticatedReunioesIdGravarRouteImport.update({
+    id: '/reunioes/$id/gravar',
+    path: '/reunioes/$id/gravar',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/ajustes': typeof AuthenticatedAjustesRoute
+  '/buscar': typeof AuthenticatedBuscarRoute
+  '/hoje': typeof AuthenticatedHojeRoute
+  '/tarefas': typeof AuthenticatedTarefasRoute
+  '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
+  '/reunioes/': typeof AuthenticatedReunioesIndexRoute
+  '/reunioes/$id/gravar': typeof AuthenticatedReunioesIdGravarRoute
+  '/reunioes/$id/': typeof AuthenticatedReunioesIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/ajustes': typeof AuthenticatedAjustesRoute
+  '/buscar': typeof AuthenticatedBuscarRoute
+  '/hoje': typeof AuthenticatedHojeRoute
+  '/tarefas': typeof AuthenticatedTarefasRoute
+  '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
+  '/reunioes': typeof AuthenticatedReunioesIndexRoute
+  '/reunioes/$id/gravar': typeof AuthenticatedReunioesIdGravarRoute
+  '/reunioes/$id': typeof AuthenticatedReunioesIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/ajustes': typeof AuthenticatedAjustesRoute
+  '/_authenticated/buscar': typeof AuthenticatedBuscarRoute
+  '/_authenticated/hoje': typeof AuthenticatedHojeRoute
+  '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
+  '/_authenticated/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
+  '/_authenticated/reunioes/': typeof AuthenticatedReunioesIndexRoute
+  '/_authenticated/reunioes/$id/gravar': typeof AuthenticatedReunioesIdGravarRoute
+  '/_authenticated/reunioes/$id/': typeof AuthenticatedReunioesIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/ajustes'
+    | '/buscar'
+    | '/hoje'
+    | '/tarefas'
+    | '/reunioes/nova'
+    | '/reunioes/'
+    | '/reunioes/$id/gravar'
+    | '/reunioes/$id/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/ajustes'
+    | '/buscar'
+    | '/hoje'
+    | '/tarefas'
+    | '/reunioes/nova'
+    | '/reunioes'
+    | '/reunioes/$id/gravar'
+    | '/reunioes/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/ajustes'
+    | '/_authenticated/buscar'
+    | '/_authenticated/hoje'
+    | '/_authenticated/tarefas'
+    | '/_authenticated/reunioes/nova'
+    | '/_authenticated/reunioes/'
+    | '/_authenticated/reunioes/$id/gravar'
+    | '/_authenticated/reunioes/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +173,108 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/ajustes': {
+      id: '/_authenticated/ajustes'
+      path: '/ajustes'
+      fullPath: '/ajustes'
+      preLoaderRoute: typeof AuthenticatedAjustesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/buscar': {
+      id: '/_authenticated/buscar'
+      path: '/buscar'
+      fullPath: '/buscar'
+      preLoaderRoute: typeof AuthenticatedBuscarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hoje': {
+      id: '/_authenticated/hoje'
+      path: '/hoje'
+      fullPath: '/hoje'
+      preLoaderRoute: typeof AuthenticatedHojeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tarefas': {
+      id: '/_authenticated/tarefas'
+      path: '/tarefas'
+      fullPath: '/tarefas'
+      preLoaderRoute: typeof AuthenticatedTarefasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reunioes/': {
+      id: '/_authenticated/reunioes/'
+      path: '/reunioes'
+      fullPath: '/reunioes/'
+      preLoaderRoute: typeof AuthenticatedReunioesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reunioes/nova': {
+      id: '/_authenticated/reunioes/nova'
+      path: '/reunioes/nova'
+      fullPath: '/reunioes/nova'
+      preLoaderRoute: typeof AuthenticatedReunioesNovaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reunioes/$id/': {
+      id: '/_authenticated/reunioes/$id/'
+      path: '/reunioes/$id'
+      fullPath: '/reunioes/$id/'
+      preLoaderRoute: typeof AuthenticatedReunioesIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reunioes/$id/gravar': {
+      id: '/_authenticated/reunioes/$id/gravar'
+      path: '/reunioes/$id/gravar'
+      fullPath: '/reunioes/$id/gravar'
+      preLoaderRoute: typeof AuthenticatedReunioesIdGravarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAjustesRoute: typeof AuthenticatedAjustesRoute
+  AuthenticatedBuscarRoute: typeof AuthenticatedBuscarRoute
+  AuthenticatedHojeRoute: typeof AuthenticatedHojeRoute
+  AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
+  AuthenticatedReunioesNovaRoute: typeof AuthenticatedReunioesNovaRoute
+  AuthenticatedReunioesIndexRoute: typeof AuthenticatedReunioesIndexRoute
+  AuthenticatedReunioesIdGravarRoute: typeof AuthenticatedReunioesIdGravarRoute
+  AuthenticatedReunioesIdIndexRoute: typeof AuthenticatedReunioesIdIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAjustesRoute: AuthenticatedAjustesRoute,
+  AuthenticatedBuscarRoute: AuthenticatedBuscarRoute,
+  AuthenticatedHojeRoute: AuthenticatedHojeRoute,
+  AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
+  AuthenticatedReunioesNovaRoute: AuthenticatedReunioesNovaRoute,
+  AuthenticatedReunioesIndexRoute: AuthenticatedReunioesIndexRoute,
+  AuthenticatedReunioesIdGravarRoute: AuthenticatedReunioesIdGravarRoute,
+  AuthenticatedReunioesIdIndexRoute: AuthenticatedReunioesIdIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
