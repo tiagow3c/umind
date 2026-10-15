@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      analyses: {
+        Row: {
+          created_at: string
+          id: string
+          meeting_id: string
+          model_id: string
+          partial: boolean
+          schema_version: string
+          stale: boolean
+          summary: string
+          transcript_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meeting_id: string
+          model_id: string
+          partial?: boolean
+          schema_version: string
+          stale?: boolean
+          summary: string
+          transcript_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          model_id?: string
+          partial?: boolean
+          schema_version?: string
+          stale?: boolean
+          summary?: string
+          transcript_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analyses_meeting_id_workspace_id_fkey"
+            columns: ["meeting_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "analyses_transcript_id_fkey"
+            columns: ["transcript_id"]
+            isOneToOne: false
+            referencedRelation: "transcripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analysis_items: {
+        Row: {
+          analysis_id: string
+          created_at: string
+          evidence_segment_ids: string[]
+          id: string
+          kind: string
+          meeting_id: string
+          position: number
+          text: string
+          workspace_id: string
+        }
+        Insert: {
+          analysis_id: string
+          created_at?: string
+          evidence_segment_ids?: string[]
+          id?: string
+          kind: string
+          meeting_id: string
+          position?: number
+          text: string
+          workspace_id: string
+        }
+        Update: {
+          analysis_id?: string
+          created_at?: string
+          evidence_segment_ids?: string[]
+          id?: string
+          kind?: string
+          meeting_id?: string
+          position?: number
+          text?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_items_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_records: {
         Row: {
           created_at: string
@@ -259,11 +360,13 @@ export type Database = {
           config_version: string
           created_at: string
           error_code: string | null
+          error_message: string | null
           id: string
           input_version: string
           lease_until: string | null
           meeting_id: string
           model_id: string | null
+          output: Json | null
           provider: string | null
           recording_id: string
           stage: string
@@ -276,11 +379,13 @@ export type Database = {
           config_version: string
           created_at?: string
           error_code?: string | null
+          error_message?: string | null
           id?: string
           input_version: string
           lease_until?: string | null
           meeting_id: string
           model_id?: string | null
+          output?: Json | null
           provider?: string | null
           recording_id: string
           stage: string
@@ -293,11 +398,13 @@ export type Database = {
           config_version?: string
           created_at?: string
           error_code?: string | null
+          error_message?: string | null
           id?: string
           input_version?: string
           lease_until?: string | null
           meeting_id?: string
           model_id?: string | null
+          output?: Json | null
           provider?: string | null
           recording_id?: string
           stage?: string
@@ -427,6 +534,280 @@ export type Database = {
           },
         ]
       }
+      speakers: {
+        Row: {
+          channel_index: number
+          created_at: string
+          id: string
+          mapping_source: string
+          meeting_id: string
+          participant_id: string | null
+          provider_label: string
+          run_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          channel_index?: number
+          created_at?: string
+          id?: string
+          mapping_source?: string
+          meeting_id: string
+          participant_id?: string | null
+          provider_label: string
+          run_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          channel_index?: number
+          created_at?: string
+          id?: string
+          mapping_source?: string
+          meeting_id?: string
+          participant_id?: string | null
+          provider_label?: string
+          run_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "speakers_meeting_id_workspace_id_fkey"
+            columns: ["meeting_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "speakers_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          due_date: string | null
+          due_text: string | null
+          evidence_segment_ids: string[]
+          id: string
+          manual: boolean
+          meeting_id: string | null
+          owner_text: string | null
+          priority_suggestion: string | null
+          source_analysis_id: string | null
+          source_version: number | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          due_date?: string | null
+          due_text?: string | null
+          evidence_segment_ids?: string[]
+          id?: string
+          manual?: boolean
+          meeting_id?: string | null
+          owner_text?: string | null
+          priority_suggestion?: string | null
+          source_analysis_id?: string | null
+          source_version?: number | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          due_date?: string | null
+          due_text?: string | null
+          evidence_segment_ids?: string[]
+          id?: string
+          manual?: boolean
+          meeting_id?: string | null
+          owner_text?: string | null
+          priority_suggestion?: string | null
+          source_analysis_id?: string | null
+          source_version?: number | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_source_analysis_id_fkey"
+            columns: ["source_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transcript_segments: {
+        Row: {
+          alignment_score: number | null
+          channel_index: number
+          created_at: string
+          end_ms: number
+          id: string
+          meeting_id: string
+          overlap: boolean
+          position: number
+          review_state: string
+          speaker_id: string | null
+          start_ms: number
+          text: string
+          transcript_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          alignment_score?: number | null
+          channel_index?: number
+          created_at?: string
+          end_ms: number
+          id?: string
+          meeting_id: string
+          overlap?: boolean
+          position: number
+          review_state?: string
+          speaker_id?: string | null
+          start_ms: number
+          text: string
+          transcript_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          alignment_score?: number | null
+          channel_index?: number
+          created_at?: string
+          end_ms?: number
+          id?: string
+          meeting_id?: string
+          overlap?: boolean
+          position?: number
+          review_state?: string
+          speaker_id?: string | null
+          start_ms?: number
+          text?: string
+          transcript_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcript_segments_speaker_id_fkey"
+            columns: ["speaker_id"]
+            isOneToOne: false
+            referencedRelation: "speakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transcript_segments_transcript_id_fkey"
+            columns: ["transcript_id"]
+            isOneToOne: false
+            referencedRelation: "transcripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transcripts: {
+        Row: {
+          author_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          language: string | null
+          meeting_id: string
+          parent_version_id: string | null
+          provider: string
+          raw_text: string | null
+          reason: string | null
+          run_id: string | null
+          status: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          language?: string | null
+          meeting_id: string
+          parent_version_id?: string | null
+          provider: string
+          raw_text?: string | null
+          reason?: string | null
+          run_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          language?: string | null
+          meeting_id?: string
+          parent_version_id?: string | null
+          provider?: string
+          raw_text?: string | null
+          reason?: string | null
+          run_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcripts_meeting_id_workspace_id_fkey"
+            columns: ["meeting_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "transcripts_parent_version_id_fkey"
+            columns: ["parent_version_id"]
+            isOneToOne: false
+            referencedRelation: "transcripts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transcripts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "processing_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -536,6 +917,12 @@ export type Database = {
         | "partial"
         | "corrupt"
         | "deleted"
+      task_status:
+        | "suggested"
+        | "accepted"
+        | "in_progress"
+        | "done"
+        | "dismissed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -693,6 +1080,13 @@ export const Constants = {
         "partial",
         "corrupt",
         "deleted",
+      ],
+      task_status: [
+        "suggested",
+        "accepted",
+        "in_progress",
+        "done",
+        "dismissed",
       ],
     },
   },
