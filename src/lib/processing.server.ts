@@ -201,22 +201,36 @@ async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: 
 async function stageAlign(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string, inputVersion: string) {
   const { data: runs } = await admin.from("processing_runs").select("stage, output")
     .eq("recording_id", recordingId).eq("input_version", inputVersion).eq("config_version", CONFIG_VERSION).in("stage", ["transcribe", "diarize"]);
-  const diar = runs?.find((r) => r.stage === "diarize")?.output as { utterances?: Utterance[] } | null;
+  const diar = runs?.find((r) => r.stage === "diarize")?.output as { utterances?: Utterance[]; matches?: Record<string, string> } | null;
   const { data: raw } = await admin.from("transcripts").select("raw_text").eq("meeting_id", meeting.id).eq("kind", "raw_openai").order("created_at", { ascending: false }).limit(1);
   const { data: rec } = await admin.from("recordings").select("duration_ms").eq("id", recordingId).single();
-  const segments = alignTranscripts({ utterances: diar?.utterances ?? null, openaiText: raw?.[0]?.raw_text ?? null, durationMs: Number(rec?.duration_ms ?? 0) });
+  const turns = diar?.utterances ?? [];
+  const hasText = turns.some((u) => u.text);
+  let segments = alignTranscripts({ utterances: hasText ? turns : null, openaiText: raw?.[0]?.raw_text ?? null, durationMs: Number(rec?.duration_ms ?? 0) });
+  if (!hasText && turns.length) segments = assignSpeakersByTime(segments, turns);
   if (!segments.length) throw new StageError("empty transcript", "no_speech", false);
   if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
 
   const { data: tr, error } = await admin.from("transcripts").insert({
-    workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: diar?.utterances ? "deepgram+openai" : "openai", kind: "canonical", version: 1,
+    workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: turns.length ? "diarized+openai" : "openai", kind: "canonical", version: 1,
   }).select("id").single();
   if (error || !tr) throw new StageError("insert failed", "db", true);
-  const labels = [...new Set(segments.map((s) => s.speaker).filter((s): s is number => s !== null))];
+  const labels = [...new Set(segments.map((s) => s.speaker).filter((s): s is number => s !== null))].sort((a, b) => a - b);
   const speakerIds = new Map<number, string>();
-  for (const l of labels) {
-    const { data: sp } = await admin.from("speakers").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider_label: `Falante ${l + 1}` }).select("id").single();
-    if (sp) speakerIds.set(l, sp.id);
+  const matches = diar?.matches ?? {};
+  const matchedIds = Object.values(matches);
+  const { data: matchedPeople } = matchedIds.length
+    ? await admin.from("people").select("id, display_name").eq("workspace_id", meeting.workspace_id).in("id", matchedIds)
+    : { data: [] as { id: string; display_name: string }[] };
+  for (const [n, l] of labels.entries()) {
+    const { data: sp } = await admin.from("speakers").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider_label: `Falante ${n + 1}` }).select("id").single();
+    if (!sp) continue;
+    speakerIds.set(l, sp.id);
+    const person = matchedPeople?.find((p) => p.id === matches[String(l)]);
+    if (person) {
+      const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: person.display_name, person_id: person.id, person_confirmed: false, source: "voice" }).select("id").single();
+      if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: "voice" }).eq("id", sp.id);
+    }
   }
   const rows = segments.map((s) => ({
     workspace_id: meeting.workspace_id, meeting_id: meeting.id, transcript_id: tr.id, position: s.position,
