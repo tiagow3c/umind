@@ -64,6 +64,13 @@
       "when": 1792102225617,
       "tag": "0008_people_avatars",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792102451314,
+      "tag": "0009_people_version_reanalysis",
+      "breakpoints": true
     }
   ]
 }

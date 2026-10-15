@@ -264,6 +264,7 @@ export type Database = {
           ended_at: string | null
           id: string
           owner_id: string
+          people_version: number
           scheduled_at: string | null
           source_type: string
           started_at: string | null
@@ -281,6 +282,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           owner_id: string
+          people_version?: number
           scheduled_at?: string | null
           source_type?: string
           started_at?: string | null
@@ -298,6 +300,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           owner_id?: string
+          people_version?: number
           scheduled_at?: string | null
           source_type?: string
           started_at?: string | null
@@ -999,6 +1002,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bump_people_version: { Args: { _meeting: string }; Returns: undefined }
       cancel_processing: { Args: { _meeting: string }; Returns: undefined }
       delete_meeting: { Args: { _meeting: string }; Returns: undefined }
       finalize_recording: {
