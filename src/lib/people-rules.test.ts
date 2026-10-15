@@ -27,3 +27,21 @@ describe("avatarSrc", () => {
   it("instagram sem foto baixada", () => expect(avatarSrc({ instagram: "a" })).toBeNull());
   it("nada", () => expect(avatarSrc({})).toBeNull());
 });
+
+import { suggestCandidates } from "./people-rules";
+describe("suggestCandidates", () => {
+  const people = [
+    { id: "a", display_name: "Carlos Mendes", aliases: [], meetings: [{ id: "1" }] },
+    { id: "b", display_name: "Ana", aliases: [], meetings: [{ id: "1" }, { id: "2" }, { id: "3" }] },
+    { id: "c", display_name: "Bruno", aliases: [], meetings: [] },
+  ];
+  it("puts people cited in the transcript first, with mention time", () => {
+    const r = suggestCandidates([{ text: "Oi, Carlos, tudo bem?", start_ms: 80000 }], people, new Set());
+    expect(r[0]).toEqual({ person: people[0], mentionMs: 80000 });
+    expect(r[1]!.person.id).toBe("b");
+  });
+  it("excludes people already assigned", () => {
+    const r = suggestCandidates([], people, new Set(["b"]));
+    expect(r.map((x) => x.person.id)).toEqual(["a", "c"]);
+  });
+});
