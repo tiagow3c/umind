@@ -17,7 +17,6 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
   const { data: speakers } = useQuery(speakersQuery(meeting.id));
   const { data: tasks } = useQuery(meetingTasksQuery(meeting.id));
   const qc = useQueryClient();
-  const [editing, setEditing] = useState<string | null>(null);
 
   const act = async (id: string, status: "accepted" | "done") => {
     try { await updateTask(id, { status }); qc.invalidateQueries({ queryKey: ["tasks"] }); }

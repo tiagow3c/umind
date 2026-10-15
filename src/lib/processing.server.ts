@@ -1,3 +1,4 @@
+import { matchPerson } from "./people-rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { alignTranscripts, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
