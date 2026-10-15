@@ -350,21 +350,25 @@ export async function releaseLease(admin: Admin) {
 export type StageState = { stage: Stage; status: string; error_code: string | null; attempt: number };
 
 /** Run at most one pending stage for the meeting. Safe to call repeatedly and concurrently. */
-export async function advanceMeeting(admin: Admin, meetingId: string): Promise<{ stages: StageState[]; meetingStatus: string }> {
+export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { probe?: boolean }): Promise<{ stages: StageState[]; meetingStatus: string; paused: boolean; pauseReason: string | null }> {
   const { data: m } = await admin.from("meetings").select("*").eq("id", meetingId).single();
   if (!m) throw new Error("not_found");
   const { data: rec } = await admin.from("recordings").select("id, manifest_hash, status").eq("meeting_id", meetingId).not("finalized_at", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
   const summarize = async () => {
     const { data: runs } = await admin.from("processing_runs").select("stage, status, error_code, attempt, input_version").eq("meeting_id", meetingId).order("created_at");
     const { data: fresh } = await admin.from("meetings").select("status").eq("id", meetingId).single();
+    const state = await getJobState(admin);
     const latest = new Map<string, StageState>();
     for (const r of runs ?? []) latest.set(r.stage, { stage: r.stage as Stage, status: r.status, error_code: r.error_code, attempt: r.attempt });
-    return { stages: STAGES.map((s) => latest.get(s) ?? { stage: s, status: "queued", error_code: null, attempt: 0 }), meetingStatus: fresh?.status ?? m.status };
+    return { stages: STAGES.map((s) => latest.get(s) ?? { stage: s, status: "queued", error_code: null, attempt: 0 }), meetingStatus: fresh?.status ?? m.status, paused: state?.paused ?? false, pauseReason: state?.pause_reason ?? null };
   };
-  if (!rec || m.status !== "processing") return summarize();
+  if (!rec || (m.status !== "processing" && m.status !== "review_ready" && m.status !== "completed")) return summarize();
+  const job = await getJobState(admin);
+  if (job?.paused && !opts?.probe) return summarize();
 
   for (const stage of STAGES) {
-    const inputVersion = stage === "analyze" ? m.current_transcript_id ?? "none" : rec.manifest_hash ?? rec.id;
+    if (m.status !== "processing" && stage !== "embed") continue;
+    const inputVersion = stage === "analyze" || stage === "embed" ? m.current_transcript_id ?? "none" : rec.manifest_hash ?? rec.id;
     const key = { recording_id: rec.id, stage, input_version: inputVersion, config_version: CONFIG_VERSION };
     let { data: run } = await admin.from("processing_runs").select("*").match(key).maybeSingle();
     if (run?.status === "succeeded") continue;
