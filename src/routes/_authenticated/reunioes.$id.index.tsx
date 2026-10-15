@@ -6,6 +6,7 @@ import { canStartCapture } from "@/lib/meeting-rules";
 import { StatusBadge, formatDuration } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
+import { MeetingSkeleton } from "@/components/MeetingSkeleton";
 import { MeetingReview } from "@/components/MeetingReview";
 import { markCompleted } from "@/lib/review";
 import {
@@ -58,6 +59,8 @@ function Detalhe() {
       </section>
 
       {(m.status === "processing" || m.status === "failed") && rec?.finalized_at && <ProcessingPanel meetingId={m.id} status={m.status} />}
+
+      {m.status === "processing" && rec?.finalized_at && !m.current_transcript_id && <MeetingSkeleton />}
 
       {m.status === "review_ready" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-success p-4 text-sm">
