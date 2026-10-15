@@ -40,6 +40,5 @@ export function parseNameHandle(input: string): { name: string; instagram: strin
 export function avatarSrc(p: { photo_url?: string | null; instagram?: string | null } | null | undefined): string | null {
   if (!p) return null;
   if (p.photo_url) return p.photo_url;
-  if (p.instagram) return `https://unavatar.io/instagram/${encodeURIComponent(p.instagram)}?fallback=false`;
   return null;
 }

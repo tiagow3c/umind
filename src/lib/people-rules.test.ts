@@ -24,6 +24,6 @@ describe("parseNameHandle", () => {
 });
 describe("avatarSrc", () => {
   it("foto vence instagram", () => expect(avatarSrc({ photo_url: "x", instagram: "a" })).toBe("x"));
-  it("instagram sem foto", () => expect(avatarSrc({ instagram: "a" })).toContain("/instagram/a"));
+  it("instagram sem foto baixada", () => expect(avatarSrc({ instagram: "a" })).toBeNull());
   it("nada", () => expect(avatarSrc({})).toBeNull());
 });
