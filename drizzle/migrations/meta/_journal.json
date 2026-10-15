@@ -50,6 +50,13 @@
       "when": 1792100706652,
       "tag": "0006_live_transcript_chunks",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792101464408,
+      "tag": "0007_people_registry",
+      "breakpoints": true
     }
   ]
 }
