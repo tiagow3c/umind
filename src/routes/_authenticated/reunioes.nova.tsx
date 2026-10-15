@@ -26,7 +26,7 @@ function Nova() {
     try {
       const id = await createMeeting({ title: AUTO_TITLE, timezone: tz, sourceType: "live", participants: [], consentMethod: "verbal" });
       qc.invalidateQueries({ queryKey: ["meetings"] });
-      navigate({ to: "/reunioes/$id/gravar", params: { id } });
+      navigate({ to: "/reunioes/$id/gravar", params: { id }, search: { auto: true } });
     } catch (err) {
       toast.error(friendlyError(err));
     } finally { setBusy(false); }
