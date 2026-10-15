@@ -308,11 +308,18 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
   const aiTitle = p2.title?.trim().slice(0, 200);
   if (aiTitle) await admin.from("meetings").update({ title: aiTitle }).eq("id", meeting.id).eq("title", AUTO_TITLE);
   const { data: sps } = await admin.from("speakers").select("id, provider_label, participant_id").eq("meeting_id", meeting.id);
+  const { data: people } = await admin.from("people").select("id, display_name, aliases").eq("workspace_id", meeting.workspace_id);
+  const registry = people ?? [];
   for (const g of p2.speakers ?? []) {
     const name = g.name?.trim().slice(0, 120);
     const sp = sps?.find((x) => x.provider_label === g.label && !x.participant_id);
     if (!name || !sp) continue;
-    const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: name }).select("id").single();
+    let person = matchPerson(name, registry);
+    if (!person) {
+      const { data: np } = await admin.from("people").insert({ workspace_id: meeting.workspace_id, display_name: name }).select("id, display_name, aliases").single();
+      if (np) { person = np; registry.push(np); }
+    }
+    const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: person?.display_name ?? name, person_id: person?.id ?? null }).select("id").single();
     if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: "ai" }).eq("id", sp.id).is("participant_id", null);
   }
   await admin.from("meetings").update({ status: "review_ready" }).eq("id", meeting.id).eq("status", "processing");
