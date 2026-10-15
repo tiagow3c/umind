@@ -98,7 +98,7 @@ export function fmtTime(ms: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-export const STAGE_LABEL: Record<string, string> = { transcribe: "Transcrição", diarize: "Falantes", align: "Alinhamento", analyze: "Análise" };
+export const STAGE_LABEL: Record<string, string> = { transcribe: "Transcrição", diarize: "Falantes", align: "Alinhamento", analyze: "Análise", embed: "Busca" };
 export const RUN_LABEL: Record<string, string> = { queued: "Na fila", running: "Em andamento", retry_wait: "Nova tentativa em breve", succeeded: "Concluída", failed: "Falhou", cancelled: "Cancelada" };
 export const ERROR_LABEL: Record<string, string> = {
   credits: "Créditos de IA esgotados no workspace.",
@@ -106,5 +106,6 @@ export const ERROR_LABEL: Record<string, string> = {
   no_speech: "Não foi encontrada fala no áudio.",
   no_audio: "Nenhuma parte de áudio enviada.",
   analysis_invalid: "A análise retornou um formato inválido.",
+  too_large: "Uma parte do áudio excede o limite de transcrição.",
   config: "Configuração do servidor ausente.",
 };

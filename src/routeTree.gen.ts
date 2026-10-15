@@ -18,6 +18,7 @@ import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/h
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedReunioesIndexRouteImport } from './routes/_authenticated/reunioes.index'
 import { Route as AuthenticatedReunioesNovaRouteImport } from './routes/_authenticated/reunioes.nova'
+import { Route as ApiPublicProcessQueueRouteImport } from './routes/api/public/process-queue'
 import { Route as AuthenticatedReunioesIdIndexRouteImport } from './routes/_authenticated/reunioes.$id.index'
 import { Route as AuthenticatedReunioesIdGravarRouteImport } from './routes/_authenticated/reunioes.$id.gravar'
 
@@ -67,6 +68,11 @@ const AuthenticatedReunioesNovaRoute =
     path: '/reunioes/nova',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicProcessQueueRoute = ApiPublicProcessQueueRouteImport.update({
+  id: '/api/public/process-queue',
+  path: '/api/public/process-queue',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedReunioesIdIndexRoute =
   AuthenticatedReunioesIdIndexRouteImport.update({
     id: '/reunioes/$id/',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/hoje': typeof AuthenticatedHojeRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
+  '/api/public/process-queue': typeof ApiPublicProcessQueueRoute
   '/reunioes/': typeof AuthenticatedReunioesIndexRoute
   '/reunioes/$id/gravar': typeof AuthenticatedReunioesIdGravarRoute
   '/reunioes/$id/': typeof AuthenticatedReunioesIdIndexRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/hoje': typeof AuthenticatedHojeRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
+  '/api/public/process-queue': typeof ApiPublicProcessQueueRoute
   '/reunioes': typeof AuthenticatedReunioesIndexRoute
   '/reunioes/$id/gravar': typeof AuthenticatedReunioesIdGravarRoute
   '/reunioes/$id': typeof AuthenticatedReunioesIdIndexRoute
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/_authenticated/hoje': typeof AuthenticatedHojeRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/_authenticated/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
+  '/api/public/process-queue': typeof ApiPublicProcessQueueRoute
   '/_authenticated/reunioes/': typeof AuthenticatedReunioesIndexRoute
   '/_authenticated/reunioes/$id/gravar': typeof AuthenticatedReunioesIdGravarRoute
   '/_authenticated/reunioes/$id/': typeof AuthenticatedReunioesIdIndexRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/hoje'
     | '/tarefas'
     | '/reunioes/nova'
+    | '/api/public/process-queue'
     | '/reunioes/'
     | '/reunioes/$id/gravar'
     | '/reunioes/$id/'
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/hoje'
     | '/tarefas'
     | '/reunioes/nova'
+    | '/api/public/process-queue'
     | '/reunioes'
     | '/reunioes/$id/gravar'
     | '/reunioes/$id'
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/_authenticated/hoje'
     | '/_authenticated/tarefas'
     | '/_authenticated/reunioes/nova'
+    | '/api/public/process-queue'
     | '/_authenticated/reunioes/'
     | '/_authenticated/reunioes/$id/gravar'
     | '/_authenticated/reunioes/$id/'
@@ -162,6 +174,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicProcessQueueRoute: typeof ApiPublicProcessQueueRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -229,6 +242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReunioesNovaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/process-queue': {
+      id: '/api/public/process-queue'
+      path: '/api/public/process-queue'
+      fullPath: '/api/public/process-queue'
+      preLoaderRoute: typeof ApiPublicProcessQueueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/reunioes/$id/': {
       id: '/_authenticated/reunioes/$id/'
       path: '/reunioes/$id'
@@ -275,6 +295,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicProcessQueueRoute: ApiPublicProcessQueueRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
