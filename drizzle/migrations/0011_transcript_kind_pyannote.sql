@@ -1,0 +1,2 @@
+ALTER TABLE public.transcripts DROP CONSTRAINT IF EXISTS transcripts_kind_check;
+ALTER TABLE public.transcripts ADD CONSTRAINT transcripts_kind_check CHECK (kind IN ('raw_openai','raw_deepgram','raw_pyannote','canonical'));
