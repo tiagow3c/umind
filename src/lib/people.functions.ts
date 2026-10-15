@@ -34,3 +34,28 @@ export const fetchInstagramAvatar = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Builds a pyannote voiceprint from a short clean clip of one speaker and stores it on the person. */
+export const enrollVoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ speakerId: z.string().uuid(), personId: z.string().uuid(), wavBase64: z.string().min(100).max(3_000_000) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { hasPyannote, uploadMedia, submitVoiceprint, waitJob } = await import("./pyannote.server");
+    if (!hasPyannote()) return { ok: false, reason: "not_configured" };
+    const sb = context.supabase;
+    const { data: sp } = await sb.from("speakers").select("id, workspace_id").eq("id", data.speakerId).single();
+    const { data: p } = await sb.from("people").select("id, workspace_id").eq("id", data.personId).single();
+    if (!sp || !p || sp.workspace_id !== p.workspace_id) throw new Error("not_found");
+    const bin = Uint8Array.from(atob(data.wavBase64), (c) => c.charCodeAt(0));
+    const media = await uploadMedia(`vp-${data.speakerId}-${Date.now()}.wav`, new Blob([bin], { type: "audio/wav" }));
+    const job = await waitJob(await submitVoiceprint(media), 50_000);
+    const vp = job?.status === "succeeded" ? (job.output?.["voiceprint"] as string | undefined) : undefined;
+    if (!vp) return { ok: false, reason: job ? "failed" : "timeout" };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("person_voiceprints").upsert(
+      { workspace_id: p.workspace_id, person_id: p.id, speaker_id: sp.id, voiceprint: vp },
+      { onConflict: "person_id,speaker_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
