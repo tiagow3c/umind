@@ -57,7 +57,7 @@ function AppLayout() {
             <Link to="/reunioes/nova">Nova gravação</Link>
           </Button>
         </div>
-        <div className="hidden border-t p-3 md:mt-auto md:block">
+        <div className="hidden p-3 md:mt-auto md:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-sidebar-accent">
@@ -66,7 +66,6 @@ function AppLayout() {
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm text-sidebar-foreground">{displayName}</span>
-                  <span className="block truncate text-xs text-muted-foreground">Minha conta</span>
                 </span>
               </button>
             </DropdownMenuTrigger>
