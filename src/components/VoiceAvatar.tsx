@@ -1,5 +1,5 @@
 import { Play, Square } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { toast } from "sonner";
 import { loadPlayableAudio } from "@/lib/review";
 import { cn } from "@/lib/utils";
@@ -11,9 +11,12 @@ const bus = new EventTarget();
 
 const R = 42; const C = 2 * Math.PI * R;
 
-export function VoiceAvatar({ id, name, rec, sample, tone, suggested }: {
+export type VoiceAvatarHandle = { play: () => void };
+
+export const VoiceAvatar = forwardRef<VoiceAvatarHandle, {
   id: string; name: string; rec: Rec | undefined; sample: { start: number; end: number } | null; tone: "accent" | "neutral"; suggested: boolean;
-}) {
+  onPlay?: () => void;
+}>(function VoiceAvatar({ id, name, rec, sample, tone, suggested, onPlay }, ref) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const raf = useRef(0);
   const [state, setState] = useState<"idle" | "loading" | "playing">("idle");
@@ -34,6 +37,7 @@ export function VoiceAvatar({ id, name, rec, sample, tone, suggested }: {
   async function play() {
     if (state !== "idle") return stop();
     if (!rec || !sample) return;
+    onPlay?.();
     bus.dispatchEvent(new CustomEvent("play", { detail: id }));
     setState("loading");
     try {
@@ -54,6 +58,8 @@ export function VoiceAvatar({ id, name, rec, sample, tone, suggested }: {
       raf.current = requestAnimationFrame(tick);
     } catch { stop(); toast.error("Não foi possível tocar este trecho."); }
   }
+
+  useImperativeHandle(ref, () => ({ play }));
 
   const known = !!name;
   const active = state !== "idle";
@@ -82,7 +88,7 @@ export function VoiceAvatar({ id, name, rec, sample, tone, suggested }: {
       </span>
     </button>
   );
-}
+});
 
 /** Pick a representative sample per speaker: their longest utterance, capped at 10 s. */
 export function pickSamples(segments: { speaker_id: string | null; start_ms: number; end_ms: number }[]) {
