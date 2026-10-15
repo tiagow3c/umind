@@ -82,11 +82,7 @@ async function readSSE(res: Response, onEvent: (type: string, data: Record<strin
   }
 }
 
-async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
-  const audio = await loadAudio(admin, recordingId);
-  if (audio.size > MAX_TRANSCRIBE_BYTES) return { skipped: "too_large", bytes: audio.size };
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) throw new StageError("missing key", "config", false);
+async function transcribeChunk(audio: Blob, key: string) {
   const form = new FormData();
   form.append("model", TRANSCRIBE_MODEL);
   form.append("file", new File([audio], "audio.webm", { type: audio.type }));
@@ -101,10 +97,24 @@ async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id:
     if (type === "transcript.text.delta") deltas += String(d["delta"] ?? "");
     if (type === "transcript.text.done") text = String(d["text"] ?? "");
   });
-  text = text || deltas;
-  if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
+  return text || deltas;
+}
+
+async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
+  const { parts, type } = await loadParts(admin, recordingId);
+  const chunks = planChunks(parts);
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) throw new StageError("missing key", "config", false);
+  const texts: string[] = [];
+  for (const chunk of chunks) {
+    const audio = await downloadParts(admin, chunk, type);
+    if (audio.size > MAX_TRANSCRIBE_BYTES) throw new StageError("chunk too large", "too_large", false);
+    texts.push(await transcribeChunk(audio, key));
+    if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
+  }
+  const text = joinChunkTexts(texts);
   await admin.from("transcripts").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: "openai", kind: "raw_openai", raw_text: text });
-  return { chars: text.length };
+  return { chars: text.length, chunks: chunks.length };
 }
 
 async function stageDiarize(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
