@@ -31,6 +31,9 @@ const NAV = [
 function AppLayout() {
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
+  const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
+  const displayName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Minha conta";
+  const initials = displayName.slice(0, 2).toUpperCase();
   return (
     <div className="min-h-screen md:grid md:grid-cols-[220px_1fr]">
       <aside className="border-b bg-sidebar md:min-h-screen md:border-b-0 md:border-r">
