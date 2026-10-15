@@ -165,6 +165,7 @@ export async function assignSpeakerPerson(speakerId: string, target: { personId:
     const { data: p, error: e } = await supabase.from("people").insert({ workspace_id: sp.workspace_id, display_name: name, instagram: parsed.instagram }).select("id").single();
     if (e || !p) throw new Error(e?.message ?? "person");
     personId = p.id;
+    if (parsed.instagram) await fetchInstagramAvatar({ data: { personId } }).catch(() => null);
   }
   if (sp.participant_id) {
     const r = await supabase.from("participants").update({ display_name: name, person_id: personId, person_confirmed: true }).eq("id", sp.participant_id);
@@ -224,4 +225,5 @@ export async function setPersonInstagram(id: string, handle: string) {
   if (h && !/^[a-z0-9._]{1,30}$/.test(h)) throw new Error("invalid");
   const { error } = await supabase.from("people").update({ instagram: h || null }).eq("id", id);
   if (error) throw new Error(error.message);
+  if (h) await fetchInstagramAvatar({ data: { personId: id } }).catch(() => null);
 }
