@@ -498,6 +498,11 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
       if (job?.paused) await setJobPaused(admin, false, null);
     } catch (e) {
       const err = e instanceof StageError ? e : new StageError(e instanceof Error ? e.message : "erro", "internal", true);
+      if (err.code === "pending") {
+        // external job still running: not a failure, poll again shortly without spending an attempt
+        await admin.from("processing_runs").update({ status: "retry_wait", attempt: run.attempt, error_code: null, lease_until: new Date(Date.now() + 5000).toISOString() }).eq("id", run.id);
+        return summarize();
+      }
       const attempt = run.attempt + 1;
       const terminal = !err.retryable || attempt >= MAX_ATTEMPTS || err.code === "credits" || err.code === "forbidden";
       const backoff = Math.min(60_000, 2000 * 2 ** attempt) + Math.random() * 1000;

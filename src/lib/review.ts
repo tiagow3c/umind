@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { parseNameHandle } from "@/lib/people-rules";
-import { fetchInstagramAvatar } from "@/lib/people.functions";
+import { enrollVoice, fetchInstagramAvatar } from "@/lib/people.functions";
 
 export const transcriptQuery = (transcriptId: string | null) =>
   queryOptions({
@@ -178,6 +178,47 @@ export async function assignSpeakerPerson(speakerId: string, target: { personId:
     await mapSpeaker(speakerId, part.id);
   }
   await supabase.rpc("bump_people_version", { _meeting: sp.meeting_id });
+  void enrollSpeakerVoice(speakerId, personId).catch(() => null);
+}
+
+/** Encode mono 16 kHz PCM WAV from a slice of a decoded buffer. */
+function toWav(buf: AudioBuffer, startS: number, endS: number) {
+  const rate = 16000;
+  const src = buf.getChannelData(0);
+  const from = Math.floor(startS * buf.sampleRate), to = Math.min(src.length, Math.floor(endS * buf.sampleRate));
+  const n = Math.max(0, Math.floor(((to - from) * rate) / buf.sampleRate));
+  const out = new DataView(new ArrayBuffer(44 + n * 2));
+  const w = (o: number, t: string) => { for (let i = 0; i < t.length; i++) out.setUint8(o + i, t.charCodeAt(i)); };
+  w(0, "RIFF"); out.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt ");
+  out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true); out.setUint32(24, rate, true);
+  out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true); w(36, "data"); out.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) {
+    const v = Math.max(-1, Math.min(1, src[from + Math.floor((i * buf.sampleRate) / rate)] ?? 0));
+    out.setInt16(44 + i * 2, v * 0x7fff, true);
+  }
+  let bin = ""; const bytes = new Uint8Array(out.buffer);
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/** Save the voice of a just-named speaker so future meetings recognise this person automatically. */
+export async function enrollSpeakerVoice(speakerId: string, personId: string) {
+  const { data: sp } = await supabase.from("speakers").select("meeting_id").eq("id", speakerId).single();
+  if (!sp) return;
+  const { data: m } = await supabase.from("meetings").select("current_transcript_id").eq("id", sp.meeting_id).single();
+  if (!m?.current_transcript_id) return;
+  const { data: segs } = await supabase.from("transcript_segments").select("speaker_id, start_ms, end_ms, overlap").eq("transcript_id", m.current_transcript_id);
+  const { pickSamples } = await import("@/components/VoiceAvatar");
+  const sample = pickSamples((segs ?? []).map((x) => ({ ...x, start_ms: Number(x.start_ms), end_ms: Number(x.end_ms) }))).get(speakerId);
+  if (!sample || sample.end - sample.start < 2000) return;
+  const { data: rec } = await supabase.from("recordings").select("id, codec, recording_parts(object_key, sequence)").eq("meeting_id", sp.meeting_id).not("finalized_at", "is", null).order("created_at", { ascending: false }).limit(1).single();
+  if (!rec) return;
+  const url = await loadPlayableAudio(rec.id, rec.recording_parts, (rec.codec ?? "audio/webm").split(";")[0]!);
+  const ctx = new AudioContext();
+  try {
+    const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
+    await enrollVoice({ data: { speakerId, personId, wavBase64: toWav(buf, sample.start / 1000, sample.end / 1000) } });
+  } finally { void ctx.close(); }
 }
 
 export async function confirmParticipant(participantId: string) {
@@ -185,6 +226,9 @@ export async function confirmParticipant(participantId: string) {
   if (e0 || !p) throw new Error(e0?.message ?? "participant");
   const { error } = await supabase.from("participants").update({ person_confirmed: true }).eq("id", participantId);
   if (error) throw new Error(error.message);
+  const { data: part } = await supabase.from("participants").select("person_id, speakers(id)").eq("id", participantId).single();
+  const spId = (part?.speakers as unknown as { id: string }[] | null)?.[0]?.id;
+  if (part?.person_id && spId) void enrollSpeakerVoice(spId, part.person_id).catch(() => null);
   await supabase.rpc("bump_people_version", { _meeting: p.meeting_id });
 }
 
