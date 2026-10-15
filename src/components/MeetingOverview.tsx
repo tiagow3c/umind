@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { analysisQuery, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
+import { analysisQuery, assignSpeakerPerson, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { Button } from "@/components/ui/button";
 import { PersonPicker } from "@/components/PersonPicker";
-import { VoiceAvatar, pickSamples } from "@/components/VoiceAvatar";
+import { VoiceAvatar, pickSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
 
 type Meeting = {
   id: string;
@@ -24,10 +25,25 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
   const { data: tr } = useQuery(transcriptQuery(meeting.current_transcript_id));
   const samples = pickSamples(tr?.segments ?? []);
   const qc = useQueryClient();
+  const avatarRefs = useRef(new Map<string, VoiceAvatarHandle>());
+  const inputRefs = useRef(new Map<string, HTMLInputElement>());
 
   const act = async (id: string, status: "accepted" | "done") => {
     try { await updateTask(id, { status }); qc.invalidateQueries({ queryKey: ["tasks"] }); }
     catch { toast.error("Não foi possível atualizar."); }
+  };
+
+  const nameOf = (speakerId: string) =>
+    meeting.participants.find((p) => p.id === speakers?.find((s) => s.id === speakerId)?.participant_id)?.display_name ?? "";
+
+  /** Focus the name field of the next unnamed speaker and play their voice. */
+  const advance = (afterId: string) => {
+    const next = (speakers ?? []).find((s) => s.id !== afterId && !nameOf(s.id));
+    if (!next) return;
+    requestAnimationFrame(() => {
+      avatarRefs.current.get(next.id)?.play();
+      inputRefs.current.get(next.id)?.focus();
+    });
   };
 
   return (
@@ -47,12 +63,29 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
               const suggested = !!part && !part.person_confirmed && s.mapping_source === "ai";
               return (
                 <li key={s.id + name} className="flex w-28 flex-col items-center gap-2">
-                  <VoiceAvatar id={s.id} name={name} rec={meeting.recordings[0]} sample={samples.get(s.id) ?? null} tone={i === 0 ? "accent" : "neutral"} suggested={suggested} />
-                  <PersonPicker speakerId={s.id} participantId={part?.id ?? null} suggested={suggested}>
-                    <button className="max-w-28 truncate text-center text-sm underline underline-offset-4 hover:text-accent">
-                      {name || <span className="text-muted-foreground">Quem é?</span>}
-                    </button>
-                  </PersonPicker>
+                  <VoiceAvatar
+                    ref={(h) => { if (h) avatarRefs.current.set(s.id, h); else avatarRefs.current.delete(s.id); }}
+                    id={s.id} name={name} rec={meeting.recordings[0]} sample={samples.get(s.id) ?? null}
+                    tone={i === 0 ? "accent" : "neutral"} suggested={suggested}
+                    onPlay={() => { if (!name) inputRefs.current.get(s.id)?.focus(); }}
+                  />
+                  {name ? (
+                    <PersonPicker speakerId={s.id} participantId={part?.id ?? null} suggested={suggested}>
+                      <button className="max-w-28 truncate text-center text-sm underline underline-offset-4 hover:text-accent">{name}</button>
+                    </PersonPicker>
+                  ) : (
+                    <NameField
+                      ref={(el) => { if (el) inputRefs.current.set(s.id, el); else inputRefs.current.delete(s.id); }}
+                      onSave={async (value) => {
+                        try {
+                          await assignSpeakerPerson(s.id, { newName: value });
+                          qc.invalidateQueries();
+                          advance(s.id);
+                        } catch { toast.error("Não foi possível salvar."); }
+                      }}
+                      onSkip={() => advance(s.id)}
+                    />
+                  )}
                   {suggested && <span className="-mt-1 text-[11px] text-muted-foreground">sugerido</span>}
                 </li>
               );
@@ -84,3 +117,22 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
     </div>
   );
 }
+
+/** Inline name input that replaces the "Quem é?" label. Tab/Enter saves and moves on. */
+import { forwardRef } from "react";
+const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => void; onSkip: () => void }>(function NameField({ onSave, onSkip }, ref) {
+  const [v, setV] = useState("");
+  return (
+    <input
+      ref={ref} value={v} onChange={(e) => setV(e.target.value)} placeholder="Quem é?"
+      aria-label="Nome desta pessoa"
+      onKeyDown={(e) => {
+        if (e.key === "Tab" || e.key === "Enter") {
+          e.preventDefault();
+          if (v.trim()) onSave(v.trim()); else onSkip();
+        }
+      }}
+      className="w-28 border-b border-transparent bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground focus:border-accent"
+    />
+  );
+});
