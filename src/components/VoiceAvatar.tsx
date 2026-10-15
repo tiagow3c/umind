@@ -15,8 +15,10 @@ export type VoiceAvatarHandle = { play: () => void };
 
 export const VoiceAvatar = forwardRef<VoiceAvatarHandle, {
   id: string; name: string; rec: Rec | undefined; sample: { start: number; end: number } | null; tone: "accent" | "neutral"; suggested: boolean;
-  onPlay?: () => void;
-}>(function VoiceAvatar({ id, name, rec, sample, tone, suggested, onPlay }, ref) {
+  onPlay?: () => void; src?: string | null;
+}>(function VoiceAvatar({ id, name, rec, sample, tone, suggested, onPlay, src }, ref) {
+  const [imgOk, setImgOk] = useState(true);
+  useEffect(() => setImgOk(true), [src]);
   const audio = useRef<HTMLAudioElement | null>(null);
   const raf = useRef(0);
   const [state, setState] = useState<"idle" | "loading" | "playing">("idle");
@@ -77,10 +79,11 @@ export const VoiceAvatar = forwardRef<VoiceAvatarHandle, {
       </svg>
       <span className={cn("relative flex size-20 items-center justify-center overflow-hidden rounded-full text-2xl font-medium transition-transform group-hover:scale-[1.03]",
         known ? (tone === "accent" ? "bg-accent text-accent-foreground" : "bg-secondary text-foreground") : "bg-muted text-muted-foreground")}>
-        {known && <span className={cn("transition-opacity", active ? "opacity-0" : "group-hover:opacity-0")}>{name.slice(0, 1).toUpperCase()}</span>}
+        {known && src && imgOk && <img src={src} alt="" onError={() => setImgOk(false)} className={cn("absolute inset-0 size-full object-cover transition-[filter]", active ? "brightness-50" : "group-hover:brightness-50")} />}
+        {known && !(src && imgOk) && <span className={cn("transition-opacity", active ? "opacity-0" : "group-hover:opacity-0")}>{name.slice(0, 1).toUpperCase()}</span>}
         {sample && (
           <span className={cn("absolute inset-0 flex items-center justify-center transition-opacity",
-            known ? (active ? "opacity-100" : "opacity-0 group-hover:opacity-100") : "opacity-100")}>
+            known ? (active ? "opacity-100" : "opacity-0 group-hover:opacity-100") : "opacity-100", known && src && imgOk && "text-background")}>
             {active ? <Square className="size-5 fill-current" /> : <Play className="ml-0.5 size-6 fill-current" />}
           </span>
         )}
