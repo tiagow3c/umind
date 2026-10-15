@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { analysisQuery, assignSpeakerPerson, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { Button } from "@/components/ui/button";
 import { PersonPicker } from "@/components/PersonPicker";
-import { avatarSrc } from "@/lib/people-rules";
+import { personAvatarSrc } from "@/lib/default-avatars";
 import { VoiceAvatar, pickSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
 
 type Meeting = {
@@ -70,7 +70,7 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
                   <VoiceAvatar
                     ref={(h) => { if (h) avatarRefs.current.set(s.id, h); else avatarRefs.current.delete(s.id); }}
                     id={s.id} name={name} rec={meeting.recordings[0]} sample={samples.get(s.id) ?? null}
-                    tone={i === 0 ? "accent" : "neutral"} suggested={suggested} src={avatarSrc(person)}
+                    tone={i === 0 ? "accent" : "neutral"} suggested={suggested} src={person ? personAvatarSrc(person) : null}
                     onPlay={() => { if (!name) inputRefs.current.get(s.id)?.focus(); }}
                   />
                   {person && (
