@@ -417,4 +417,6 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
 export async function retryMeeting(admin: Admin, meetingId: string) {
   await admin.from("processing_runs").update({ status: "queued", attempt: 0, lease_until: null, error_code: null }).eq("meeting_id", meetingId).eq("status", "failed");
   await admin.from("meetings").update({ status: "processing" }).eq("id", meetingId).in("status", ["failed", "review_ready", "completed"]);
+  // explicit user action also resumes a paused background processor
+  await setJobPaused(admin, false, null);
 }
