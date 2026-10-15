@@ -101,7 +101,37 @@ async function transcribeChunk(audio: Blob, key: string) {
   return text || deltas;
 }
 
+/** Transcribe a standalone live window recorded in parallel with the main recording. */
+export async function transcribeLiveWindow(
+  admin: Admin,
+  w: { workspaceId: string; meetingId: string; recordingId: string; sequence: number; startMs: number; endMs: number; audio: Blob },
+) {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) throw new Error("config");
+  const text = w.audio.size > 1000 ? (await transcribeChunk(w.audio, key)).trim() : "";
+  await admin.from("live_transcript_chunks").upsert(
+    { workspace_id: w.workspaceId, meeting_id: w.meetingId, recording_id: w.recordingId, sequence: w.sequence, start_ms: w.startMs, end_ms: w.endMs, text },
+    { onConflict: "recording_id,sequence" },
+  );
+  return { text };
+}
+
+/** Live windows reuse only when they are contiguous from 1 and reach close to the recording end. */
+async function liveTextIfComplete(admin: Admin, recordingId: string) {
+  const { data: rec } = await admin.from("recordings").select("duration_ms").eq("id", recordingId).single();
+  const { data: rows } = await admin.from("live_transcript_chunks").select("sequence, end_ms, text").eq("recording_id", recordingId).order("sequence");
+  if (!rows?.length || !rec?.duration_ms) return null;
+  if (rows.some((r, i) => r.sequence !== i + 1)) return null;
+  if (Number(rows[rows.length - 1]!.end_ms) < Number(rec.duration_ms) - 5000) return null;
+  return joinChunkTexts(rows.map((r) => r.text));
+}
+
 async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
+  const live = await liveTextIfComplete(admin, recordingId);
+  if (live !== null) {
+    await admin.from("transcripts").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: "openai", kind: "raw_openai", raw_text: live });
+    return { chars: live.length, chunks: 0, live: true };
+  }
   const { parts, type } = await loadParts(admin, recordingId);
   const chunks = planChunks(parts);
   const key = process.env["LOVABLE_API_KEY"];

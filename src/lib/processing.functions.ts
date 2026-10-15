@@ -62,3 +62,25 @@ export const correctSegment = createServerFn({ method: "POST" })
     await sb.from("analyses").update({ stale: true }).eq("meeting_id", m.id);
     return { transcriptId: tr.id };
   });
+
+/** Transcribe a live window while the recording is still going on. */
+export const transcribeLive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      meetingId: z.string().uuid(), recordingId: z.string().uuid(), sequence: z.number().int().min(1).max(10000),
+      startMs: z.number().min(0), endMs: z.number().min(0), mime: z.string().max(100), audioBase64: z.string().max(8_000_000),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertOwner(context.supabase, data.meetingId, context.userId);
+    const { data: rec } = await context.supabase.from("recordings").select("id, workspace_id, meeting_id").eq("id", data.recordingId).maybeSingle();
+    if (!rec || rec.meeting_id !== data.meetingId) throw new Error("not_found");
+    const bytes = Uint8Array.from(atob(data.audioBase64), (c) => c.charCodeAt(0));
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { transcribeLiveWindow } = await import("./processing.server");
+    return transcribeLiveWindow(supabaseAdmin, {
+      workspaceId: rec.workspace_id, meetingId: data.meetingId, recordingId: data.recordingId, sequence: data.sequence,
+      startMs: Math.round(data.startMs), endMs: Math.round(data.endMs), audio: new Blob([bytes], { type: data.mime.split(";")[0] || "audio/webm" }),
+    });
+  });
