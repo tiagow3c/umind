@@ -43,6 +43,13 @@
       "when": 1792099863655,
       "tag": "0005_cancel_processing",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792100706652,
+      "tag": "0006_live_transcript_chunks",
+      "breakpoints": true
     }
   ]
 }

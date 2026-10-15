@@ -205,6 +205,57 @@ export type Database = {
         }
         Relationships: []
       }
+      live_transcript_chunks: {
+        Row: {
+          created_at: string
+          end_ms: number
+          id: string
+          meeting_id: string
+          recording_id: string
+          sequence: number
+          start_ms: number
+          text: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_ms?: number
+          id?: string
+          meeting_id: string
+          recording_id: string
+          sequence: number
+          start_ms?: number
+          text?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          end_ms?: number
+          id?: string
+          meeting_id?: string
+          recording_id?: string
+          sequence?: number
+          start_ms?: number
+          text?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_transcript_chunks_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_transcript_chunks_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "recordings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meetings: {
         Row: {
           created_at: string
