@@ -431,7 +431,7 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
 
 /** Manual retry: reset failed runs for the current inputs and put the meeting back in processing. */
 export async function retryMeeting(admin: Admin, meetingId: string) {
-  await admin.from("processing_runs").update({ status: "queued", attempt: 0, lease_until: null, error_code: null }).eq("meeting_id", meetingId).eq("status", "failed");
+  await admin.from("processing_runs").update({ status: "queued", attempt: 0, lease_until: null, error_code: null }).eq("meeting_id", meetingId).in("status", ["failed", "cancelled"]);
   await admin.from("meetings").update({ status: "processing" }).eq("id", meetingId).in("status", ["failed", "review_ready", "completed"]);
   // explicit user action also resumes a paused background processor
   await setJobPaused(admin, false, null);

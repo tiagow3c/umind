@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
-import { meetingsQuery } from "@/lib/meetings";
+import { deleteMeeting, meetingsQuery } from "@/lib/meetings";
 import { StatusBadge, formatDuration } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { STATUS_LABEL, type MeetingStatus } from "@/lib/meeting-rules";
@@ -14,6 +16,12 @@ export const Route = createFileRoute("/_authenticated/reunioes/")({
 
 function Lista() {
   const { data } = useSuspenseQuery(meetingsQuery);
+  const qc = useQueryClient();
+  async function remove(id: string, title: string) {
+    if (!confirm(`Excluir "${title}"? O áudio, a transcrição e o resumo serão apagados.`)) return;
+    try { await deleteMeeting(id); toast.success("Reunião excluída."); qc.invalidateQueries({ queryKey: ["meetings"] }); }
+    catch { toast.error("Não foi possível excluir."); }
+  }
   const [filter, setFilter] = useState<MeetingStatus | "all">("all");
   const statuses = [...new Set(data.map((m) => m.status))];
   const rows = filter === "all" ? data : data.filter((m) => m.status === filter);
@@ -36,13 +44,14 @@ function Lista() {
       ) : (
         <ul className="divide-y border-y">
           {rows.map((m) => (
-            <li key={m.id}>
-              <Link to="/reunioes/$id" params={{ id: m.id }} className="grid grid-cols-[1fr_auto] items-center gap-4 py-4 hover:bg-secondary/50 md:grid-cols-[1fr_120px_80px_auto]">
+            <li key={m.id} className="flex items-center gap-2">
+              <Link to="/reunioes/$id" params={{ id: m.id }} className="grid flex-1 grid-cols-[1fr_auto] items-center gap-4 py-4 hover:bg-secondary/50 md:grid-cols-[1fr_120px_80px_auto]">
                 <span className="font-medium">{m.title}</span>
                 <span className="hidden text-sm text-muted-foreground md:block">{new Date(m.created_at).toLocaleDateString("pt-BR")}</span>
                 <span className="hidden text-sm tabular-nums text-muted-foreground md:block">{formatDuration(m.recordings?.[0]?.duration_ms)}</span>
                 <StatusBadge status={m.status} />
               </Link>
+              <Button variant="ghost" size="icon" aria-label={`Excluir ${m.title}`} onClick={() => remove(m.id, m.title)}><Trash2 className="h-4 w-4" /></Button>
             </li>
           ))}
         </ul>
