@@ -13,7 +13,7 @@ export function defaultAvatarFor(id: string | null | undefined): string {
   let h = 0;
   const key = id ?? "";
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return DEFAULT_AVATARS[h % DEFAULT_AVATARS.length];
+  return DEFAULT_AVATARS[h % DEFAULT_AVATARS.length]!;
 }
 
 /** Foto enviada ou do Instagram; se não houver, uma ilustração padrão. */
