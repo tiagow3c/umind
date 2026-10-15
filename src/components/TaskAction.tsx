@@ -1,0 +1,106 @@
+import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+
+export type TaskDraft = { kind: "email" | "calendar"; to_name: string | null; subject: string | null; body: string | null; event_title: string | null; event_start: string | null; event_minutes: number | null };
+type Task = { id: string; title: string; owner_text: string | null; due_text: string | null; due_date: string | null; status: string; action?: unknown };
+
+function GmailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
+      <path fill="#4285F4" d="M1.5 6.2v12.1c0 .8.7 1.5 1.5 1.5h3.4V11L12 15.2V12L3.6 5.1A1.4 1.4 0 0 0 1.5 6.2Z" />
+      <path fill="#34A853" d="M17.6 19.8H21c.8 0 1.5-.7 1.5-1.5V6.2a1.4 1.4 0 0 0-2.1-1.1L12 12v3.2l5.6-4.2Z" />
+      <path fill="#EA4335" d="M6.4 11V5.6L12 9.8l5.6-4.2V11L12 15.2Z" />
+      <path fill="#FBBC04" d="M17.6 5.6V11l4.9-3.7V6.2c0-1.2-1.4-1.9-2.4-1.2Z" />
+      <path fill="#C5221F" d="M1.5 6.2v1.1L6.4 11V5.6L3.6 5.1C2.6 4.4 1.5 5 1.5 6.2Z" />
+    </svg>
+  );
+}
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
+      <rect x="3" y="4" width="18" height="17" rx="2" fill="#fff" stroke="#4285F4" strokeWidth="2" />
+      <rect x="3" y="4" width="18" height="5" rx="2" fill="#4285F4" />
+      <text x="12" y="18.5" textAnchor="middle" fontSize="8" fontWeight="700" fill="#4285F4">31</text>
+    </svg>
+  );
+}
+
+/** Draft from the analysis; older tasks without one get a simple draft from the title. */
+export function draftFor(t: Task): TaskDraft {
+  const a = t.action as TaskDraft | null | undefined;
+  if (a && (a.kind === "email" || a.kind === "calendar")) return a;
+  const isCal = /\b(marcar|agendar|reuni[aã]o|ligar|liga[cç][aã]o|call)\b/i.test(t.title);
+  return isCal
+    ? { kind: "calendar", to_name: null, subject: null, body: t.title, event_title: t.title, event_start: null, event_minutes: 30 }
+    : { kind: "email", to_name: null, subject: t.title, body: `Olá,\n\n${t.title}.\n\nAbraço,\n${t.owner_text ?? ""}`.trim(), event_title: null, event_start: null, event_minutes: null };
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const gcal = (d: Date) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+
+function startOf(d: TaskDraft, due: string | null) {
+  if (d.event_start && !Number.isNaN(Date.parse(d.event_start))) return new Date(d.event_start);
+  const base = due ? new Date(due + "T09:00:00") : new Date(Date.now() + 86_400_000);
+  if (!due) base.setHours(9, 0, 0, 0);
+  return base;
+}
+
+export function gmailUrl(d: TaskDraft) {
+  return `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(d.subject ?? "")}&body=${encodeURIComponent(d.body ?? "")}`;
+}
+export function calendarUrl(d: TaskDraft, due: string | null) {
+  const s = startOf(d, due);
+  const e = new Date(s.getTime() + (d.event_minutes ?? 30) * 60_000);
+  const title = d.kind === "email" ? `Enviar e-mail: ${d.subject ?? ""}` : d.event_title ?? "";
+  const details = d.kind === "email" ? `Assunto: ${d.subject ?? ""}\n\n${d.body ?? ""}\n\nEnviar: ${gmailUrl(d)}` : d.body ?? "";
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${gcal(s)}/${gcal(e)}&details=${encodeURIComponent(details)}`;
+}
+
+export function TaskAction({ task, onDone }: { task: Task; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [d, setD] = useState<TaskDraft>(() => draftFor(task));
+  const set = (k: keyof TaskDraft) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value });
+  const go = (url: string) => { window.open(url, "_blank", "noopener"); onDone(); };
+  const meta = [task.owner_text && `Responsável: ${task.owner_text}`, task.due_date ? `Prazo: ${new Date(task.due_date + "T12:00:00").toLocaleDateString("pt-BR")}` : task.due_text].filter(Boolean).join(" · ") || "Mencionada na conversa";
+  const done = task.status === "done";
+
+  return (
+    <li className="py-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <button onClick={() => setOpen(!open)} className="group flex min-w-0 max-w-xl items-start gap-2 text-left" aria-expanded={open}>
+          <ChevronRight className={cn("mt-1.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground", open && "rotate-90")} />
+          <span className="min-w-0">
+            <span className={cn("block text-lg font-medium", done && "text-muted-foreground line-through")}>{task.title}</span>
+            <span className="mt-1 block text-sm text-muted-foreground">{meta}</span>
+          </span>
+        </button>
+        {done ? <span className="text-sm text-muted-foreground">Feita</span> : (
+          <div className="flex gap-2">
+            {d.kind === "email" ? (
+              <>
+                <button onClick={() => go(gmailUrl(d))} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-secondary"><GmailIcon /> Enviar</button>
+                <button onClick={() => go(calendarUrl(d, task.due_date))} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm hover:bg-secondary"><CalendarIcon /> Agendar</button>
+              </>
+            ) : (
+              <button onClick={() => go(calendarUrl(d, task.due_date))} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-secondary"><CalendarIcon /> Agendar</button>
+            )}
+          </div>
+        )}
+      </div>
+      {open && (
+        <div className="ml-6 mt-4 space-y-2 rounded-lg border bg-background p-4 text-sm">
+          {d.kind === "email" ? (
+            <>
+              {d.to_name && <p className="text-muted-foreground">Para: {d.to_name}</p>}
+              <input value={d.subject ?? ""} onChange={set("subject")} aria-label="Assunto" className="w-full border-b bg-transparent py-1 font-medium outline-none focus:border-accent" />
+            </>
+          ) : (
+            <input value={d.event_title ?? ""} onChange={set("event_title")} aria-label="Título do evento" className="w-full border-b bg-transparent py-1 font-medium outline-none focus:border-accent" />
+          )}
+          <textarea value={d.body ?? ""} onChange={set("body")} rows={8} aria-label="Conteúdo" className="w-full resize-y bg-transparent py-1 leading-relaxed outline-none" />
+        </div>
+      )}
+    </li>
+  );
+}
