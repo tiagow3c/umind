@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { alignTranscripts, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
+import { AUTO_TITLE } from "./meeting-rules";
 import { joinChunkTexts, planChunks, MAX_TRANSCRIBE_BYTES } from "./chunking-rules";
 
 type Admin = SupabaseClient<Database>;
@@ -170,8 +171,10 @@ const evidence = { type: "array", items: { type: "integer" } };
 const itemSchema = { type: "object", additionalProperties: false, required: ["text", "evidence"], properties: { text: { type: "string" }, evidence } };
 const ANALYSIS_JSON_SCHEMA = {
   type: "object", additionalProperties: false,
-  required: ["summary", "topics", "decisions", "proposals", "questions", "tasks"],
+  required: ["title", "speakers", "summary", "topics", "decisions", "proposals", "questions", "tasks"],
   properties: {
+    title: { type: "string" },
+    speakers: { type: "array", items: { type: "object", additionalProperties: false, required: ["label", "name"], properties: { label: { type: "string" }, name: { type: ["string", "null"] } } } },
     summary: { type: "string" },
     topics: { type: "array", items: itemSchema },
     decisions: { type: "array", items: itemSchema },
@@ -192,7 +195,9 @@ Regras:
 - due_date: interprete o prazo em AAAA-MM-DD usando a DATA DA REUNIÃO e o fuso informados; null se ambíguo.
 - priority_suggestion só se explícita; caso contrário null.
 - evidence: índices [n] dos trechos que sustentam o item. Decisões, propostas e tarefas precisam de evidência.
-- Resumo executivo curto (até 5 frases).`;
+- Resumo executivo curto (até 5 frases).
+- title: título curto e específico da reunião (até 8 palavras), sem data.
+- speakers: para cada rótulo "Falante N" presente, o nome da pessoa SOMENTE se ficar claro na conversa (ex.: alguém a chama pelo nome ou ela se apresenta); caso contrário name = null. Nunca adivinhe.`;
 
 async function callAnalysis(prompt: string) {
   const key = process.env["LOVABLE_API_KEY"];
@@ -268,6 +273,17 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
       owner_text: t.owner_text, due_text: t.due_text, due_date: t.due_date, priority_suggestion: t.priority_suggestion,
       evidence_segment_ids: idOf(t.evidence), source_version: ver?.version ?? 1,
     })));
+  }
+  const p2 = parsed as RawAnalysis & { title?: string; speakers?: { label: string; name: string | null }[] };
+  const aiTitle = p2.title?.trim().slice(0, 200);
+  if (aiTitle) await admin.from("meetings").update({ title: aiTitle }).eq("id", meeting.id).eq("title", AUTO_TITLE);
+  const { data: sps } = await admin.from("speakers").select("id, provider_label, participant_id").eq("meeting_id", meeting.id);
+  for (const g of p2.speakers ?? []) {
+    const name = g.name?.trim().slice(0, 120);
+    const sp = sps?.find((x) => x.provider_label === g.label && !x.participant_id);
+    if (!name || !sp) continue;
+    const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: name }).select("id").single();
+    if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: "ai" }).eq("id", sp.id).is("participant_id", null);
   }
   await admin.from("meetings").update({ status: "review_ready" }).eq("id", meeting.id).eq("status", "processing");
   return { analysis_id: an.id, tasks: v.tasks.length, decisions: v.decisions.length };
