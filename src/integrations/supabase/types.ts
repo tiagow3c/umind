@@ -495,6 +495,48 @@ export type Database = {
           },
         ]
       }
+      person_voiceprints: {
+        Row: {
+          created_at: string
+          id: string
+          person_id: string
+          speaker_id: string | null
+          voiceprint: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          person_id: string
+          speaker_id?: string | null
+          voiceprint: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          person_id?: string
+          speaker_id?: string | null
+          voiceprint?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_voiceprints_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_voiceprints_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       processing_runs: {
         Row: {
           attempt: number
