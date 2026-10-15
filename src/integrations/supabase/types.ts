@@ -75,6 +75,7 @@ export type Database = {
         Row: {
           analysis_id: string
           created_at: string
+          embedding: unknown
           evidence_segment_ids: string[]
           id: string
           kind: string
@@ -86,6 +87,7 @@ export type Database = {
         Insert: {
           analysis_id: string
           created_at?: string
+          embedding?: unknown
           evidence_segment_ids?: string[]
           id?: string
           kind: string
@@ -97,6 +99,7 @@ export type Database = {
         Update: {
           analysis_id?: string
           created_at?: string
+          embedding?: unknown
           evidence_segment_ids?: string[]
           id?: string
           kind?: string
@@ -177,6 +180,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      job_state: {
+        Row: {
+          key: string
+          lease_until: string | null
+          pause_reason: string | null
+          paused: boolean
+          updated_at: string
+        }
+        Insert: {
+          key: string
+          lease_until?: string | null
+          pause_reason?: string | null
+          paused?: boolean
+          updated_at?: string
+        }
+        Update: {
+          key?: string
+          lease_until?: string | null
+          pause_reason?: string | null
+          paused?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       meetings: {
         Row: {
@@ -668,6 +695,7 @@ export type Database = {
           alignment_score: number | null
           channel_index: number
           created_at: string
+          embedding: unknown
           end_ms: number
           id: string
           meeting_id: string
@@ -685,6 +713,7 @@ export type Database = {
           alignment_score?: number | null
           channel_index?: number
           created_at?: string
+          embedding?: unknown
           end_ms: number
           id?: string
           meeting_id: string
@@ -702,6 +731,7 @@ export type Database = {
           alignment_score?: number | null
           channel_index?: number
           created_at?: string
+          embedding?: unknown
           end_ms?: number
           id?: string
           meeting_id?: string
@@ -877,6 +907,29 @@ export type Database = {
       is_workspace_member: { Args: { _ws: string }; Returns: boolean }
       meeting_visible: { Args: { _meeting: string }; Returns: boolean }
       recording_visible: { Args: { _rec: string }; Returns: boolean }
+      search_items: {
+        Args: { _limit?: number; _query: unknown; _ws: string }
+        Returns: {
+          item_id: string
+          kind: string
+          meeting_id: string
+          meeting_title: string
+          score: number
+          text: string
+        }[]
+      }
+      search_segments: {
+        Args: { _limit?: number; _query: unknown; _ws: string }
+        Returns: {
+          meeting_id: string
+          meeting_title: string
+          score: number
+          segment_id: string
+          speaker_label: string
+          start_ms: number
+          text: string
+        }[]
+      }
       start_recording: {
         Args: {
           _channels: number
