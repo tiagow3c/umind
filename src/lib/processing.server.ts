@@ -422,7 +422,7 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
 
   for (const stage of STAGES) {
     if (m.status !== "processing" && stage !== "embed") continue;
-    const inputVersion = stage === "analyze" || stage === "embed" ? m.current_transcript_id ?? "none" : rec.manifest_hash ?? rec.id;
+    const inputVersion = stage === "analyze" || stage === "embed" ? `${m.current_transcript_id ?? "none"}:${m.people_version ?? 0}` : rec.manifest_hash ?? rec.id;
     const key = { recording_id: rec.id, stage, input_version: inputVersion, config_version: CONFIG_VERSION };
     let { data: run } = await admin.from("processing_runs").select("*").match(key).maybeSingle();
     if (run?.status === "succeeded") continue;

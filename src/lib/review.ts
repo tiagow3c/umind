@@ -170,16 +170,20 @@ export async function assignSpeakerPerson(speakerId: string, target: { personId:
     const r = await supabase.from("participants").update({ display_name: name, person_id: personId, person_confirmed: true }).eq("id", sp.participant_id);
     if (r.error) throw new Error(r.error.message);
     await supabase.from("speakers").update({ mapping_source: "user" }).eq("id", speakerId);
-    return;
+  } else {
+    const { data: part, error: e2 } = await supabase.from("participants").insert({ workspace_id: sp.workspace_id, meeting_id: sp.meeting_id, display_name: name, person_id: personId, person_confirmed: true }).select("id").single();
+    if (e2 || !part) throw new Error(e2?.message ?? "participant");
+    await mapSpeaker(speakerId, part.id);
   }
-  const { data: part, error: e2 } = await supabase.from("participants").insert({ workspace_id: sp.workspace_id, meeting_id: sp.meeting_id, display_name: name, person_id: personId, person_confirmed: true }).select("id").single();
-  if (e2 || !part) throw new Error(e2?.message ?? "participant");
-  await mapSpeaker(speakerId, part.id);
+  await supabase.rpc("bump_people_version", { _meeting: sp.meeting_id });
 }
 
 export async function confirmParticipant(participantId: string) {
+  const { data: p, error: e0 } = await supabase.from("participants").select("meeting_id").eq("id", participantId).single();
+  if (e0 || !p) throw new Error(e0?.message ?? "participant");
   const { error } = await supabase.from("participants").update({ person_confirmed: true }).eq("id", participantId);
   if (error) throw new Error(error.message);
+  await supabase.rpc("bump_people_version", { _meeting: p.meeting_id });
 }
 
 export async function renamePerson(id: string, name: string) {
