@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
 import { MeetingSkeleton } from "@/components/MeetingSkeleton";
 import { MeetingReview } from "@/components/MeetingReview";
+import { MeetingOverview } from "@/components/MeetingOverview";
+import { useState } from "react";
 import { markCompleted } from "@/lib/review";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -28,6 +30,7 @@ function Detalhe() {
   const { data: m } = useSuspenseQuery(meetingQuery(id));
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [full, setFull] = useState(false);
   if (!m) return <div><h1 className="text-4xl">Reunião indisponível</h1><p className="mt-2 text-muted-foreground">Ela não existe ou foi excluída.</p></div>;
   const rec = m.recordings[0];
   const parts = rec?.recording_parts ?? [];
@@ -42,8 +45,18 @@ function Detalhe() {
     } catch (e) { toast.error(friendlyError(e)); }
   }
 
+  if (m.current_transcript_id && !full && m.status !== "processing" && m.status !== "failed") {
+    return (
+      <div className="space-y-6 py-4">
+        <h1 className="text-5xl">{m.title}</h1>
+        <MeetingOverview meeting={m} onFull={() => setFull(true)} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-10">
+      {full && <button onClick={() => setFull(false)} className="text-sm text-muted-foreground hover:text-foreground">← Voltar à visão geral</button>}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">{new Date(m.created_at).toLocaleString("pt-BR")} · {m.timezone}</p>
