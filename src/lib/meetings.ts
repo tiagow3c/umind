@@ -139,3 +139,7 @@ export function friendlyError(e: unknown) {
   if (msg.includes("no_parts")) return "Nenhum áudio foi enviado.";
   return "Algo deu errado. Tente novamente.";
 }
+
+export async function cancelProcessing(id: string) {
+  ok(await supabase.rpc("cancel_processing", { _meeting: id }));
+}
