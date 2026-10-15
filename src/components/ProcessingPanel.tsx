@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type StageState = { stage: string; status: string; error_code: string | null; attempt: number };
 
-export function ProcessingPanel({ meetingId, status }: { meetingId: string; status: string }) {
+export function ProcessingPanel({ meetingId, status, compact = false }: { meetingId: string; status: string; compact?: boolean }) {
   const advance = useServerFn(advanceProcessing);
   const retry = useServerFn(retryProcessing);
   const qc = useQueryClient();
@@ -34,6 +34,10 @@ export function ProcessingPanel({ meetingId, status }: { meetingId: string; stat
           qc.invalidateQueries();
           return;
         }
+        if (compact) {
+          // Keep the overview live: new speakers, transcript and analysis appear as stages finish.
+          for (const k of [["meeting", meetingId], ["speakers", meetingId], ["analysis", meetingId], ["tasks", "meeting", meetingId]]) qc.invalidateQueries({ queryKey: k });
+        }
       } catch {
         /* keep polling */
       } finally {
@@ -43,7 +47,7 @@ export function ProcessingPanel({ meetingId, status }: { meetingId: string; stat
     };
     void tick();
     return () => { alive = false; clearTimeout(timer); };
-  }, [meetingId, status, advance, qc]);
+  }, [meetingId, status, advance, qc, compact]);
 
   const failed = stages?.find((s) => s.status === "failed");
   const cancelled = status === "failed" && !failed && stages?.some((s) => s.error_code === "user_cancelled");
