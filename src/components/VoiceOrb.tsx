@@ -21,10 +21,8 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p*=2.02;a*=.5;}
 void main(){
  vec2 uv=(gl_FragCoord.xy-.5*r)/min(r.x,r.y);
  float d=length(uv);
- float ang=atan(uv.y,uv.x);
- float wob=(fbm(vec2(ang*1.5,t*.6))-.5)*(.04+.18*lv);
- float rad=.32+.07*lv+.012*sin(t*1.3)*act+wob;
- float mask=smoothstep(rad,rad-.012,d);
+ float rad=.32+.07*lv+.008*sin(t*1.3)*act;
+ float mask=smoothstep(rad,rad-.004,d);
  vec2 q=uv*2.2;
  float f=fbm(q+vec2(t*.15,-t*.1)+fbm(q*1.5-t*.2+lv*2.));
  vec3 col=mix(c1,c2,smoothstep(.25,.8,f+uv.y*.6));
