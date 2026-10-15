@@ -259,8 +259,12 @@ const ANALYSIS_JSON_SCHEMA = {
     proposals: { type: "array", items: itemSchema },
     questions: { type: "array", items: itemSchema },
     tasks: { type: "array", items: { type: "object", additionalProperties: false,
-      required: ["title", "owner_text", "due_text", "due_date", "priority_suggestion", "evidence"],
-      properties: { title: { type: "string" }, owner_text: { type: ["string", "null"] }, due_text: { type: ["string", "null"] }, due_date: { type: ["string", "null"] }, priority_suggestion: { type: ["string", "null"] }, evidence } } },
+      required: ["title", "owner_text", "due_text", "due_date", "priority_suggestion", "evidence", "action"],
+      properties: { action: { type: "object", additionalProperties: false,
+        required: ["kind", "to_name", "subject", "body", "event_title", "event_start", "event_minutes"],
+        properties: { kind: { type: "string", enum: ["email", "calendar", "none"] }, to_name: { type: ["string", "null"] }, subject: { type: ["string", "null"] }, body: { type: ["string", "null"] },
+          event_title: { type: ["string", "null"] }, event_start: { type: ["string", "null"] }, event_minutes: { type: ["integer", "null"] } } },
+        title: { type: "string" }, owner_text: { type: ["string", "null"] }, due_text: { type: ["string", "null"] }, due_date: { type: ["string", "null"] }, priority_suggestion: { type: ["string", "null"] }, evidence } } },
   },
 };
 
@@ -273,6 +277,7 @@ Regras:
 - due_date: interprete o prazo em AAAA-MM-DD usando a DATA DA REUNIÃO e o fuso informados; null se ambíguo.
 - priority_suggestion só se explícita; caso contrário null.
 - evidence: índices [n] dos trechos que sustentam o item. Decisões, propostas e tarefas precisam de evidência.
+- action: rascunho pronto para executar a tarefa. kind="email" quando a tarefa é enviar/escrever mensagem ou e-mail/entrar em contato: preencha to_name, subject e body (e-mail completo, cordial, em pt-BR, assinado pelo responsável, com o conteúdo concreto discutido). kind="calendar" quando é marcar reunião/ligação/lembrete: event_title, event_start (AAAA-MM-DDTHH:MM local, ou null se não dito), event_minutes, e body como descrição. Caso contrário kind="none" e demais campos null.
 - Resumo executivo curto (até 5 frases).
 - title: título curto e específico da reunião (até 8 palavras), sem data.
 - speakers: para cada rótulo "Falante N" presente, o nome da pessoa SOMENTE se ficar claro na conversa (ex.: alguém a chama pelo nome ou ela se apresenta); caso contrário name = null. Nunca adivinhe.`;
@@ -350,6 +355,7 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
       workspace_id: meeting.workspace_id, meeting_id: meeting.id, source_analysis_id: an.id, title: t.title,
       owner_text: t.owner_text, due_text: t.due_text, due_date: t.due_date, priority_suggestion: t.priority_suggestion,
       evidence_segment_ids: idOf(t.evidence), source_version: ver?.version ?? 1,
+      action: (t as { action?: { kind: string } }).action?.kind && (t as { action?: { kind: string } }).action!.kind !== "none" ? (t as { action?: object }).action as never : null,
     })));
   }
   const p2 = parsed as RawAnalysis & { title?: string; speakers?: { label: string; name: string | null }[] };

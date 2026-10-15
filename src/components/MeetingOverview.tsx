@@ -3,7 +3,7 @@ import { Camera, Loader2 } from "lucide-react";
 import { forwardRef, useRef, useState } from "react";
 import { toast } from "sonner";
 import { analysisQuery, assignSpeakerPerson, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
-import { Button } from "@/components/ui/button";
+import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
 import { avatarSrc, suggestCandidates } from "@/lib/people-rules";
 import { fmtTime } from "@/lib/review";
@@ -151,19 +151,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
         <h2 className="text-3xl">Tarefas</h2>
         {!tasks?.length ? (processing ? <div className="mt-6 space-y-3"><div className="h-5 w-2/3 animate-pulse rounded bg-muted" /><div className="h-5 w-1/2 animate-pulse rounded bg-muted [animation-delay:300ms]" /></div> : <p className="mt-6 text-sm text-muted-foreground">Nenhuma tarefa identificada.</p>) : (
           <ul className="mt-6 divide-y">
-            {tasks.map((t) => (
-              <li key={t.id} className="flex flex-wrap items-center justify-between gap-4 py-6">
-                <div className="min-w-0 max-w-xl">
-                  <p className="text-lg font-medium">{t.title}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {[t.owner_text && `Responsável: ${t.owner_text}`, t.due_date ? `Prazo: ${new Date(t.due_date + "T12:00:00").toLocaleDateString("pt-BR")}` : t.due_text].filter(Boolean).join(" · ") || "Mencionada na conversa"}
-                  </p>
-                </div>
-                {t.status === "suggested" && <Button onClick={() => act(t.id, "accepted")}>Aceitar</Button>}
-                {(t.status === "accepted" || t.status === "in_progress") && <Button variant="outline" onClick={() => act(t.id, "done")}>Marcar como feita</Button>}
-                {t.status === "done" && <span className="text-sm text-muted-foreground">Feita</span>}
-              </li>
-            ))}
+            {tasks.map((t) => <TaskAction key={t.id} task={t} onDone={() => act(t.id, "done")} />)}
           </ul>
         )}
       </section>
