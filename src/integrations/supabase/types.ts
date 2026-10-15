@@ -773,6 +773,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          action: Json | null
           approved_at: string | null
           approved_by: string | null
           created_at: string
@@ -792,6 +793,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          action?: Json | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
@@ -811,6 +813,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          action?: Json | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
