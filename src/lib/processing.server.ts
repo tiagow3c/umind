@@ -1,7 +1,8 @@
 import { matchPerson } from "./people-rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
-import { alignTranscripts, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
+import { alignTranscripts, assignSpeakersByTime, parsePyannote, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
+import { PyannoteError, hasPyannote, submitDiarize, uploadMedia, waitJob } from "./pyannote.server";
 import { AUTO_TITLE } from "./meeting-rules";
 import { joinChunkTexts, planChunks, MAX_TRANSCRIBE_BYTES } from "./chunking-rules";
 
@@ -150,6 +151,7 @@ async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id:
 }
 
 async function stageDiarize(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
+  if (hasPyannote()) return stageDiarizePyannote(admin, recordingId, meeting, runId);
   const key = process.env["DEEPGRAM_API_KEY"];
   if (!key) return { skipped: "no_key" };
   const audio = await loadAudio(admin, recordingId);
@@ -165,25 +167,70 @@ async function stageDiarize(admin: Admin, recordingId: string, meeting: { id: st
   return { utterances } as unknown as Record<string, Json>;
 }
 
+/** pyannoteAI: diarization + per-turn transcription, and voice identification against the workspace voiceprints.
+ *  Resumable: the job id is kept on the run so each call only polls. */
+async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
+  try {
+    const { data: run } = await admin.from("processing_runs").select("output").eq("id", runId).single();
+    let jobId = (run?.output as { jobId?: string } | null)?.jobId;
+    if (!jobId) {
+      const audio = await loadAudio(admin, recordingId);
+      const media = await uploadMedia(`${recordingId}-${Date.now()}`, audio);
+      const { data: vps } = await admin.from("person_voiceprints").select("person_id, voiceprint").eq("workspace_id", meeting.workspace_id).order("created_at", { ascending: false }).limit(200);
+      const seen = new Set<string>();
+      const voiceprints = (vps ?? []).filter((v) => !seen.has(v.person_id) && seen.add(v.person_id)).map((v) => ({ label: v.person_id, voiceprint: v.voiceprint }));
+      jobId = await submitDiarize(media, voiceprints);
+      await admin.from("processing_runs").update({ output: { jobId } }).eq("id", runId);
+    }
+    const job = await waitJob(jobId, 40_000);
+    if (!job) throw new StageError("pending", "pending", true);
+    if (job.status !== "succeeded") {
+      await admin.from("processing_runs").update({ output: {} }).eq("id", runId);
+      throw new StageError(`pyannote job ${job.status}`, "pyannote_failed", true);
+    }
+    const { utterances, matches } = parsePyannote(job.output);
+    if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
+    await admin.from("transcripts").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: "pyannote", kind: "raw_pyannote", raw_text: utterances.map((u) => u.text).join(" ") });
+    return { utterances, matches, jobId } as unknown as Record<string, Json>;
+  } catch (e) {
+    if (e instanceof PyannoteError) throw providerError("pyannote", e.status || 500, e.message);
+    throw e;
+  }
+}
+
 async function stageAlign(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string, inputVersion: string) {
   const { data: runs } = await admin.from("processing_runs").select("stage, output")
     .eq("recording_id", recordingId).eq("input_version", inputVersion).eq("config_version", CONFIG_VERSION).in("stage", ["transcribe", "diarize"]);
-  const diar = runs?.find((r) => r.stage === "diarize")?.output as { utterances?: Utterance[] } | null;
+  const diar = runs?.find((r) => r.stage === "diarize")?.output as { utterances?: Utterance[]; matches?: Record<string, string> } | null;
   const { data: raw } = await admin.from("transcripts").select("raw_text").eq("meeting_id", meeting.id).eq("kind", "raw_openai").order("created_at", { ascending: false }).limit(1);
   const { data: rec } = await admin.from("recordings").select("duration_ms").eq("id", recordingId).single();
-  const segments = alignTranscripts({ utterances: diar?.utterances ?? null, openaiText: raw?.[0]?.raw_text ?? null, durationMs: Number(rec?.duration_ms ?? 0) });
+  const turns = diar?.utterances ?? [];
+  const hasText = turns.some((u) => u.text);
+  let segments = alignTranscripts({ utterances: hasText ? turns : null, openaiText: raw?.[0]?.raw_text ?? null, durationMs: Number(rec?.duration_ms ?? 0) });
+  if (!hasText && turns.length) segments = assignSpeakersByTime(segments, turns);
   if (!segments.length) throw new StageError("empty transcript", "no_speech", false);
   if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
 
   const { data: tr, error } = await admin.from("transcripts").insert({
-    workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: diar?.utterances ? "deepgram+openai" : "openai", kind: "canonical", version: 1,
+    workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: turns.length ? "diarized+openai" : "openai", kind: "canonical", version: 1,
   }).select("id").single();
   if (error || !tr) throw new StageError("insert failed", "db", true);
-  const labels = [...new Set(segments.map((s) => s.speaker).filter((s): s is number => s !== null))];
+  const labels = [...new Set(segments.map((s) => s.speaker).filter((s): s is number => s !== null))].sort((a, b) => a - b);
   const speakerIds = new Map<number, string>();
-  for (const l of labels) {
-    const { data: sp } = await admin.from("speakers").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider_label: `Falante ${l + 1}` }).select("id").single();
-    if (sp) speakerIds.set(l, sp.id);
+  const matches = diar?.matches ?? {};
+  const matchedIds = Object.values(matches);
+  const { data: matchedPeople } = matchedIds.length
+    ? await admin.from("people").select("id, display_name").eq("workspace_id", meeting.workspace_id).in("id", matchedIds)
+    : { data: [] as { id: string; display_name: string }[] };
+  for (const [n, l] of labels.entries()) {
+    const { data: sp } = await admin.from("speakers").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider_label: `Falante ${n + 1}` }).select("id").single();
+    if (!sp) continue;
+    speakerIds.set(l, sp.id);
+    const person = matchedPeople?.find((p) => p.id === matches[String(l)]);
+    if (person) {
+      const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: person.display_name, person_id: person.id, person_confirmed: false, source: "voice" }).select("id").single();
+      if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: "voice" }).eq("id", sp.id);
+    }
   }
   const rows = segments.map((s) => ({
     workspace_id: meeting.workspace_id, meeting_id: meeting.id, transcript_id: tr.id, position: s.position,

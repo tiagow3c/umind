@@ -55,3 +55,24 @@ describe("reprocessamento de tarefas", () => {
     expect(r.map((t) => t.id)).toEqual([2]);
   });
 });
+
+import { parsePyannote, assignSpeakersByTime } from "./pipeline-rules";
+describe("pyannote", () => {
+  it("lê falas com texto e falante", () => {
+    const r = parsePyannote({ turnLevelTranscription: [{ speaker: "SPEAKER_01", start: 1.2, end: 3, text: " oi " }] });
+    expect(r.utterances).toEqual([{ start_ms: 1200, end_ms: 3000, text: "oi", speaker: 1 }]);
+  });
+  it("só reconhece a voz com confiança de 70 ou mais", () => {
+    const r = parsePyannote({ voiceprints: [
+      { speaker: "SPEAKER_00", match: "p1", confidence: { p1: 82 } },
+      { speaker: "SPEAKER_01", match: "p2", confidence: { p2: 60 } },
+    ] });
+    expect(r.matches).toEqual({ "0": "p1" });
+  });
+  it("atribui falante pelo maior trecho sobreposto", () => {
+    const out = assignSpeakersByTime([{ start_ms: 0, end_ms: 1000, speaker: null }], [
+      { start_ms: 0, end_ms: 300, text: "", speaker: 0 }, { start_ms: 300, end_ms: 1000, text: "", speaker: 1 },
+    ]);
+    expect(out[0]!.speaker).toBe(1);
+  });
+});

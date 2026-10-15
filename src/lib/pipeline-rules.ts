@@ -105,3 +105,49 @@ export function validateAnalysis(raw: RawAnalysis, segmentCount: number) {
 export function tasksToReplace<T extends { status: string; manual: boolean }>(existing: T[]) {
   return existing.filter((t) => t.status === "suggested" && !t.manual);
 }
+
+export const VOICE_MATCH_MIN = 70;
+
+type PyTurn = { speaker?: string; start?: number; end?: number; text?: string };
+type PyVoice = { speaker?: string; match?: string | null; confidence?: Record<string, number> };
+
+/** Speaker label "SPEAKER_03" → 3. Unknown labels get stable indices after the numbered ones. */
+function speakerIndex(label: string | undefined, extra: Map<string, number>) {
+  if (!label) return null;
+  const m = label.match(/(\d+)$/);
+  if (m) return Number(m[1]);
+  if (!extra.has(label)) extra.set(label, 1000 + extra.size);
+  return extra.get(label)!;
+}
+
+/**
+ * Turn a pyannoteAI job output into utterances (timing + speaker + text) and
+ * voice matches (speaker index → voiceprint label) above the confidence floor.
+ */
+export function parsePyannote(output: Record<string, unknown> | null): { utterances: Utterance[]; matches: Record<string, string> } {
+  const extra = new Map<string, number>();
+  const turns = ((output?.["turnLevelTranscription"] as PyTurn[] | undefined) ?? (output?.["diarization"] as PyTurn[] | undefined) ?? []);
+  const utterances = turns
+    .filter((t) => typeof t.start === "number" && typeof t.end === "number")
+    .map((t) => ({ start_ms: Math.round(t.start! * 1000), end_ms: Math.round(t.end! * 1000), text: (t.text ?? "").trim(), speaker: speakerIndex(t.speaker, extra) }));
+  const matches: Record<string, string> = {};
+  for (const v of (output?.["voiceprints"] as PyVoice[] | undefined) ?? []) {
+    const idx = speakerIndex(v.speaker, extra);
+    if (idx === null || !v.match) continue;
+    const score = v.confidence?.[v.match] ?? 0;
+    if (score >= VOICE_MATCH_MIN) matches[String(idx)] = v.match;
+  }
+  return { utterances, matches };
+}
+
+/** Give speakers to timed sentences (no text from diarizer) by the turn that overlaps them most. */
+export function assignSpeakersByTime<T extends { start_ms: number; end_ms: number; speaker: number | null }>(segments: T[], turns: Utterance[]): T[] {
+  return segments.map((s) => {
+    let best: number | null = null; let bestOv = 0;
+    for (const t of turns) {
+      const ov = Math.min(s.end_ms, t.end_ms) - Math.max(s.start_ms, t.start_ms);
+      if (ov > bestOv) { bestOv = ov; best = t.speaker; }
+    }
+    return { ...s, speaker: best };
+  });
+}
