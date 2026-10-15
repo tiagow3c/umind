@@ -391,9 +391,10 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
       else if (stage === "align") output = await stageAlign(admin, rec.id, m, run.id, rec.manifest_hash ?? rec.id);
       else {
         const { data: fresh } = await admin.from("meetings").select("*").eq("id", m.id).single();
-        output = await stageAnalyze(admin, fresh ?? m, rec.status === "partial");
+        output = stage === "embed" ? await stageEmbed(admin, fresh ?? m) : await stageAnalyze(admin, fresh ?? m, rec.status === "partial");
       }
       await admin.from("processing_runs").update({ status: "succeeded", output: output as Json, lease_until: null }).eq("id", run.id);
+      if (job?.paused) await setJobPaused(admin, false, null);
     } catch (e) {
       const err = e instanceof StageError ? e : new StageError(e instanceof Error ? e.message : "erro", "internal", true);
       const attempt = run.attempt + 1;
@@ -404,6 +405,7 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
         error_code: err.code, error_message: err.message.slice(0, 300),
         lease_until: terminal ? null : new Date(Date.now() + backoff).toISOString(),
       }).eq("id", run.id);
+      if (err.code === "credits" || err.code === "forbidden") await setJobPaused(admin, true, err.code);
       if (terminal && err.code !== "cancelled") await admin.from("meetings").update({ status: "failed" }).eq("id", m.id).eq("status", "processing");
     }
     return summarize();
