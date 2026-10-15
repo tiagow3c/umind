@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { deletePerson, mergePeople, peopleQuery, renamePerson } from "@/lib/review";
+import { deletePerson, mergePeople, peopleQuery, removePersonPhoto, renamePerson, setPersonInstagram, uploadPersonPhoto } from "@/lib/review";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +32,19 @@ function Pessoa() {
     <div className="max-w-3xl space-y-12">
       <Link to="/pessoas" className="text-sm text-muted-foreground hover:text-foreground">← Pessoas</Link>
       <header className="flex items-center gap-5">
-        <span className="flex size-20 items-center justify-center rounded-full bg-accent text-3xl text-accent-foreground">{p.display_name.slice(0, 1).toUpperCase()}</span>
+        <div className="flex flex-col items-center gap-1">
+          <label className="cursor-pointer" title="Trocar foto">
+            <PersonAvatar person={p} className="size-20 text-3xl" />
+            <input type="file" accept="image/*" className="sr-only" onChange={async (e) => {
+              const f = e.target.files?.[0]; e.target.value = "";
+              if (!f) return;
+              try { await uploadPersonPhoto(p, f); refresh(); } catch { toast.error("Não foi possível enviar a foto (imagem até 5 MB)."); }
+            }} />
+          </label>
+          {p.avatar_path
+            ? <button className="text-xs text-muted-foreground hover:text-foreground" onClick={async () => { await removePersonPhoto(p.id); refresh(); }}>Remover foto</button>
+            : <span className="text-xs text-muted-foreground">Trocar foto</span>}
+        </div>
         <div className="min-w-0">
           <input key={p.display_name} defaultValue={p.display_name} aria-label="Nome"
             className="w-full bg-transparent font-serif text-5xl outline-none"
@@ -40,6 +53,9 @@ function Pessoa() {
             <input type="checkbox" checked={p.is_self} onChange={async (e) => { await supabase.from("people").update({ is_self: e.target.checked }).eq("id", p.id); refresh(); }} />
             Sou eu
           </label>
+          <input key={p.instagram ?? ""} defaultValue={p.instagram ? `@${p.instagram}` : ""} placeholder="@instagram" aria-label="Instagram"
+            className="mt-2 block bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            onBlur={async (e) => { const v = e.target.value.replace(/^@/, "").trim().toLowerCase(); if (v !== (p.instagram ?? "")) { try { await setPersonInstagram(p.id, v); refresh(); } catch { toast.error("@ inválido."); } } }} />
         </div>
       </header>
 

@@ -15,3 +15,15 @@ describe("matchPerson", () => {
   it("does not guess when first name is ambiguous", () => expect(matchPerson("Ana", people)).toBeNull());
   it("returns null for unknown names", () => expect(matchPerson("Pedro", people)).toBeNull());
 });
+
+import { parseNameHandle, avatarSrc } from "./people-rules";
+describe("parseNameHandle", () => {
+  it("separa nome e @", () => expect(parseNameHandle("João Silva @joao.silva")).toEqual({ name: "João Silva", instagram: "joao.silva" }));
+  it("só @ vira nome também", () => expect(parseNameHandle("@Maria_x")).toEqual({ name: "maria_x", instagram: "maria_x" }));
+  it("sem @ não tem instagram", () => expect(parseNameHandle("Ana")).toEqual({ name: "Ana", instagram: null }));
+});
+describe("avatarSrc", () => {
+  it("foto vence instagram", () => expect(avatarSrc({ photo_url: "x", instagram: "a" })).toBe("x"));
+  it("instagram sem foto", () => expect(avatarSrc({ instagram: "a" })).toContain("/instagram/a"));
+  it("nada", () => expect(avatarSrc({})).toBeNull());
+});

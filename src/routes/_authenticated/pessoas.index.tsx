@@ -1,3 +1,4 @@
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { peopleQuery } from "@/lib/review";
@@ -21,7 +22,7 @@ function Pessoas() {
           {data.map((p) => (
             <li key={p.id}>
               <Link to="/pessoas/$id" params={{ id: p.id }} className="flex items-center gap-4 py-4 hover:bg-secondary/50">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-lg">{p.display_name.slice(0, 1).toUpperCase()}</span>
+                <PersonAvatar person={p} className="size-11 text-lg" />
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">{p.display_name}{p.is_self && <span className="ml-1 text-xs text-muted-foreground">(você)</span>}</span>
                   <span className="block text-xs text-muted-foreground">

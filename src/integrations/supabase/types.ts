@@ -448,9 +448,11 @@ export type Database = {
       people: {
         Row: {
           aliases: string[]
+          avatar_path: string | null
           created_at: string
           display_name: string
           id: string
+          instagram: string | null
           is_self: boolean
           notes: string | null
           updated_at: string
@@ -458,9 +460,11 @@ export type Database = {
         }
         Insert: {
           aliases?: string[]
+          avatar_path?: string | null
           created_at?: string
           display_name: string
           id?: string
+          instagram?: string | null
           is_self?: boolean
           notes?: string | null
           updated_at?: string
@@ -468,9 +472,11 @@ export type Database = {
         }
         Update: {
           aliases?: string[]
+          avatar_path?: string | null
           created_at?: string
           display_name?: string
           id?: string
+          instagram?: string | null
           is_self?: boolean
           notes?: string | null
           updated_at?: string

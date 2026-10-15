@@ -57,6 +57,13 @@
       "when": 1792101464408,
       "tag": "0007_people_registry",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792102225617,
+      "tag": "0008_people_avatars",
+      "breakpoints": true
     }
   ]
 }
