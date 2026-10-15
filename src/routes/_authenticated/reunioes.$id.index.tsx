@@ -15,6 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/_authenticated/reunioes/$id/")({
   head: () => ({ meta: [{ title: "Reunião — Ata" }, { name: "description", content: "Status, participantes e consentimento da reunião." }, { property: "og:title", content: "Reunião — Ata" }, { property: "og:description", content: "Status, participantes e consentimento da reunião." }] }),
@@ -88,36 +89,44 @@ function Detalhe() {
         <Button asChild size="lg"><Link to="/reunioes/$id/gravar" params={{ id }} search={{ auto: true }}>{m.source_type === "import" ? "Importar áudio" : "Ir para o gravador"}</Link></Button>
       )}
 
-      {rec && (
-        <section>
-          <h2 className="border-b pb-2 text-2xl">Gravação</h2>
-          <dl className="grid grid-cols-2 gap-y-2 py-4 text-sm md:grid-cols-4">
-            <dt className="text-muted-foreground">Duração</dt><dd className="tabular-nums">{formatDuration(rec.duration_ms)}</dd>
-            <dt className="text-muted-foreground">Formato</dt><dd>{rec.codec ?? "—"}</dd>
-            <dt className="text-muted-foreground">Canais</dt><dd>{rec.channels}</dd>
-            <dt className="text-muted-foreground">Manifesto</dt><dd className="truncate font-mono text-xs">{rec.manifest_hash?.slice(0, 16) ?? "pendente"}</dd>
-          </dl>
-        </section>
-      )}
-
-      <section>
-        <h2 className="border-b pb-2 text-2xl">Participantes</h2>
-        {m.participants.length === 0 ? <p className="py-4 text-sm text-muted-foreground">Nenhum participante informado.</p> : (
-          <ul className="divide-y">{m.participants.map((p) => <li key={p.id} className="py-3 text-sm">{p.display_name}{p.email && <span className="text-muted-foreground"> · {p.email}</span>}</li>)}</ul>
+      <Accordion type="multiple" className="w-full">
+        {rec && (
+          <AccordionItem value="gravacao">
+            <AccordionTrigger className="text-2xl">Gravação</AccordionTrigger>
+            <AccordionContent>
+              <dl className="grid grid-cols-2 gap-y-2 py-2 text-sm md:grid-cols-4">
+                <dt className="text-muted-foreground">Duração</dt><dd className="tabular-nums">{formatDuration(rec.duration_ms)}</dd>
+                <dt className="text-muted-foreground">Formato</dt><dd>{rec.codec ?? "—"}</dd>
+                <dt className="text-muted-foreground">Canais</dt><dd>{rec.channels}</dd>
+                <dt className="text-muted-foreground">Manifesto</dt><dd className="truncate font-mono text-xs">{rec.manifest_hash?.slice(0, 16) ?? "pendente"}</dd>
+              </dl>
+            </AccordionContent>
+          </AccordionItem>
         )}
-      </section>
 
-      <section>
-        <h2 className="border-b pb-2 text-2xl">Consentimento</h2>
-        <ul className="divide-y">
-          {m.consent_records.map((c) => (
-            <li key={c.id} className="flex justify-between py-3 text-sm">
-              <span>{METHOD[c.method] ?? c.method} · {c.notice_version}</span>
-              <span className="text-muted-foreground">{c.withdrawn_at ? "Retirado" : new Date(c.recorded_at).toLocaleString("pt-BR")}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+        <AccordionItem value="participantes">
+          <AccordionTrigger className="text-2xl">Participantes</AccordionTrigger>
+          <AccordionContent>
+            {m.participants.length === 0 ? <p className="py-2 text-sm text-muted-foreground">Nenhum participante informado.</p> : (
+              <ul className="divide-y">{m.participants.map((p) => <li key={p.id} className="py-3 text-sm">{p.display_name}{p.email && <span className="text-muted-foreground"> · {p.email}</span>}</li>)}</ul>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="consentimento">
+          <AccordionTrigger className="text-2xl">Consentimento</AccordionTrigger>
+          <AccordionContent>
+            <ul className="divide-y">
+              {m.consent_records.map((c) => (
+                <li key={c.id} className="flex justify-between py-3 text-sm">
+                  <span>{METHOD[c.method] ?? c.method} · {c.notice_version}</span>
+                  <span className="text-muted-foreground">{c.withdrawn_at ? "Retirado" : new Date(c.recorded_at).toLocaleString("pt-BR")}</span>
+                </li>
+              ))}
+            </ul>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       <section className="border-t pt-6">
         <AlertDialog>
