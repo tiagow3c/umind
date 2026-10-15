@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatusBadge, formatDuration } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/_authenticated/reunioes/$id/gravar")({
-  head: () => ({ meta: [{ title: "Gravar — Ata" }, { name: "description", content: "Grave ou importe o áudio da reunião." }, { property: "og:title", content: "Gravar — Ata" }, { property: "og:description", content: "Grave ou importe o áudio da reunião." }] }),
+  head: () => ({ meta: [{ title: "Gravar — Ata" }, { name: "description", content: "Grave o áudio da reunião." }, { property: "og:title", content: "Gravar — Ata" }, { property: "og:description", content: "Grave o áudio da reunião." }] }),
   loader: ({ context, params }) => context.queryClient.ensureQueryData(meetingQuery(params.id)),
   component: Gravar,
 });
@@ -73,7 +73,7 @@ function Gravar() {
       timer.current = { start: Date.now(), acc: 0 };
       setPhase("recording");
     } catch (e) {
-      if (e instanceof DOMException && e.name === "NotAllowedError") toast.error("Permissão de microfone negada. Libere nas configurações do navegador ou importe um arquivo.");
+      if (e instanceof DOMException && e.name === "NotAllowedError") toast.error("Permissão de microfone negada. Libere nas configurações do navegador.");
       else toast.error(friendlyError(e));
     }
   }

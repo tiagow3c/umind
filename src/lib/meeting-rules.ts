@@ -43,3 +43,6 @@ export function canStartCapture(status: MeetingStatus, consents: Consent[]) {
 
 export const MAX_DURATION_MS = 120 * 60 * 1000;
 export const NOTICE_VERSION = "aviso-v1";
+
+/** Placeholder title used until the AI names the meeting from its transcript. */
+export const AUTO_TITLE = "Reunião sem título";

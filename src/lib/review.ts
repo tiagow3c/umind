@@ -77,6 +77,23 @@ export async function mapSpeaker(speakerId: string, participantId: string | null
   if (error) throw new Error(error.message);
 }
 
+/** Give a detected speaker a name: renames its participant or creates one. */
+export async function nameSpeaker(speakerId: string, name: string) {
+  const n = name.trim().slice(0, 120);
+  const { data: sp, error } = await supabase.from("speakers").select("id, meeting_id, workspace_id, participant_id").eq("id", speakerId).single();
+  if (error || !sp) throw new Error(error?.message ?? "speaker");
+  if (!n) return mapSpeaker(speakerId, null);
+  if (sp.participant_id) {
+    const r = await supabase.from("participants").update({ display_name: n }).eq("id", sp.participant_id);
+    if (r.error) throw new Error(r.error.message);
+    await supabase.from("speakers").update({ mapping_source: "user" }).eq("id", speakerId);
+    return;
+  }
+  const { data: p, error: e2 } = await supabase.from("participants").insert({ workspace_id: sp.workspace_id, meeting_id: sp.meeting_id, display_name: n }).select("id").single();
+  if (e2 || !p) throw new Error(e2?.message ?? "participant");
+  await mapSpeaker(speakerId, p.id);
+}
+
 export async function markCompleted(meetingId: string) {
   const { error } = await supabase.from("meetings").update({ status: "completed" }).eq("id", meetingId).eq("status", "review_ready");
   if (error) throw new Error(error.message);

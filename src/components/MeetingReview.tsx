@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { correctSegment, retryProcessing } from "@/lib/processing.functions";
-import { analysisQuery, fmtTime, loadPlayableAudio, mapSpeaker, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
+import { analysisQuery, fmtTime, loadPlayableAudio, nameSpeaker, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,18 +141,23 @@ function Transcript({ meeting, focus }: { meeting: Meeting; focus: string | null
       <p className="text-xs text-muted-foreground">Versão {data.transcript?.version} · gerada por IA · trechos marcados como incertos merecem revisão.</p>
       {speakers && speakers.length > 0 && (
         <div className="rounded-md border p-4">
-          <p className="mb-3 text-sm font-medium">Quem é quem</p>
+          <p className="mb-1 text-sm font-medium">Quem é quem</p>
+          <p className="mb-3 text-xs text-muted-foreground">A IA sugere nomes quando eles aparecem na conversa. Corrija ou preencha os que faltam.</p>
           <div className="grid gap-2 md:grid-cols-2">
-            {speakers.map((s) => (
-              <label key={s.id} className="flex items-center justify-between gap-3 text-sm">
-                <span>{s.provider_label}</span>
-                <select className="rounded-md border bg-background px-2 py-1" value={s.participant_id ?? ""}
-                  onChange={async (e) => { await mapSpeaker(s.id, e.target.value || null); qc.invalidateQueries({ queryKey: ["speakers", meeting.id] }); }}>
-                  <option value="">Não identificado</option>
-                  {meeting.participants.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-                </select>
-              </label>
-            ))}
+            {speakers.map((s) => {
+              const current = meeting.participants.find((p) => p.id === s.participant_id)?.display_name ?? "";
+              return (
+                <label key={s.id + current} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="shrink-0">{s.provider_label}{s.mapping_source === "ai" && current ? <span className="ml-1 text-xs text-muted-foreground">(sugerido pela IA)</span> : null}</span>
+                  <input className="w-40 rounded-md border bg-background px-2 py-1" defaultValue={current} placeholder="Nome"
+                    onBlur={async (e) => {
+                      if (e.target.value.trim() === current) return;
+                      try { await nameSpeaker(s.id, e.target.value); qc.invalidateQueries(); toast.success("Falante identificado."); }
+                      catch { toast.error("Não foi possível salvar o nome."); }
+                    }} />
+                </label>
+              );
+            })}
           </div>
         </div>
       )}
