@@ -888,6 +888,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_processing: { Args: { _meeting: string }; Returns: undefined }
       delete_meeting: { Args: { _meeting: string }; Returns: undefined }
       finalize_recording: {
         Args: {

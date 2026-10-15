@@ -36,6 +36,13 @@
       "when": 1792099590842,
       "tag": "0004_finalize_recording_security_definer",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792099863655,
+      "tag": "0005_cancel_processing",
+      "breakpoints": true
     }
   ]
 }
