@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { deleteMeeting, meetingsQuery } from "@/lib/meetings";
 import { StatusBadge, formatDuration } from "@/components/StatusBadge";
