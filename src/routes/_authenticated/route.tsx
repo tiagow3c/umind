@@ -36,7 +36,7 @@ function AppLayout() {
   const initials = displayName.slice(0, 2).toUpperCase();
   return (
     <div className="min-h-screen md:grid md:grid-cols-[220px_1fr]">
-      <aside className="border-b bg-sidebar md:min-h-screen md:border-b-0 md:border-r">
+      <aside className="border-b bg-sidebar md:sticky md:top-0 md:flex md:h-screen md:flex-col md:border-b-0 md:border-r">
         <div className="flex items-center justify-between p-5 md:block">
           <Link to="/hoje" className="font-serif text-3xl">Ata</Link>
           <p className="hidden text-xs text-muted-foreground md:mt-1 md:block">Assistente de reuniões</p>
@@ -57,9 +57,11 @@ function AppLayout() {
           <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
             <Link to="/reunioes/nova">Nova gravação</Link>
           </Button>
+        </div>
+        <div className="hidden border-t p-3 md:mt-auto md:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="mt-6 flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-sidebar-accent">
+              <button className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-sidebar-accent">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground">
                   {initials}
                 </span>
