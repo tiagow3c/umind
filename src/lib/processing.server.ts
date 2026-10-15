@@ -1,18 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { alignTranscripts, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
+import { joinChunkTexts, planChunks, MAX_TRANSCRIBE_BYTES } from "./chunking-rules";
 
 type Admin = SupabaseClient<Database>;
 const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const TRANSCRIBE_MODEL = "openai/gpt-transcribe";
 const ANALYSIS_MODEL = "openai/gpt-6-astra";
+const EMBED_MODEL = "google/gemini-embedding-2";
 const CONFIG_VERSION = "v1";
 const ANALYSIS_SCHEMA_VERSION = "analysis-v1";
-const MAX_TRANSCRIBE_BYTES = 24 * 1024 * 1024;
 const MAX_ATTEMPTS = 5;
 const LEASE_MS = 5 * 60 * 1000;
+const JOB_KEY = "processing";
 
-export const STAGES = ["transcribe", "diarize", "align", "analyze"] as const;
+export const STAGES = ["transcribe", "diarize", "align", "analyze", "embed"] as const;
 export type Stage = (typeof STAGES)[number];
 
 class StageError extends Error {
@@ -33,20 +35,29 @@ async function meetingAlive(admin: Admin, meetingId: string) {
   return !!data && data.status !== "deleting" && data.status !== "deleted";
 }
 
-async function loadAudio(admin: Admin, recordingId: string) {
+async function loadParts(admin: Admin, recordingId: string) {
   const { data: rec } = await admin.from("recordings").select("codec").eq("id", recordingId).single();
   const { data: parts, error } = await admin
-    .from("recording_parts").select("object_key, sequence").eq("recording_id", recordingId).eq("status", "confirmed").order("sequence");
+    .from("recording_parts").select("object_key, sequence, bytes").eq("recording_id", recordingId).eq("status", "confirmed").order("sequence");
   if (error || !parts?.length) throw new StageError("no audio", "no_audio", false);
+  const codec = rec?.codec ?? "";
+  const type = codec.startsWith("audio/") ? codec.split(";")[0]! : "audio/webm";
+  return { parts, type };
+}
+
+async function downloadParts(admin: Admin, parts: { object_key: string }[], type: string) {
   const blobs: Blob[] = [];
   for (const p of parts) {
     const d = await admin.storage.from("recordings").download(p.object_key);
     if (d.error || !d.data) throw new StageError("download failed", "storage", true);
     blobs.push(d.data);
   }
-  const codec = rec?.codec ?? "";
-  const type = codec.startsWith("audio/") ? codec.split(";")[0]! : "audio/webm";
   return new Blob(blobs, { type });
+}
+
+async function loadAudio(admin: Admin, recordingId: string) {
+  const { parts, type } = await loadParts(admin, recordingId);
+  return downloadParts(admin, parts, type);
 }
 
 async function readSSE(res: Response, onEvent: (type: string, data: Record<string, unknown>) => void) {
