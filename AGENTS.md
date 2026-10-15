@@ -20,3 +20,4 @@
 - Semantic search uses google/gemini-embedding-2 (3072 dims, stored as halfvec) on transcript_segments and analysis_items; queries go through the search_segments/search_items SQL functions which re-check workspace membership.
 - Canonical transcript timing/speakers come from Deepgram utterances; the OpenAI transcript (no timestamps) is used as a word-agreement check. Without Deepgram, sentences get proportional times and unknown speakers.
 - Transcript corrections never edit rows in place: they create a new canonical version and mark analyses stale. Accepted tasks are never replaced by reprocessing.
+- While recording, a parallel MediaRecorder produces standalone ~30 s windows transcribed immediately into public.live_transcript_chunks; the transcribe stage reuses them only when contiguous and covering the full duration, otherwise it re-transcribes the uploaded parts (diarize/analyze always run on the full audio after stop).
