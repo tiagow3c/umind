@@ -12,7 +12,7 @@ import { StatusBadge, formatDuration } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/_authenticated/reunioes/$id/gravar")({
   head: () => ({ meta: [{ title: "Gravar — Ata" }, { name: "description", content: "Grave o áudio da reunião." }, { property: "og:title", content: "Gravar — Ata" }, { property: "og:description", content: "Grave o áudio da reunião." }] }),
-  validateSearch: (search: Record<string, unknown>) => ({ auto: search.auto === "1" || search.auto === true }),
+  validateSearch: (search: Record<string, unknown>) => ({ auto: search["auto"] === "1" || search["auto"] === true }),
   loader: ({ context, params }) => context.queryClient.ensureQueryData(meetingQuery(params.id)),
   component: Gravar,
 });

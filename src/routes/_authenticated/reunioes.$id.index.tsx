@@ -69,7 +69,7 @@ function Detalhe() {
       {m.current_transcript_id && <MeetingReview meeting={m} />}
 
       {canStartCapture(m.status, m.consent_records) && (
-        <Button asChild size="lg"><Link to="/reunioes/$id/gravar" params={{ id }}>{m.source_type === "import" ? "Importar áudio" : "Ir para o gravador"}</Link></Button>
+        <Button asChild size="lg"><Link to="/reunioes/$id/gravar" params={{ id }} search={m.source_type === "import" ? {} : { auto: true }}>{m.source_type === "import" ? "Importar áudio" : "Ir para o gravador"}</Link></Button>
       )}
 
       {rec && (
