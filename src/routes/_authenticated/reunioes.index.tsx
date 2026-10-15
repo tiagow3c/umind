@@ -44,14 +44,14 @@ function Lista() {
       ) : (
         <ul className="divide-y border-y">
           {rows.map((m) => (
-            <li key={m.id} className="flex items-center gap-2">
-              <Link to="/reunioes/$id" params={{ id: m.id }} className="grid flex-1 grid-cols-[1fr_auto] items-center gap-4 py-4 hover:bg-secondary/50 md:grid-cols-[1fr_120px_80px_auto]">
+            <li key={m.id} className="flex items-center gap-2 pr-2 hover:bg-secondary/50">
+              <Link to="/reunioes/$id" params={{ id: m.id }} className="grid flex-1 grid-cols-[1fr_auto] items-center gap-4 py-4 md:grid-cols-[1fr_120px_80px_auto]">
                 <span className="font-medium">{m.title}</span>
                 <span className="hidden text-sm text-muted-foreground md:block">{new Date(m.created_at).toLocaleDateString("pt-BR")}</span>
                 <span className="hidden text-sm tabular-nums text-muted-foreground md:block">{formatDuration(m.recordings?.[0]?.duration_ms)}</span>
                 <StatusBadge status={m.status} />
               </Link>
-              <Button variant="ghost" size="icon" aria-label={`Excluir ${m.title}`} onClick={() => remove(m.id, m.title)}><Trash2 className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" className="text-muted-foreground/50 hover:bg-transparent hover:text-destructive" aria-label={`Excluir ${m.title}`} onClick={() => remove(m.id, m.title)}><Trash2 className="h-4 w-4" /></Button>
             </li>
           ))}
         </ul>
