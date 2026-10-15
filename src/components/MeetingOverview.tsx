@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 import { forwardRef, useRef, useState } from "react";
 import { toast } from "sonner";
 import { analysisQuery, assignSpeakerPerson, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
@@ -15,7 +15,7 @@ type Meeting = {
   recordings: { id: string; codec: string | null; recording_parts: { object_key: string; sequence: number }[] }[];
 };
 
-function firstSentences(text: string, n = 2) {
+function firstSentences(text: string, n = 4) {
   const parts = text.match(/[^.!?]+[.!?]+/g) ?? [text];
   return parts.slice(0, n).join(" ").trim();
 }
@@ -153,9 +153,22 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   );
 }
 
-/** Inline name input that replaces the "Quem é?" label. Tab/Enter saves and moves on. */
-const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => void; onSkip: () => void }>(function NameField({ onSave, onSkip }, ref) {
+/** Inline name input that replaces the "Quem é?" label. Tab/Enter saves and moves on. Shows a spinner while saving (e.g. fetching the Instagram avatar). */
+const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => Promise<void>; onSkip: () => void }>(function NameField({ onSave, onSkip }, ref) {
   const [v, setV] = useState("");
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (!v.trim()) { onSkip(); return; }
+    setSaving(true);
+    try { await onSave(v.trim()); } finally { setSaving(false); }
+  };
+  if (saving) {
+    return (
+      <span className="flex h-5 w-32 items-center justify-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin" /> Buscando perfil…
+      </span>
+    );
+  }
   return (
     <input
       ref={ref} value={v} onChange={(e) => setV(e.target.value)} placeholder="Nome ou @instagram"
@@ -163,7 +176,7 @@ const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => void; on
       onKeyDown={(e) => {
         if (e.key === "Tab" || e.key === "Enter") {
           e.preventDefault();
-          if (v.trim()) onSave(v.trim()); else onSkip();
+          void save();
         }
       }}
       className="w-32 border-b border-transparent bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground focus:border-accent"
