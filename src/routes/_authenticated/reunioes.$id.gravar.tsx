@@ -172,9 +172,9 @@ function Gravar() {
             {phase === "recording" ? "Gravando" : phase === "paused" ? "Pausada" : phase === "uploading" ? "Enviando" : "Pronto para gravar"}
           </p>
           <p className="mt-3 font-serif text-7xl tabular-nums">{formatDuration(elapsed) === "—" ? "0:00" : formatDuration(elapsed)}</p>
-          <div className="mt-6" role="meter" aria-label="Nível do microfone" aria-valuenow={Math.round(level * 100)}>
-            <VoiceOrb level={phase === "recording" ? level : 0} active={phase === "recording"} />
-          </div>
+          {phase === "recording" && <div className="mt-6" role="meter" aria-label="Nível do microfone" aria-valuenow={Math.round(level * 100)}>
+            <VoiceOrb level={phase === "recording" ? level : 0} active />
+          </div>}
           <div className="mt-8 flex justify-center gap-3">
             {phase === "idle" && <Button size="lg" onClick={start} className="bg-accent text-accent-foreground hover:bg-accent/90">Iniciar gravação</Button>}
             {phase === "recording" && <><Button variant="outline" onClick={pause}>Pausar</Button><Button onClick={stop}>Encerrar</Button></>}
