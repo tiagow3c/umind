@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { finalizeRecording, friendlyError, meetingQuery, setMeetingStatus, startRecording, uploadPending } from "@/lib/meetings";
 import { putChunk } from "@/lib/local-store";
+import { transcribeLive } from "@/lib/processing.functions";
 import { MAX_DURATION_MS, canStartCapture } from "@/lib/meeting-rules";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -31,6 +32,41 @@ function Gravar() {
   const [progress, setProgress] = useState<[number, number]>([0, 0]);
   const rec = useRef<{ mr: MediaRecorder; stream: MediaStream; recordingId: string; seq: number; lastMs: number; ctx: AudioContext } | null>(null);
   const timer = useRef<{ start: number; acc: number } | null>(null);
+  const live = useRef<{ mr: MediaRecorder | null; seq: number; pending: Set<Promise<unknown>>; loop: ReturnType<typeof setInterval> | null }>({ mr: null, seq: 0, pending: new Set(), loop: null });
+  const [liveText, setLiveText] = useState<{ seq: number; text: string }[]>([]);
+  const liveEnd = useRef<HTMLDivElement>(null);
+  useEffect(() => { liveEnd.current?.scrollIntoView({ block: "nearest" }); }, [liveText]);
+
+  function elapsedNow() { return timer.current ? timer.current.acc + (timer.current.start ? Date.now() - timer.current.start : 0) : 0; }
+
+  /** Parallel standalone recorder: each window is a self-contained file sent for transcription right away. */
+  function openLiveWindow(stream: MediaStream, recordingId: string, mime: string) {
+    const l = live.current;
+    const mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : undefined);
+    const startMs = elapsedNow();
+    const blobs: Blob[] = [];
+    mr.ondataavailable = (ev) => { if (ev.data.size) blobs.push(ev.data); };
+    mr.onstop = () => {
+      const endMs = elapsedNow();
+      const seq = ++l.seq;
+      const blob = new Blob(blobs, { type: mime || "audio/webm" });
+      const p = (async () => {
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+        const r = await transcribeLive({ data: { meetingId: m!.id, recordingId, sequence: seq, startMs, endMs, mime: mime || "audio/webm", audioBase64: btoa(bin) } });
+        if (r.text) setLiveText((t) => [...t, { seq, text: r.text }].sort((a, b) => a.seq - b.seq));
+      })().catch(() => {}).finally(() => l.pending.delete(p));
+      l.pending.add(p);
+    };
+    mr.start();
+    l.mr = mr;
+  }
+  function closeLiveWindow() { const l = live.current; if (l.mr && l.mr.state !== "inactive") l.mr.stop(); l.mr = null; }
+  function startLiveLoop(stream: MediaStream, recordingId: string, mime: string) {
+    openLiveWindow(stream, recordingId, mime);
+    live.current.loop = setInterval(() => { closeLiveWindow(); openLiveWindow(stream, recordingId, mime); }, CHUNK_MS);
+  }
+  function stopLiveLoop() { if (live.current.loop) clearInterval(live.current.loop); live.current.loop = null; closeLiveWindow(); }
 
   useEffect(() => {
     if (phase !== "recording") return;
@@ -82,6 +118,7 @@ function Gravar() {
       };
       mr.start(CHUNK_MS);
       timer.current = { start: Date.now(), acc: 0 };
+      startLiveLoop(stream, recordingId, mime);
       setPhase("recording");
     } catch (e) {
       if (e instanceof DOMException && e.name === "NotAllowedError") toast.error("Permissão de microfone negada. Libere nas configurações do navegador.");
@@ -91,6 +128,7 @@ function Gravar() {
 
   async function pause() {
     const r = rec.current; if (!r) return;
+    stopLiveLoop();
     r.mr.pause(); r.mr.requestData();
     if (timer.current) timer.current = { start: 0, acc: timer.current.acc + (Date.now() - timer.current.start) };
     setPhase("paused");
@@ -101,6 +139,7 @@ function Gravar() {
     const r = rec.current; if (!r) return;
     r.mr.resume();
     if (timer.current) timer.current = { start: Date.now(), acc: timer.current.acc };
+    startLiveLoop(r.stream, r.recordingId, r.mr.mimeType);
     setPhase("recording");
     await setMeetingStatus(m!.id, "recording").catch(() => {});
   }
@@ -109,9 +148,12 @@ function Gravar() {
     const r = rec.current; if (!r) return;
     if (timer.current && phase === "recording") timer.current = { start: Date.now(), acc: timer.current.acc + (Date.now() - timer.current.start) };
     const finalMs = timer.current?.acc ?? elapsed;
+    if (timer.current) timer.current = { start: 0, acc: finalMs };
+    stopLiveLoop();
     await new Promise<void>((res) => { r.mr.addEventListener("stop", () => setTimeout(res, 300), { once: true }); r.mr.stop(); });
     r.stream.getTracks().forEach((t) => t.stop());
     void r.ctx.close();
+    await Promise.race([Promise.all([...live.current.pending]), new Promise((res) => setTimeout(res, 20_000))]);
     await finishUpload(r.recordingId, finalMs);
   }
 
@@ -190,6 +232,15 @@ function Gravar() {
             {phase === "recording" && <><Button variant="outline" onClick={pause}>Pausar</Button><Button onClick={stop}>Encerrar</Button></>}
             {phase === "paused" && <><Button variant="outline" onClick={resume}>Retomar</Button><Button onClick={stop}>Encerrar</Button></>}
           </div>
+          {phase !== "idle" && (
+            <div className="mx-auto mt-8 max-h-56 max-w-xl overflow-y-auto border-t pt-5 text-left">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Transcrição ao vivo</p>
+              {liveText.length === 0
+                ? <p className="mt-2 text-sm text-muted-foreground">O texto aparece aqui a cada 30 segundos de conversa.</p>
+                : liveText.map((c) => <p key={c.seq} className="mt-2 text-sm leading-relaxed">{c.text}</p>)}
+              <div ref={liveEnd} />
+            </div>
+          )}
           <p className="mt-6 text-xs text-muted-foreground">O áudio é salvo neste navegador a cada 30 segundos antes de ser enviado.</p>
         </div>
       )}
