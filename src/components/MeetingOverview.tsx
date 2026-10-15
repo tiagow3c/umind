@@ -82,7 +82,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
             {speakers.map((s, i) => {
               const part = meeting.participants.find((p) => p.id === s.participant_id);
               const name = part?.display_name ?? "";
-              const suggested = !!part && !part.person_confirmed && s.mapping_source === "ai";
+              const suggested = !!part && !part.person_confirmed && (s.mapping_source === "ai" || s.mapping_source === "voice");
               const person = people?.find((p) => p.id === part?.person_id) ?? null;
               return (
                 <li key={s.id + name} className="relative flex w-28 flex-col items-center gap-2">
@@ -121,7 +121,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                     />
                   )}
                   {person?.instagram && <a href={`https://instagram.com/${person.instagram}`} target="_blank" rel="noreferrer" className="-mt-1.5 max-w-28 truncate text-xs text-muted-foreground hover:text-accent">@{person.instagram}</a>}
-                  {suggested && <span className="-mt-1 text-[11px] text-muted-foreground">sugerido</span>}
+                  {suggested && <span className="-mt-1 text-[11px] text-muted-foreground">{s.mapping_source === "voice" ? "reconhecido pela voz" : "sugerido"}</span>}
                 </li>
               );
             })}

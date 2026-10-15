@@ -226,6 +226,9 @@ export async function confirmParticipant(participantId: string) {
   if (e0 || !p) throw new Error(e0?.message ?? "participant");
   const { error } = await supabase.from("participants").update({ person_confirmed: true }).eq("id", participantId);
   if (error) throw new Error(error.message);
+  const { data: part } = await supabase.from("participants").select("person_id, speakers(id)").eq("id", participantId).single();
+  const spId = (part?.speakers as unknown as { id: string }[] | null)?.[0]?.id;
+  if (part?.person_id && spId) void enrollSpeakerVoice(spId, part.person_id).catch(() => null);
   await supabase.rpc("bump_people_version", { _meeting: p.meeting_id });
 }
 
