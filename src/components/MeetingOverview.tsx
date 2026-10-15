@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { forwardRef, useRef, useState } from "react";
 import { toast } from "sonner";
 import { analysisQuery, assignSpeakerPerson, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { Button } from "@/components/ui/button";
@@ -119,7 +119,6 @@ export function MeetingOverview({ meeting, onFull }: { meeting: Meeting; onFull:
 }
 
 /** Inline name input that replaces the "Quem é?" label. Tab/Enter saves and moves on. */
-import { forwardRef } from "react";
 const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => void; onSkip: () => void }>(function NameField({ onSave, onSkip }, ref) {
   const [v, setV] = useState("");
   return (
