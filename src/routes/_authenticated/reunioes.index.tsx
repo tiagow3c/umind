@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { deleteMeeting, meetingsQuery } from "@/lib/meetings";
 import { StatusBadge, formatDuration } from "@/components/StatusBadge";
@@ -29,7 +29,12 @@ function Lista() {
     <div className="space-y-8">
       <div className="flex items-end justify-between">
         <h1 className="text-5xl">Reuniões</h1>
-        <Button asChild><Link to="/reunioes/nova">Nova gravação</Link></Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="icon" className="size-10">
+            <Link to="/buscar" aria-label="Buscar nas reuniões"><Search className="h-4 w-4" /></Link>
+          </Button>
+          <Button asChild className="h-10"><Link to="/reunioes/nova">Nova gravação</Link></Button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         {(["all", ...statuses] as const).map((s) => (
