@@ -50,9 +50,14 @@ export const meetingTasksQuery = (meetingId: string) =>
 export const allTasksQuery = queryOptions({
   queryKey: ["tasks", "all"],
   queryFn: async () => {
-    const { data, error } = await supabase.from("tasks").select("*, meetings(title)").neq("status", "dismissed").order("due_date", { ascending: true, nullsFirst: false });
+    const { data, error } = await supabase.from("tasks").select("*").neq("status", "dismissed").order("due_date", { ascending: true, nullsFirst: false });
     if (error) throw new Error(error.message);
-    return data;
+    const ids = [...new Set((data ?? []).map((t) => t.meeting_id).filter((x): x is string => !!x))];
+    const { data: meetings } = ids.length
+      ? await supabase.from("meetings").select("id, title").in("id", ids)
+      : { data: [] };
+    const titles = new Map((meetings ?? []).map((m) => [m.id, m.title]));
+    return (data ?? []).map((t) => ({ ...t, meetings: t.meeting_id ? { title: titles.get(t.meeting_id) ?? "" } : null }));
   },
 });
 

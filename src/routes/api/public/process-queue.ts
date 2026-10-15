@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { authenticateCronRequest } from "@/integrations/supabase/cron-auth";
 import { advanceMeeting, getJobState, releaseLease, tryAcquireLease } from "@/lib/processing.server";
 
 const BATCH_SIZE = 3;
@@ -9,10 +10,8 @@ export const Route = createFileRoute("/api/public/process-queue")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env["LOVABLE_CRON_SECRET"];
-        if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-          return new Response("unauthorized", { status: 401 });
-        }
+        const authFailure = await authenticateCronRequest(request);
+        if (authFailure) return authFailure;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         if (!(await tryAcquireLease(supabaseAdmin, LEASE_TTL_MS))) {
           return Response.json({ ok: true, skipped: "locked" });
