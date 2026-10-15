@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { analysisQuery, assignSpeakerPerson, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { Button } from "@/components/ui/button";
 import { PersonPicker } from "@/components/PersonPicker";
-import { personAvatarSrc } from "@/lib/default-avatars";
+import { avatarSrc, suggestCandidates } from "@/lib/people-rules";
+import { fmtTime } from "@/lib/review";
 import { VoiceAvatar, pickSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
 
 type Meeting = {
@@ -30,6 +31,13 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   const qc = useQueryClient();
   const avatarRefs = useRef(new Map<string, VoiceAvatarHandle>());
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
+
+  const used = new Set(meeting.participants.map((p) => p.person_id).filter((x): x is string => !!x));
+  const candidates = suggestCandidates(tr?.segments ?? [], people ?? [], used, 3);
+  const pick = async (speakerId: string, personId: string) => {
+    try { await assignSpeakerPerson(speakerId, { personId }); qc.invalidateQueries(); advance(speakerId); }
+    catch { toast.error("Não foi possível salvar."); }
+  };
 
   const act = async (id: string, status: "accepted" | "done") => {
     try { await updateTask(id, { status }); qc.invalidateQueries({ queryKey: ["tasks"] }); }
@@ -89,7 +97,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                   <VoiceAvatar
                     ref={(h) => { if (h) avatarRefs.current.set(s.id, h); else avatarRefs.current.delete(s.id); }}
                     id={s.id} name={name} rec={meeting.recordings[0]} sample={samples.get(s.id) ?? null}
-                    tone={i === 0 ? "accent" : "neutral"} suggested={suggested} src={person ? personAvatarSrc(person) : null}
+                    tone={i === 0 ? "accent" : "neutral"} suggested={suggested} src={person ? avatarSrc(person) : null}
                     onPlay={() => { if (!name) inputRefs.current.get(s.id)?.focus(); }}
                   />
                   {person && (
@@ -119,6 +127,16 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                       }}
                       onSkip={() => advance(s.id)}
                     />
+                  )}
+                  {!name && candidates.length > 0 && (
+                    <div className="flex w-36 flex-col items-center gap-1">
+                      {candidates.map((c) => (
+                        <button key={c.person.id} onClick={() => pick(s.id, c.person.id)}
+                          className="max-w-36 truncate rounded-full border px-2.5 py-0.5 text-[11px] text-muted-foreground hover:border-accent hover:text-foreground">
+                          {c.person.display_name}{c.mentionMs != null && ` · citado aos ${fmtTime(c.mentionMs)}`}
+                        </button>
+                      ))}
+                    </div>
                   )}
                   {person?.instagram && <a href={`https://instagram.com/${person.instagram}`} target="_blank" rel="noreferrer" className="-mt-1.5 max-w-28 truncate text-xs text-muted-foreground hover:text-accent">@{person.instagram}</a>}
                   {suggested && <span className="-mt-1 text-[11px] text-muted-foreground">{s.mapping_source === "voice" ? "reconhecido pela voz" : "sugerido"}</span>}

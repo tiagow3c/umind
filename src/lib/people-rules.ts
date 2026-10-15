@@ -42,3 +42,27 @@ export function avatarSrc(p: { photo_url?: string | null; instagram?: string | n
   if (p.photo_url) return p.photo_url;
   return null;
 }
+
+type Candidate = { id: string; display_name: string; aliases: string[]; meetings?: { id: string }[] };
+
+/**
+ * One-click suggestions for an unnamed voice: people cited in this transcript first
+ * (with the first mention time), then the most frequent people. Excludes already-used ids.
+ */
+export function suggestCandidates<P extends Candidate>(
+  segments: { text: string; start_ms: number }[], people: P[], exclude: Set<string>, max = 4,
+): { person: P; mentionMs: number | null }[] {
+  const pool = people.filter((p) => !exclude.has(p.id));
+  const texts = segments.map((s) => ({ t: ` ${normalizeName(s.text)} `, ms: s.start_ms }));
+  const cited: { person: P; mentionMs: number }[] = [];
+  for (const p of pool) {
+    const names = [p.display_name, ...p.aliases, p.display_name.split(" ")[0] ?? ""].map(normalizeName).filter((n) => n.length >= 3);
+    const hit = texts.find((x) => names.some((n) => x.t.includes(` ${n} `)));
+    if (hit) cited.push({ person: p, mentionMs: hit.ms });
+  }
+  cited.sort((a, b) => a.mentionMs - b.mentionMs);
+  const frequent = pool.filter((p) => !cited.some((c) => c.person.id === p.id))
+    .sort((a, b) => (b.meetings?.length ?? 0) - (a.meetings?.length ?? 0))
+    .map((person) => ({ person, mentionMs: null as number | null }));
+  return [...cited, ...frequent].slice(0, max);
+}

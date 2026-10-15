@@ -77,7 +77,7 @@ export const VoiceAvatar = forwardRef<VoiceAvatarHandle, {
           strokeDasharray={C} strokeDashoffset={C * (1 - progress)} style={{ opacity: state === "playing" ? 1 : 0 }} />
         {state === "loading" && <circle cx="48" cy="48" r={R} fill="none" strokeWidth="3" strokeLinecap="round" className="origin-center animate-spin stroke-accent/60" strokeDasharray={`${C * 0.2} ${C}`} />}
       </svg>
-      <span className={cn("relative flex size-20 items-center justify-center overflow-hidden rounded-full text-2xl font-medium transition-transform group-hover:scale-[1.03]",
+      <span className={cn("relative flex size-20 items-center justify-center overflow-hidden rounded-full font-serif text-4xl transition-transform group-hover:scale-[1.03]",
         known ? (tone === "accent" ? "bg-accent text-accent-foreground" : "bg-secondary text-foreground") : "bg-muted text-muted-foreground")}>
         {known && src && imgOk && <img src={src} alt="" onError={() => setImgOk(false)} className={cn("absolute inset-0 size-full object-cover transition-[filter]", active ? "brightness-50" : "group-hover:brightness-50")} />}
         {known && !(src && imgOk) && <span className={cn("transition-opacity", active ? "opacity-0" : "group-hover:opacity-0")}>{name.slice(0, 1).toUpperCase()}</span>}
