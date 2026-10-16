@@ -106,6 +106,13 @@
       "when": 1792181251349,
       "tag": "0014_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792193373755,
+      "tag": "0015_speaker_clean_sample",
+      "breakpoints": true
     }
   ]
 }

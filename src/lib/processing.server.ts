@@ -1,7 +1,7 @@
 import { inferSpeakersFromConversation, matchPerson } from "./people-rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
-import { alignTranscripts, assignSpeakersByTime, matchIdentifiedSpeakers, parsePyannote, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
+import { alignTranscripts, assignSpeakersByTime, matchIdentifiedSpeakers, parsePyannote, pickCleanSamples, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
 import { PyannoteError, hasPyannote, submitDiarize, submitIdentify, uploadMedia, waitJob } from "./pyannote.server";
 import { AUTO_TITLE } from "./meeting-rules";
 import { joinChunkTexts, planChunks, MAX_TRANSCRIBE_BYTES } from "./chunking-rules";
@@ -197,7 +197,8 @@ async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: 
       state.transcriptionOutput = job.output ?? {};
       await save();
     }
-    const { utterances } = parsePyannote(state.transcriptionOutput);
+    const { utterances, turns } = parsePyannote(state.transcriptionOutput);
+    const samples = pickCleanSamples(utterances, turns);
     const { data: vps, error: vpError } = await admin.from("person_voiceprints").select("person_id, voiceprint").eq("workspace_id", meeting.workspace_id).order("created_at", { ascending: false }).limit(200);
     if (vpError) throw new StageError("load voiceprints failed", "db", true);
     const seen = new Set<string>();
@@ -221,7 +222,7 @@ async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: 
     const matches = state.identificationOutput ? matchIdentifiedSpeakers(utterances, parsePyannote(state.identificationOutput)) : {};
     if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
     await admin.from("transcripts").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: "pyannote", kind: "raw_pyannote", raw_text: utterances.map((u) => u.text).join(" ") });
-    return { utterances, matches, jobId: state.jobId, identifyJobId: state.identifyJobId ?? null } as unknown as Record<string, Json>;
+    return { utterances, matches, samples, jobId: state.jobId, identifyJobId: state.identifyJobId ?? null } as unknown as Record<string, Json>;
   } catch (e) {
     if (e instanceof PyannoteError) throw providerError("pyannote", e.status || 500, e.message);
     throw e;
@@ -231,7 +232,7 @@ async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: 
 async function stageAlign(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string, inputVersion: string) {
   const { data: runs } = await admin.from("processing_runs").select("stage, output")
     .eq("recording_id", recordingId).eq("input_version", inputVersion).eq("config_version", CONFIG_VERSION).in("stage", ["transcribe", "diarize"]);
-  const diar = runs?.find((r) => r.stage === "diarize")?.output as { utterances?: Utterance[]; matches?: Record<string, string> } | null;
+  const diar = runs?.find((r) => r.stage === "diarize")?.output as { utterances?: Utterance[]; matches?: Record<string, string>; samples?: Record<string, { start_ms: number; end_ms: number }> } | null;
   const { data: raw } = await admin.from("transcripts").select("raw_text").eq("meeting_id", meeting.id).eq("kind", "raw_openai").order("created_at", { ascending: false }).limit(1);
   const { data: rec } = await admin.from("recordings").select("duration_ms").eq("id", recordingId).single();
   const turns = diar?.utterances ?? [];
@@ -246,17 +247,37 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
   }).select("id").single();
   if (error || !tr) throw new StageError("insert failed", "db", true);
   const labels = [...new Set(segments.map((s) => s.speaker).filter((s): s is number => s !== null))].sort((a, b) => a - b);
+  const labelOf = (l: number) => `Falante ${labels.indexOf(l) + 1}`;
+
+  // 1) Voices + transcript first, so the user can start naming them right away.
   const speakerIds = new Map<number, string>();
+  for (const l of labels) {
+    const sample = diar?.samples?.[String(l)];
+    const { data: sp } = await admin.from("speakers").insert({
+      workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider_label: labelOf(l),
+      sample_start_ms: sample?.start_ms ?? null, sample_end_ms: sample?.end_ms ?? null,
+    }).select("id").single();
+    if (sp) speakerIds.set(l, sp.id);
+  }
+  const rows = segments.map((s) => ({
+    workspace_id: meeting.workspace_id, meeting_id: meeting.id, transcript_id: tr.id, position: s.position,
+    speaker_id: s.speaker === null ? null : speakerIds.get(s.speaker) ?? null,
+    start_ms: s.start_ms, end_ms: s.end_ms, text: s.text, alignment_score: s.alignment_score, review_state: s.review_state,
+  }));
+  for (let i = 0; i < rows.length; i += 500) {
+    const r = await admin.from("transcript_segments").insert(rows.slice(i, i + 500));
+    if (r.error) throw new StageError("segments insert failed", "db", true);
+  }
+  await admin.from("meetings").update({ current_transcript_id: tr.id }).eq("id", meeting.id);
+
+  // 2) Automatic naming. Never overwrites a voice the user already named meanwhile.
   const matches = diar?.matches ?? {};
   const { data: registryRows } = await admin.from("people").select("id, display_name, aliases, is_self").eq("workspace_id", meeting.workspace_id);
   const registry = registryRows ?? [];
-  // Layer 1: voiceprints. Layer 2: names said in the conversation (addressing + reply, self-introduction).
   const known = new Map<number, string>();
   for (const l of labels) { const pid = matches[String(l)]; if (pid && registry.some((p) => p.id === pid)) known.set(l, pid); }
   const viaVoice = new Set(known.keys());
   for (const [l, pid] of inferSpeakersFromConversation(segments, registry, known)) known.set(l, pid);
-  // Layer 3: AI reads the dialogue for names not yet in the registry (or not caught by the rule).
-  const labelOf = (l: number) => `Falante ${labels.indexOf(l) + 1}`;
   const unknown = labels.filter((l) => !known.has(l));
   const aiNames = new Map<number, string>();
   if (unknown.length) {
@@ -278,38 +299,28 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
       }
     } catch { /* naming is best-effort; the user can still name voices */ }
   }
-  for (const [n, l] of labels.entries()) {
-    const { data: sp } = await admin.from("speakers").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider_label: `Falante ${n + 1}` }).select("id").single();
-    if (!sp) continue;
-    speakerIds.set(l, sp.id);
+  const { data: current } = await admin.from("speakers").select("id, participant_id").eq("meeting_id", meeting.id);
+  const userNamed = new Set((current ?? []).filter((x) => x.participant_id).map((x) => x.id));
+  for (const l of labels) {
+    const spId = speakerIds.get(l);
+    if (!spId || userNamed.has(spId)) continue;
     let person = registry.find((p) => p.id === known.get(l));
     const newName = aiNames.get(l);
     if (!person && newName) {
       const { data: np } = await admin.from("people").insert({ workspace_id: meeting.workspace_id, display_name: newName }).select("id, display_name, aliases, is_self").single();
       if (np) { person = np; registry.push(np); }
     }
-    if (person) {
-      const voice = viaVoice.has(l);
-      // The owner recognised by voice is certain enough to never ask again.
-      const confirmed = voice && person.is_self;
-      const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: person.display_name, person_id: person.id, person_confirmed: confirmed, source: voice ? "voice" : "ai" }).select("id").single();
-      if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: confirmed ? "user" : voice ? "voice" : "ai" }).eq("id", sp.id);
-    }
+    if (!person) continue;
+    const voice = viaVoice.has(l);
+    // The owner recognised by voice is certain enough to never ask again.
+    const confirmed = voice && person.is_self;
+    const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: person.display_name, person_id: person.id, person_confirmed: confirmed, source: voice ? "voice" : "ai" }).select("id").single();
+    if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: confirmed ? "user" : voice ? "voice" : "ai" }).eq("id", spId).is("participant_id", null);
   }
-  // Everyone identified automatically → no need to wait for the user before analysing.
-  if (labels.length && labels.every((l) => known.has(l) || aiNames.has(l))) {
+  // Everyone identified (automatically or by the user meanwhile) → no need to wait before analysing.
+  if (labels.length && labels.every((l) => known.has(l) || aiNames.has(l) || userNamed.has(speakerIds.get(l) ?? ""))) {
     await admin.from("meetings").update({ analysis_requested_at: new Date().toISOString() }).eq("id", meeting.id).is("analysis_requested_at", null);
   }
-  const rows = segments.map((s) => ({
-    workspace_id: meeting.workspace_id, meeting_id: meeting.id, transcript_id: tr.id, position: s.position,
-    speaker_id: s.speaker === null ? null : speakerIds.get(s.speaker) ?? null,
-    start_ms: s.start_ms, end_ms: s.end_ms, text: s.text, alignment_score: s.alignment_score, review_state: s.review_state,
-  }));
-  for (let i = 0; i < rows.length; i += 500) {
-    const r = await admin.from("transcript_segments").insert(rows.slice(i, i + 500));
-    if (r.error) throw new StageError("segments insert failed", "db", true);
-  }
-  await admin.from("meetings").update({ current_transcript_id: tr.id }).eq("id", meeting.id);
   return { transcript_id: tr.id, segments: rows.length, uncertain: segments.filter((s) => s.review_state === "uncertain").length };
 }
 

@@ -9,7 +9,7 @@ import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
 import { avatarSrc } from "@/lib/people-rules";
 import { fmtTime } from "@/lib/review";
-import { VoiceAvatar, pickSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
+import { VoiceAvatar, speakerSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
 
 type Meeting = {
   id: string;
@@ -26,10 +26,10 @@ function firstSentences(text: string, n = 4) {
 
 export function MeetingOverview({ meeting, onFull, processing = false }: { meeting: Meeting; onFull: () => void; processing?: boolean }) {
   const { data: an } = useQuery(analysisQuery(meeting.id));
-  const { data: speakers } = useQuery(speakersQuery(meeting.id));
+  const { data: speakers } = useQuery({ ...speakersQuery(meeting.id), refetchInterval: processing ? 3000 : false });
   const { data: tasks } = useQuery(meetingTasksQuery(meeting.id));
   const { data: tr } = useQuery(transcriptQuery(meeting.current_transcript_id));
-  const samples = pickSamples(tr?.segments ?? []);
+  const samples = speakerSamples(speakers ?? [], tr?.segments ?? []);
   const { data: people } = useQuery(peopleQuery);
   const qc = useQueryClient();
   const avatarRefs = useRef(new Map<string, VoiceAvatarHandle>());

@@ -210,7 +210,7 @@ export function assignSpeakersByTime<T extends { start_ms: number; end_ms: numbe
 }
 
 /** Separate jobs do not share speaker numbering. Map identity by time, never label. */
-export function matchIdentifiedSpeakers(transcribed: Utterance[], identified: ReturnType<typeof parsePyannote>): Record<string, string> {
+export function matchIdentifiedSpeakers(transcribed: Utterance[], identified: Pick<ReturnType<typeof parsePyannote>, "utterances" | "matches">): Record<string, string> {
   const overlaps = new Map<number, Map<number, number>>();
   for (const t of transcribed) {
     if (t.speaker === null) continue;

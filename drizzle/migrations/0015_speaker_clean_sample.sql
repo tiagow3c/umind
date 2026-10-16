@@ -1,0 +1,1 @@
+ALTER TABLE public.speakers ADD COLUMN IF NOT EXISTS sample_start_ms integer, ADD COLUMN IF NOT EXISTS sample_end_ms integer;

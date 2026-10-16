@@ -730,6 +730,8 @@ export type Database = {
           participant_id: string | null
           provider_label: string
           run_id: string | null
+          sample_end_ms: number | null
+          sample_start_ms: number | null
           updated_at: string
           workspace_id: string
         }
@@ -742,6 +744,8 @@ export type Database = {
           participant_id?: string | null
           provider_label: string
           run_id?: string | null
+          sample_end_ms?: number | null
+          sample_start_ms?: number | null
           updated_at?: string
           workspace_id: string
         }
@@ -754,6 +758,8 @@ export type Database = {
           participant_id?: string | null
           provider_label?: string
           run_id?: string | null
+          sample_end_ms?: number | null
+          sample_start_ms?: number | null
           updated_at?: string
           workspace_id?: string
         }
