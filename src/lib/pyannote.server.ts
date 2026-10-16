@@ -32,10 +32,12 @@ export async function uploadMedia(name: string, data: Blob) {
   return mediaUrl;
 }
 
-/** Transcription is supported only by /diarize, never by /identify. */
+/** Transcription is supported only by /diarize, never by /identify.
+ *  precision-3 + exclusive turns keep speakers from being merged or flipped mid-sentence;
+ *  minSpeakers 2 biases toward splitting (the user can merge by giving two voices the same name). */
 export async function submitDiarize(url: string) {
   const r = await call("/diarize", { method: "POST", body: JSON.stringify({
-    url, model: "precision-2", transcription: true,
+    url, model: "precision-3", exclusive: true, minSpeakers: 2, transcription: true,
     transcriptionConfig: { model: "faster-whisper-large-v3-turbo" },
   }) });
   return String(r["jobId"]);

@@ -11,7 +11,7 @@ describe("pyannote API requests", () => {
     expect(await submitDiarize("media://ata/saved")).toBe("transcription-job");
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("https://api.pyannote.ai/v1/diarize");
-    expect(JSON.parse(init.body)).toEqual({ url: "media://ata/saved", model: "precision-2", transcription: true, transcriptionConfig: { model: "faster-whisper-large-v3-turbo" } });
+    expect(JSON.parse(init.body)).toEqual({ url: "media://ata/saved", model: "precision-3", exclusive: true, minSpeakers: 2, transcription: true, transcriptionConfig: { model: "faster-whisper-large-v3-turbo" } });
   });
   it("identifies voices without unsupported transcription parameters", async () => {
     vi.stubEnv("PYANNOTE_API_KEY", "test-key");
