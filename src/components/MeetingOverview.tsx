@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { forwardRef, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { requestAnalysis } from "@/lib/processing.functions";
 import { analysisQuery, assignSpeakerPerson, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
@@ -12,6 +14,7 @@ import { VoiceAvatar, pickSamples, type VoiceAvatarHandle } from "@/components/V
 type Meeting = {
   id: string;
   current_transcript_id: string | null;
+  analysis_requested_at?: string | null;
   participants: { id: string; display_name: string; person_confirmed: boolean; person_id?: string | null }[];
   recordings: { id: string; codec: string | null; recording_parts: { object_key: string; sequence: number }[] }[];
 };
@@ -48,9 +51,18 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
     meeting.participants.find((p) => p.id === speakers?.find((s) => s.id === speakerId)?.participant_id)?.display_name ?? "";
 
   /** Focus the name field of the next unnamed speaker and play their voice. */
+  const analyzeFn = useServerFn(requestAnalysis);
+  const waiting = processing && !!meeting.current_transcript_id && !meeting.analysis_requested_at;
+  const [starting, setStarting] = useState(false);
+  const startAnalysis = async () => {
+    if (starting) return;
+    setStarting(true);
+    try { await analyzeFn({ data: { meetingId: meeting.id } }); qc.invalidateQueries(); }
+    catch { toast.error("Não foi possível iniciar a análise."); setStarting(false); }
+  };
   const advance = (afterId: string) => {
     const next = (speakers ?? []).find((s) => s.id !== afterId && !nameOf(s.id));
-    if (!next) return;
+    if (!next) { if (waiting) void startAnalysis(); return; }
     requestAnimationFrame(() => {
       avatarRefs.current.get(next.id)?.play();
       inputRefs.current.get(next.id)?.focus();
@@ -60,7 +72,14 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   return (
     <div className="max-w-3xl space-y-10 sm:space-y-16">
       <section>
-        {an?.summary ? (
+        {waiting ? (
+          <div>
+            <p className="font-serif text-2xl leading-snug">Transcrição pronta. Diga quem participou para a análise sair mais precisa.</p>
+            <button onClick={startAnalysis} disabled={starting} className="mt-5 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm hover:border-accent disabled:opacity-60">
+              {starting && <Loader2 className="size-3.5 animate-spin" />}Analisar agora
+            </button>
+          </div>
+        ) : an?.summary ? (
           <p className="font-serif text-2xl leading-snug">{firstSentences(an.summary)}</p>
         ) : processing ? (
           <div className="space-y-3" aria-label="Resumo sendo preparado">
