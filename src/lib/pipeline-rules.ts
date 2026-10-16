@@ -182,10 +182,13 @@ export function pickCleanSamples(utterances: SpeakerTurn[], turns: SpeakerTurn[]
     let s = u.start_ms + SAMPLE_EDGE_MS;
     let e = u.end_ms - SAMPLE_EDGE_MS;
     // Push the start past anyone else still talking at the beginning.
-    for (const o of all) if (o.speaker !== u.speaker && o.start_ms <= s && o.end_ms > s) s = o.end_ms + SAMPLE_EDGE_MS;
+    for (let moved = true; moved;) {
+      moved = false;
+      for (const o of all) if (o.speaker !== u.speaker && o.start_ms <= s && o.end_ms + SAMPLE_EDGE_MS > s) { s = o.end_ms + SAMPLE_EDGE_MS; moved = true; }
+    }
     e = Math.min(e, s + SAMPLE_MAX_MS);
     // Stop before anyone else starts.
-    for (const o of all) if (o.speaker !== u.speaker && o.start_ms > s - SAMPLE_EDGE_MS && o.start_ms < e + SAMPLE_EDGE_MS) e = Math.min(e, o.start_ms - SAMPLE_EDGE_MS);
+    for (const o of all) if (o.speaker !== u.speaker && o.start_ms > s && o.start_ms < e + SAMPLE_EDGE_MS) e = Math.min(e, o.start_ms - SAMPLE_EDGE_MS);
     if (e - s < SAMPLE_MIN_MS) continue;
     const key = String(u.speaker);
     const cur = best[key];
