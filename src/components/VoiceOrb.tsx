@@ -12,32 +12,32 @@ function toRgb(css: string): [number, number, number] {
 }
 
 const VERT = `attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
+
+/** A soft, flat disc: the two palette tones drifting slowly into each other.
+ *  No drop shadow, no halo, no specular highlight — the level only swells the radius. */
 const FRAG = `precision highp float;
-uniform vec2 r;uniform float t;uniform float lv;uniform float act;uniform vec3 c1;uniform vec3 c2;
+uniform vec2 r;uniform float t;uniform float lv;uniform vec3 c1;uniform vec3 c2;
 float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
- return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
-float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p*=2.02;a*=.5;}return v;}
+ return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+vec2(1.,1.)),f.x),f.y);}
+float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*n(p);p*=2.03;a*=.5;}return v;}
 void main(){
  vec2 uv=(gl_FragCoord.xy-.5*r)/min(r.x,r.y);
  float d=length(uv);
- float rad=.32+.07*lv+.008*sin(t*1.3)*act;
- float mask=smoothstep(rad,rad-.004,d);
- vec2 q=uv*2.2;
- float f=fbm(q+vec2(t*.15,-t*.1)+fbm(q*1.5-t*.2+lv*2.));
- vec3 col=mix(c1,c2,smoothstep(.25,.8,f+uv.y*.6));
- col+=pow(max(0.,1.-length(uv-vec2(-.1,.14))*3.2),2.)*.45;
- col*=.85+.3*f;
- float glow=exp(-max(d-rad,0.)*14.)*(.15+.45*lv)*(1.-mask);
- vec3 o=col*mask+c2*glow;
- gl_FragColor=vec4(o,max(mask,glow));
+ float rad=.30+.045*lv;
+ float mask=smoothstep(rad+.005,rad-.005,d);
+ float k=.5+.5*dot(uv/rad,vec2(.62,.78));
+ k+=.09*sin(t*.28)+.07*(fbm(uv*1.25+vec2(t*.05,-t*.045))-.5);
+ vec3 col=mix(c1,c2,clamp(k,0.,1.));
+ col=mix(col,c1,smoothstep(.62,1.,d/rad)*.14);
+ gl_FragColor=vec4(col,mask);
 }`;
 
-/** ChatGPT-voice style orb: a fluid shader disk that swells with mic level (0..1). */
+/** Recording indicator: a calm fluid disk that swells gently with mic level (0..1). */
 export function VoiceOrb({ level, active, size = 260 }: { level: number; active: boolean; size?: number }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const target = useRef(0);
-  target.current = active ? Math.min(1, level * 4) : 0;
+  target.current = active ? Math.min(1, level * 3.2) : 0;
   const activeRef = useRef(active);
   activeRef.current = active;
 
@@ -60,22 +60,24 @@ export function VoiceOrb({ level, active, size = 260 }: { level: number; active:
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     const u = (k: string) => gl.getUniformLocation(pr, k);
     const styles = getComputedStyle(cv);
-    gl.uniform3fv(u("c1"), toRgb(styles.getPropertyValue("--primary").trim() || "#222"));
-    gl.uniform3fv(u("c2"), toRgb(styles.getPropertyValue("--accent").trim() || "#b5643c"));
+    gl.uniform3fv(u("c1"), toRgb(styles.getPropertyValue("--orb-a").trim() || "#a85c37"));
+    gl.uniform3fv(u("c2"), toRgb(styles.getPropertyValue("--orb-b").trim() || "#e7d5bb"));
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = cv.height = size * dpr;
     gl.viewport(0, 0, cv.width, cv.height);
-    let lv = 0, act = 0, raf = 0;
-    const t0 = performance.now();
+    let lv = 0, act = 0, t = 0, last = performance.now(), raf = 0;
     const frame = () => {
-      lv += (target.current - lv) * (target.current > lv ? 0.35 : 0.08);
-      act += ((activeRef.current ? 1 : 0) - act) * 0.05;
+      const now = performance.now();
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      lv += (target.current - lv) * (target.current > lv ? 0.12 : 0.05);
+      act += ((activeRef.current ? 1 : 0) - act) * 0.04;
+      t += dt * (0.5 + act * 0.25 + lv * 0.45);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform2f(u("r"), cv.width, cv.height);
-      gl.uniform1f(u("t"), (performance.now() - t0) / 1000 * (0.6 + act * 0.6 + lv));
+      gl.uniform1f(u("t"), t);
       gl.uniform1f(u("lv"), lv);
-      gl.uniform1f(u("act"), act);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       raf = requestAnimationFrame(frame);
     };
