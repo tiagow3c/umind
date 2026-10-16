@@ -189,7 +189,7 @@ function Gravar() {
   const [retry, setRetry] = useState<null | (() => void)>(null);
 
   const isImport = m.source_type === "import";
-  const inCapture = !isImport && allowed && (phase === "idle" || phase === "recording" || phase === "paused");
+  const inCapture = !isImport && (phase === "recording" || phase === "paused" || (phase === "idle" && allowed));
 
   // Modo sem distrações: do preparo ao encerrar, só o círculo na tela.
   if (inCapture) {
