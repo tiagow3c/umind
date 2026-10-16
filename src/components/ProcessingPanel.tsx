@@ -23,7 +23,8 @@ export function ProcessingPanel({ meetingId, status, compact = false, waiting = 
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
-      if (busy.current) return;
+      // Another call still in flight (e.g. from a previous render): check again later, never stop polling.
+      if (busy.current) { if (alive) timer = setTimeout(tick, 2500); return; }
       busy.current = true;
       try {
         const r = await advance({ data: { meetingId } });
