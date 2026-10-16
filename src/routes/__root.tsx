@@ -123,8 +123,14 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+    let lastUser: string | null | undefined;
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const uid = session?.user?.id ?? null;
+      // SIGNED_IN re-fires when the app regains focus; only refetch everything when the user actually changes.
+      const changed = lastUser !== undefined && uid !== lastUser;
+      const first = lastUser === undefined;
+      lastUser = uid;
+      if (first || (!changed && event !== "USER_UPDATED")) return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       else queryClient.clear();
