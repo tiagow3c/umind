@@ -33,14 +33,18 @@ export function PullToRefresh() {
         startRef.current = null;
         return;
       }
-      startRef.current = e.touches[0].clientY;
+      const t = e.touches[0];
+      if (!t) return;
+      startRef.current = t.clientY;
       pullingRef.current = false;
     };
 
     const onMove = (e: TouchEvent) => {
       const from = startRef.current;
       if (from == null || busyRef.current) return;
-      const travel = e.touches[0].clientY - from;
+      const t = e.touches[0];
+      if (!t) return;
+      const travel = t.clientY - from;
       if (travel <= 0 || !atTop()) {
         if (pullingRef.current) { startRef.current = null; pullingRef.current = false; show(0); }
         return;
