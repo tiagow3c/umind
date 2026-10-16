@@ -376,7 +376,7 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
     const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: person?.display_name ?? name, person_id: person?.id ?? null }).select("id").single();
     if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: "ai" }).eq("id", sp.id).is("participant_id", null);
   }
-  await admin.from("meetings").update({ status: "review_ready" }).eq("id", meeting.id).eq("status", "processing");
+  await admin.from("meetings").update({ status: "completed" }).eq("id", meeting.id).eq("status", "processing");
   return { analysis_id: an.id, tasks: v.tasks.length, decisions: v.decisions.length };
 }
 

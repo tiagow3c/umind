@@ -10,7 +10,6 @@ import { MeetingSkeleton } from "@/components/MeetingSkeleton";
 import { MeetingReview } from "@/components/MeetingReview";
 import { MeetingOverview } from "@/components/MeetingOverview";
 import { useState } from "react";
-import { markCompleted } from "@/lib/review";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -77,13 +76,6 @@ function Detalhe() {
       {(m.status === "processing" || m.status === "failed") && rec?.finalized_at && <ProcessingPanel meetingId={m.id} status={m.status} />}
 
       {m.status === "processing" && rec?.finalized_at && !m.current_transcript_id && <MeetingSkeleton />}
-
-      {m.status === "review_ready" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-success p-4 text-sm">
-          <span>Conteúdo gerado e pronto para sua revisão.</span>
-          <Button size="sm" variant="outline" onClick={async () => { await markCompleted(m.id); qc.invalidateQueries(); toast.success("Revisão concluída."); }}>Marcar revisão como concluída</Button>
-        </div>
-      )}
 
       {m.current_transcript_id && <MeetingReview meeting={m} />}
 
