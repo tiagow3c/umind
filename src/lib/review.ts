@@ -272,3 +272,20 @@ export async function setPersonInstagram(id: string, handle: string) {
   if (error) throw new Error(error.message);
   if (h) await fetchInstagramAvatar({ data: { personId: id } }).catch(() => null);
 }
+
+/** "É minha voz": links the speaker to the owner's person (created once, marked is_self) and saves the voiceprint. */
+export async function assignSelf(speakerId: string) {
+  const { data: sp } = await supabase.from("speakers").select("workspace_id").eq("id", speakerId).single();
+  if (!sp) throw new Error("speaker");
+  const { data: me } = await supabase.from("people").select("id").eq("workspace_id", sp.workspace_id).eq("is_self", true).limit(1);
+  let personId = me?.[0]?.id;
+  if (!personId) {
+    const { data: u } = await supabase.auth.getUser();
+    const meta = (u.user?.user_metadata ?? {}) as Record<string, string | undefined>;
+    const name = (meta["full_name"] || meta["name"] || u.user?.email?.split("@")[0] || "Eu").slice(0, 120);
+    const { data: p, error } = await supabase.from("people").insert({ workspace_id: sp.workspace_id, display_name: name, is_self: true }).select("id").single();
+    if (error || !p) throw new Error(error?.message ?? "person");
+    personId = p.id;
+  }
+  await assignSpeakerPerson(speakerId, { personId });
+}

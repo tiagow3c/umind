@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
-import { forwardRef, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { requestAnalysis } from "@/lib/processing.functions";
-import { analysisQuery, assignSpeakerPerson, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
+import { analysisQuery, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
 import { avatarSrc } from "@/lib/people-rules";
@@ -34,6 +34,19 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   const qc = useQueryClient();
   const avatarRefs = useRef(new Map<string, VoiceAvatarHandle>());
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
+
+  const hasSelf = !!people?.some((p) => p.is_self);
+  // Voices named automatically from the conversation learn their voiceprint once, so next time they are recognised by voice.
+  useEffect(() => {
+    for (const s of speakers ?? []) {
+      if (s.mapping_source !== "ai" || !samples.get(s.id)) continue;
+      const pid = meeting.participants.find((p) => p.id === s.participant_id)?.person_id;
+      const key = `ata:enrolled:${s.id}`;
+      if (!pid || localStorage.getItem(key)) continue;
+      localStorage.setItem(key, "1");
+      void enrollSpeakerVoice(s.id, pid).catch(() => localStorage.removeItem(key));
+    }
+  }, [speakers, meeting.participants, samples]);
 
   const used = new Set(meeting.participants.map((p) => p.person_id).filter((x): x is string => !!x));
   const pick = async (speakerId: string, personId: string) => {
@@ -147,6 +160,10 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                       options={(people ?? []).filter((p) => !used.has(p.id))}
                       onPick={(pid) => pick(s.id, pid)}
                     />
+                  )}
+                  {!name && !hasSelf && (
+                    <button onClick={async () => { try { await assignSelf(s.id); qc.invalidateQueries(); advance(s.id); } catch { toast.error("Não foi possível salvar."); } }}
+                      className="-mt-1 text-xs text-muted-foreground underline underline-offset-4 hover:text-accent">É minha voz</button>
                   )}
                   {person?.instagram && <a href={`https://instagram.com/${person.instagram}`} target="_blank" rel="noreferrer" className="-mt-1.5 max-w-28 truncate text-xs text-muted-foreground hover:text-accent">@{person.instagram}</a>}
                   {suggested && <span className="-mt-1 text-[11px] text-muted-foreground">{s.mapping_source === "voice" ? "reconhecido pela voz" : "sugerido"}</span>}
