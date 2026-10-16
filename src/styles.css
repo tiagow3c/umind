@@ -87,5 +87,34 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
   }
-  h1, h2, h3 { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; }
+  h1, h2, h3 { font-family: var(--font-serif); font-weight: 400; letter-spacing: 0; }
+}
+
+.mobile-app-header {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+}
+.mobile-tab-bar { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+@media (max-width: 767px) {
+  html { scroll-padding-top: 6rem; }
+  .app-main {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+    padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+    overflow-wrap: anywhere;
+  }
+  .app-main h1 { font-size: 2.25rem; line-height: 1.15; }
+  .app-main h2 { line-height: 1.2; }
+  input:not([type="checkbox"]):not([type="file"]), textarea, select { font-size: 1rem; min-width: 0; max-width: 100%; }
+  .app-shell button:not([role="checkbox"]), .app-shell [role="button"] { min-height: 2.75rem; }
+  .app-shell[data-keyboard-open="true"] .mobile-tab-bar { display: none; }
+  .app-shell[data-keyboard-open="true"] .app-main { padding-bottom: 2rem; }
+  .app-main canvas { max-width: 100%; height: auto !important; aspect-ratio: 1; }
+  .app-main [role="tablist"] { max-width: 100%; overflow-x: auto; justify-content: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

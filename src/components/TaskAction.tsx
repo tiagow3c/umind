@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export type TaskDraft = { kind: "email" | "calendar"; to_name: string | null; subject: string | null; body: string | null; event_title: string | null; event_start: string | null; event_minutes: number | null };
 type Task = { id: string; title: string; owner_text: string | null; due_text: string | null; due_date: string | null; status: string; action?: unknown };
@@ -67,23 +68,23 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
 
   return (
     <li className="py-6">
-      <div className="flex items-center justify-between gap-4">
-        <button onClick={() => setOpen(!open)} className="group flex min-w-0 flex-1 items-start gap-2 text-left" aria-expanded={open}>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:items-center sm:gap-4">
+        <Button variant="ghost" onClick={() => setOpen(!open)} className="group h-auto min-w-0 items-start justify-start gap-2 whitespace-normal p-0 text-left hover:bg-transparent" aria-expanded={open}>
           <ChevronRight className={cn("mt-1.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground", open && "rotate-90")} />
           <span className="min-w-0">
             <span className={cn("block text-lg font-medium", done && "text-muted-foreground line-through")}>{task.title}</span>
             <span className="mt-1 block text-sm text-muted-foreground">{meta}</span>
           </span>
-        </button>
+        </Button>
         {done ? <span className="shrink-0 text-sm text-muted-foreground">Feita</span> : (
-          <div className="ml-auto flex shrink-0 gap-2">
+          <div className="ml-auto flex shrink-0 flex-col items-end gap-2 sm:flex-row">
             {d.kind === "email" ? (
               <>
-                <button onClick={() => go(gmailUrl(d))} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-secondary"><GmailIcon /> Enviar</button>
-                <button onClick={() => go(calendarUrl(d, task.due_date))} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm hover:bg-secondary"><CalendarIcon /> Agendar</button>
+                <Button variant="outline" onClick={() => go(gmailUrl(d))} className="w-full px-3 shadow-none"><GmailIcon /> Enviar</Button>
+                <Button variant="outline" onClick={() => go(calendarUrl(d, task.due_date))} className="w-full px-3 shadow-none"><CalendarIcon /> Agendar</Button>
               </>
             ) : (
-              <button onClick={() => go(calendarUrl(d, task.due_date))} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-secondary"><CalendarIcon /> Agendar</button>
+              <Button variant="outline" onClick={() => go(calendarUrl(d, task.due_date))} className="px-3 shadow-none"><CalendarIcon /> Agendar</Button>
             )}
           </div>
         )}
