@@ -10,7 +10,6 @@ import { MeetingSkeleton } from "@/components/MeetingSkeleton";
 import { MeetingReview } from "@/components/MeetingReview";
 import { MeetingOverview } from "@/components/MeetingOverview";
 import { useState } from "react";
-import { markCompleted } from "@/lib/review";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
