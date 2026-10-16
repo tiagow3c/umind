@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/pessoas/$id")({
-  head: () => ({ meta: [{ title: "Pessoa — Ata" }, { name: "description", content: "Reuniões e histórico de uma pessoa." }, { property: "og:title", content: "Pessoa — Ata" }, { property: "og:description", content: "Reuniões e histórico de uma pessoa." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Pessoa — Ata" }, { name: "description", content: "Reuniões e histórico de uma pessoa." }, { property: "og:title", content: "Pessoa — Ata" }, { property: "og:description", content: "Reuniões e histórico de uma pessoa." }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(peopleQuery),
   component: Pessoa,
 });

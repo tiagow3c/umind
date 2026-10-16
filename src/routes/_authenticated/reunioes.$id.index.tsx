@@ -17,7 +17,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/_authenticated/reunioes/$id/")({
-  head: () => ({ meta: [{ title: "Reunião — Ata" }, { name: "description", content: "Status, participantes e consentimento da reunião." }, { property: "og:title", content: "Reunião — Ata" }, { property: "og:description", content: "Status, participantes e consentimento da reunião." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Reunião — Ata" }, { name: "description", content: "Status, participantes e consentimento da reunião." }, { property: "og:title", content: "Reunião — Ata" }, { property: "og:description", content: "Status, participantes e consentimento da reunião." }] }),
   loader: ({ context, params }) => context.queryClient.ensureQueryData(meetingQuery(params.id)),
   component: Detalhe,
 });

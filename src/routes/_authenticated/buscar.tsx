@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 const KIND_LABEL: Record<string, string> = { topic: "Tópico", decision: "Decisão", proposal: "Proposta", question: "Pergunta" };
 
 export const Route = createFileRoute("/_authenticated/buscar")({
-  head: () => ({ meta: [{ title: "Buscar — Ata" }, { name: "description", content: "Busque por significado o que foi discutido nas reuniões." }, { property: "og:title", content: "Buscar — Ata" }, { property: "og:description", content: "Busque por significado o que foi discutido nas reuniões." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Buscar — Ata" }, { name: "description", content: "Busque por significado o que foi discutido nas reuniões." }, { property: "og:title", content: "Buscar — Ata" }, { property: "og:description", content: "Busque por significado o que foi discutido nas reuniões." }] }),
   component: SearchPage,
 });
 

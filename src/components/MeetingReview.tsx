@@ -224,7 +224,7 @@ export function TaskRow({ t, index, onEvidence }: { t: Task; index?: Map<string,
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid min-w-0 gap-3 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="font-medium">{t.title}</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -235,7 +235,7 @@ export function TaskRow({ t, index, onEvidence }: { t: Task; index?: Map<string,
               {index && onEvidence && <EvidenceLinks ids={t.evidence_segment_ids} index={index} onEvidence={onEvidence} />}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">
             <span className="rounded-full border px-2 py-0.5 text-xs">{TASK_LABEL[t.status] ?? t.status}</span>
             {t.status === "suggested" && <>
               <Button size="sm" onClick={() => act({ status: "accepted" })}>Aceitar</Button>

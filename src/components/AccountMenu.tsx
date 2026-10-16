@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-export function AccountMenu({ name, email, compact = false }: { name: string; email?: string; compact?: boolean }) {
+export function AccountMenu({ name, email, compact = false }: { name: string; email: string | undefined; compact?: boolean }) {
   const navigate = useNavigate();
   return (
     <DropdownMenu>

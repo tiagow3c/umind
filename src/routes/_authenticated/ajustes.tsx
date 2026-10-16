@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/ajustes")({
-  head: () => ({ meta: [{ title: "Ajustes — Ata" }, { name: "description", content: "Perfil, workspace e privacidade." }, { property: "og:title", content: "Ajustes — Ata" }, { property: "og:description", content: "Perfil, workspace e privacidade." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Ajustes — Ata" }, { name: "description", content: "Perfil, workspace e privacidade." }, { property: "og:title", content: "Ajustes — Ata" }, { property: "og:description", content: "Perfil, workspace e privacidade." }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(workspaceQuery),
   component: Ajustes,
 });

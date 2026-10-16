@@ -12,6 +12,8 @@ export const Route = createFileRoute("/auth")({
   validateSearch: z.object({ next: z.string().optional() }),
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Entrar — Ata" },
       { name: "description", content: "Entre ou crie sua conta no assistente de reuniões Ata." },
       { property: "og:title", content: "Entrar — Ata" },

@@ -50,7 +50,7 @@ function Lista() {
         <ul className="divide-y border-y">
           {rows.map((m) => (
             <li key={m.id} className="flex items-center gap-2 pr-2 hover:bg-secondary/50">
-              <Link to="/reunioes/$id" params={{ id: m.id }} className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-4 md:grid-cols-[minmax(0,1fr)_120px_80px_auto] md:gap-4">
+              <Link to="/reunioes/$id" params={{ id: m.id }} className="grid min-w-0 flex-1 grid-cols-1 justify-items-start gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center md:grid-cols-[minmax(0,1fr)_120px_80px_auto] md:gap-4">
                 <span className="min-w-0 break-words font-medium">{m.title}</span>
                 <span className="hidden text-sm text-muted-foreground md:block">{new Date(m.created_at).toLocaleDateString("pt-BR")}</span>
                 <span className="hidden text-sm tabular-nums text-muted-foreground md:block">{formatDuration(m.recordings?.[0]?.duration_ms)}</span>

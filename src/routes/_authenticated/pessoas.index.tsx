@@ -4,7 +4,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { peopleQuery } from "@/lib/review";
 
 export const Route = createFileRoute("/_authenticated/pessoas/")({
-  head: () => ({ meta: [{ title: "Pessoas — Ata" }, { name: "description", content: "Pessoas identificadas automaticamente nas suas reuniões." }, { property: "og:title", content: "Pessoas — Ata" }, { property: "og:description", content: "Pessoas identificadas automaticamente nas suas reuniões." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Pessoas — Ata" }, { name: "description", content: "Pessoas identificadas automaticamente nas suas reuniões." }, { property: "og:title", content: "Pessoas — Ata" }, { property: "og:description", content: "Pessoas identificadas automaticamente nas suas reuniões." }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(peopleQuery),
   component: Pessoas,
 });
