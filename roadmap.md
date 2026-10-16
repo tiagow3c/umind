@@ -1,4 +1,4 @@
-# Mobile e instalação do Ata
-- [x] Adaptar navegação, conta e telas para celular.
-- [x] Adicionar manifesto, ícones e metadados de instalação sem modo offline.
-- [x] Verificar navegação autenticada, telas em celular/computador e testes.
+# Correção da pyannote
+- [ ] Corrigir os parâmetros de transcrição e identificação de vozes conforme a API.
+- [ ] Cobrir a chamada e a leitura do resultado com testes.
+- [ ] Validar o processamento autenticado com o áudio salvo.
