@@ -26,7 +26,7 @@ const NAV = [
 function AppLayout() {
   const { user } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isRecorder = pathname.endsWith("/gravar");
+  const isRecorder = pathname.endsWith("/gravar") || pathname === "/reunioes/nova";
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -39,14 +39,14 @@ function AppLayout() {
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
   const displayName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Minha conta";
   return (
-    <div className="app-shell min-h-dvh md:grid md:grid-cols-[220px_minmax(0,1fr)]" data-keyboard-open={keyboardOpen}>
-      <header className="mobile-app-header sticky top-0 z-30 border-b bg-background md:hidden">
+    <div className={`app-shell min-h-dvh${isRecorder ? "" : " md:grid md:grid-cols-[220px_minmax(0,1fr)]"}`} data-keyboard-open={keyboardOpen}>
+      {!isRecorder && <header className="mobile-app-header sticky top-0 z-30 border-b bg-background md:hidden">
         <div className="grid h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <Link to="/hoje" className="w-fit font-serif text-3xl" aria-label="Ata — Hoje">Ata</Link>
           <AccountMenu name={displayName} email={user.email} compact />
         </div>
-      </header>
-      <aside className="hidden border-r bg-sidebar md:sticky md:top-0 md:flex md:h-dvh md:flex-col">
+      </header>}
+      {!isRecorder && <aside className="hidden border-r bg-sidebar md:sticky md:top-0 md:flex md:h-dvh md:flex-col">
         <div className="flex items-center justify-between p-5 md:block">
           <Link to="/hoje" className="font-serif text-3xl">Ata</Link>
         </div>
@@ -68,7 +68,7 @@ function AppLayout() {
           </Button>}
         </div>
         <div className="mt-auto p-3"><AccountMenu name={displayName} email={user.email} /></div>
-      </aside>
+      </aside>}
       <main className="app-main mx-auto min-w-0 w-full max-w-4xl px-5 py-7 md:px-10 md:py-12">
         <Outlet />
       </main>

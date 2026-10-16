@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { createMeeting, friendlyError } from "@/lib/meetings";
 import { Button } from "@/components/ui/button";
 import { AUTO_TITLE } from "@/lib/meeting-rules";
-import { LoaderCircle } from "lucide-react";
+import { VoiceOrb } from "@/components/VoiceOrb";
 
 export const Route = createFileRoute("/_authenticated/reunioes/nova")({
   head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Nova reunião — Ata" }, { name: "description", content: "Comece uma nova gravação de reunião." }, { property: "og:title", content: "Nova reunião — Ata" }, { property: "og:description", content: "Comece uma nova gravação de reunião." }] }),
@@ -38,9 +38,16 @@ function Nova() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-5xl">Nova reunião</h1>
-      {failed ? <Button onClick={begin}>Tentar novamente</Button> : <p role="status" className="flex items-center gap-2 text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />Iniciando gravação…</p>}
+    <div className="flex min-h-[70dvh] flex-col items-center justify-center gap-10 text-center">
+      <VoiceOrb level={0} active size={260} />
+      {failed ? (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Não foi possível iniciar a gravação.</p>
+          <Button onClick={begin}>Tentar novamente</Button>
+        </div>
+      ) : (
+        <p role="status" className="text-xs uppercase tracking-widest text-muted-foreground">Preparando microfone…</p>
+      )}
     </div>
   );
 }
