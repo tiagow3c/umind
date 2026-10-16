@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type StageState = { stage: string; status: string; error_code: string | null; attempt: number };
 
-export function ProcessingPanel({ meetingId, status, compact = false }: { meetingId: string; status: string; compact?: boolean }) {
+export function ProcessingPanel({ meetingId, status, compact = false, waiting = false }: { meetingId: string; status: string; compact?: boolean; waiting?: boolean }) {
   const advance = useServerFn(advanceProcessing);
   const retry = useServerFn(retryProcessing);
   const qc = useQueryClient();
