@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatusBadge, formatDuration } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/_authenticated/reunioes/$id/gravar")({
-  head: () => ({ meta: [{ title: "Gravar — Ata" }, { name: "description", content: "Grave o áudio da reunião." }, { property: "og:title", content: "Gravar — Ata" }, { property: "og:description", content: "Grave o áudio da reunião." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Gravar — Ata" }, { name: "description", content: "Grave o áudio da reunião." }, { property: "og:title", content: "Gravar — Ata" }, { property: "og:description", content: "Grave o áudio da reunião." }] }),
   validateSearch: (search: Record<string, unknown>) => ({ auto: search["auto"] === "1" || search["auto"] === true }),
   loader: ({ context, params }) => context.queryClient.ensureQueryData(meetingQuery(params.id)),
   component: Gravar,
@@ -197,8 +197,8 @@ function Gravar() {
   const isImport = m.source_type === "import";
   return (
     <div className="space-y-10">
-      <header className="flex items-start justify-between gap-4">
-        <div>
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <Link to="/reunioes/$id" params={{ id: m.id }} className="text-sm text-muted-foreground underline underline-offset-4">Voltar à reunião</Link>
           <h1 className="mt-2 text-5xl">{m.title}</h1>
         </div>
@@ -219,11 +219,11 @@ function Gravar() {
           )}
         </div>
       ) : (
-        <div className="rounded-md border bg-card p-8 text-center">
+        <div className="py-5 text-center sm:rounded-md sm:border sm:bg-card sm:p-8">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
             {phase === "recording" ? "Gravando" : phase === "paused" ? "Pausada" : phase === "uploading" ? "Enviando" : "Pronto para gravar"}
           </p>
-          <p className="mt-3 font-serif text-7xl tabular-nums">{formatDuration(elapsed) === "—" ? "0:00" : formatDuration(elapsed)}</p>
+          <p className="mt-3 font-serif text-6xl tabular-nums sm:text-7xl">{formatDuration(elapsed) === "—" ? "0:00" : formatDuration(elapsed)}</p>
           {phase === "recording" && <div className="mt-6" role="meter" aria-label="Nível do microfone" aria-valuenow={Math.round(level * 100)}>
             <VoiceOrb level={phase === "recording" ? level : 0} active />
           </div>}

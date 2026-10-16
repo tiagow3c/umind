@@ -8,7 +8,7 @@ import { AUTO_TITLE } from "@/lib/meeting-rules";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/_authenticated/reunioes/nova")({
-  head: () => ({ meta: [{ title: "Nova reunião — Ata" }, { name: "description", content: "Registre o consentimento e comece a gravar." }, { property: "og:title", content: "Nova reunião — Ata" }, { property: "og:description", content: "Registre o consentimento e comece a gravar." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Nova reunião — Ata" }, { name: "description", content: "Registre o consentimento e comece a gravar." }, { property: "og:title", content: "Nova reunião — Ata" }, { property: "og:description", content: "Registre o consentimento e comece a gravar." }] }),
   component: Nova,
 });
 

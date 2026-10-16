@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Search, Trash2 } from "lucide-react";
+import { Mic, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { deleteMeeting, meetingsQuery } from "@/lib/meetings";
 import { StatusBadge, formatDuration } from "@/components/StatusBadge";
@@ -27,21 +27,21 @@ function Lista() {
   const rows = filter === "all" ? data : data.filter((m) => m.status === filter);
   return (
     <div className="space-y-8">
-      <div className="flex items-end justify-between">
-        <h1 className="text-5xl">Reuniões</h1>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:items-end sm:justify-between">
+        <h1 className="min-w-0 text-5xl">Reuniões</h1>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="icon" className="size-10">
             <Link to="/buscar" aria-label="Buscar nas reuniões"><Search className="h-4 w-4" /></Link>
           </Button>
-          <Button asChild className="h-10"><Link to="/reunioes/nova">Nova gravação</Link></Button>
+          <Button asChild className="size-11 p-0 sm:h-10 sm:w-auto sm:px-4"><Link to="/reunioes/nova" aria-label="Nova gravação"><Mic className="size-4" /><span className="hidden sm:inline">Nova gravação</span></Link></Button>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
         {(["all", ...statuses] as const).map((s) => (
-          <button key={s} onClick={() => setFilter(s)}
-            className={`rounded-full border px-3 py-1 text-xs ${filter === s ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>
+          <Button variant="outline" size="sm" key={s} onClick={() => setFilter(s)} aria-pressed={filter === s}
+            className={`rounded-full border px-3 py-1 text-xs shadow-none ${filter === s ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>
             {s === "all" ? "Todas" : STATUS_LABEL[s]}
-          </button>
+          </Button>
         ))}
       </div>
       {rows.length === 0 ? (
@@ -50,8 +50,8 @@ function Lista() {
         <ul className="divide-y border-y">
           {rows.map((m) => (
             <li key={m.id} className="flex items-center gap-2 pr-2 hover:bg-secondary/50">
-              <Link to="/reunioes/$id" params={{ id: m.id }} className="grid flex-1 grid-cols-[1fr_auto] items-center gap-4 py-4 md:grid-cols-[1fr_120px_80px_auto]">
-                <span className="font-medium">{m.title}</span>
+              <Link to="/reunioes/$id" params={{ id: m.id }} className="grid min-w-0 flex-1 grid-cols-1 justify-items-start gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center md:grid-cols-[minmax(0,1fr)_120px_80px_auto] md:gap-4">
+                <span className="min-w-0 break-words font-medium">{m.title}</span>
                 <span className="hidden text-sm text-muted-foreground md:block">{new Date(m.created_at).toLocaleDateString("pt-BR")}</span>
                 <span className="hidden text-sm tabular-nums text-muted-foreground md:block">{formatDuration(m.recordings?.[0]?.duration_ms)}</span>
                 <StatusBadge status={m.status} />

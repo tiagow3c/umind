@@ -22,7 +22,7 @@ function Index() {
       </header>
       <section className="flex flex-1 flex-col justify-center py-20">
         <p className="text-sm uppercase tracking-widest text-accent">Assistente pessoal de reuniões</p>
-        <h1 className="mt-4 max-w-3xl text-6xl leading-[1.05] md:text-7xl">
+        <h1 className="mt-4 max-w-3xl text-4xl leading-[1.05] sm:text-6xl md:text-7xl">
           Lembre o que foi combinado — <em>e de onde veio.</em>
         </h1>
         <p className="mt-8 max-w-xl text-lg text-muted-foreground">

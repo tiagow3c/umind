@@ -4,7 +4,7 @@ import { allTasksQuery } from "@/lib/review";
 import { TaskRow } from "@/components/MeetingReview";
 
 export const Route = createFileRoute("/_authenticated/tarefas")({
-  head: () => ({ meta: [{ title: "Tarefas — Ata" }, { name: "description", content: "Tarefas extraídas das reuniões." }, { property: "og:title", content: "Tarefas — Ata" }, { property: "og:description", content: "Tarefas extraídas das reuniões." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Tarefas — Ata" }, { name: "description", content: "Tarefas extraídas das reuniões." }, { property: "og:title", content: "Tarefas — Ata" }, { property: "og:description", content: "Tarefas extraídas das reuniões." }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(allTasksQuery),
   component: Tarefas,
 });

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import type { MeetingStatus } from "@/lib/meeting-rules";
 
 export const Route = createFileRoute("/_authenticated/hoje")({
-  head: () => ({ meta: [{ title: "Hoje — Ata" }, { name: "description", content: "Suas reuniões recentes e pendências." }, { property: "og:title", content: "Hoje — Ata" }, { property: "og:description", content: "Suas reuniões recentes e pendências." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Hoje — Ata" }, { name: "description", content: "Suas reuniões recentes e pendências." }, { property: "og:title", content: "Hoje — Ata" }, { property: "og:description", content: "Suas reuniões recentes e pendências." }] }),
   loader: ({ context }) => Promise.all([context.queryClient.ensureQueryData(meetingsQuery), context.queryClient.ensureQueryData(workspaceQuery)]),
   component: Hoje,
 });
@@ -52,7 +52,7 @@ function Row({ m }: { m: { id: string; title: string; status: MeetingStatus; cre
   return (
     <li>
       <Link to="/reunioes/$id" params={{ id: m.id }} className="flex items-center justify-between gap-4 py-4 hover:bg-secondary/50">
-        <div>
+        <div className="min-w-0">
           <p className="font-medium">{m.title}</p>
           <p className="text-xs text-muted-foreground">{new Date(m.created_at).toLocaleString("pt-BR")}</p>
         </div>

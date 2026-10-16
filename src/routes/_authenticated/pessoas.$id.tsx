@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/pessoas/$id")({
-  head: () => ({ meta: [{ title: "Pessoa — Ata" }, { name: "description", content: "Reuniões e histórico de uma pessoa." }, { property: "og:title", content: "Pessoa — Ata" }, { property: "og:description", content: "Reuniões e histórico de uma pessoa." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Pessoa — Ata" }, { name: "description", content: "Reuniões e histórico de uma pessoa." }, { property: "og:title", content: "Pessoa — Ata" }, { property: "og:description", content: "Reuniões e histórico de uma pessoa." }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(peopleQuery),
   component: Pessoa,
 });
@@ -31,8 +31,8 @@ function Pessoa() {
   return (
     <div className="max-w-3xl space-y-12">
       <Link to="/pessoas" className="text-sm text-muted-foreground hover:text-foreground">← Pessoas</Link>
-      <header className="flex items-center gap-5">
-        <div className="flex flex-col items-center gap-1">
+      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 sm:flex sm:gap-5">
+        <div className="flex shrink-0 flex-col items-center gap-1">
           <label className="cursor-pointer" title="Trocar foto">
             <PersonAvatar person={p} className="size-20 text-3xl" />
             <input type="file" accept="image/*" className="sr-only" onChange={async (e) => {
@@ -47,14 +47,14 @@ function Pessoa() {
         </div>
         <div className="min-w-0">
           <input key={p.display_name} defaultValue={p.display_name} aria-label="Nome"
-            className="w-full bg-transparent font-serif text-5xl outline-none"
+            className="w-full bg-transparent font-serif text-3xl outline-none sm:text-5xl"
             onBlur={async (e) => { if (e.target.value.trim() && e.target.value.trim() !== p.display_name) { try { await renamePerson(p.id, e.target.value); refresh(); } catch { toast.error("Não foi possível renomear."); } } }} />
           <label className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
             <input type="checkbox" checked={p.is_self} onChange={async (e) => { await supabase.from("people").update({ is_self: e.target.checked }).eq("id", p.id); refresh(); }} />
             Sou eu
           </label>
           <input key={p.instagram ?? ""} defaultValue={p.instagram ? `@${p.instagram}` : ""} placeholder="@instagram" aria-label="Instagram"
-            className="mt-2 block bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="mt-2 block w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             onBlur={async (e) => { const v = e.target.value.replace(/^@/, "").trim().toLowerCase(); if (v !== (p.instagram ?? "")) { try { await setPersonInstagram(p.id, v); refresh(); } catch { toast.error("@ inválido."); } } }} />
         </div>
       </header>
@@ -64,7 +64,7 @@ function Pessoa() {
         {p.meetings.length === 0 ? <p className="mt-4 text-sm text-muted-foreground">Nenhuma reunião ainda.</p> : (
           <ul className="mt-4 divide-y border-y">
             {p.meetings.map((m) => (
-              <li key={m.id}><Link to="/reunioes/$id" params={{ id: m.id }} className="flex justify-between py-3 text-sm hover:bg-secondary/50">
+              <li key={m.id}><Link to="/reunioes/$id" params={{ id: m.id }} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 py-3 text-sm hover:bg-secondary/50">
                 <span>{m.title}</span><span className="text-muted-foreground">{new Date(m.created_at).toLocaleDateString("pt-BR")}</span>
               </Link></li>
             ))}
@@ -76,8 +76,8 @@ function Pessoa() {
         <section>
           <h2 className="text-2xl">Juntar com outra pessoa</h2>
           <p className="mt-1 text-sm text-muted-foreground">Use quando a mesma pessoa apareceu com dois nomes.</p>
-          <div className="mt-3 flex gap-2">
-            <select value={mergeInto} onChange={(e) => setMergeInto(e.target.value)} className="rounded-md border bg-background px-2 py-1.5 text-sm">
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:flex">
+            <select value={mergeInto} onChange={(e) => setMergeInto(e.target.value)} className="min-w-0 rounded-md border bg-background px-2 py-1.5 text-sm">
               <option value="">Escolha…</option>
               {others.map((o) => <option key={o.id} value={o.id}>{o.display_name}</option>)}
             </select>

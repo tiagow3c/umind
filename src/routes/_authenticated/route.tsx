@@ -1,14 +1,9 @@
-import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { AccountMenu } from "@/components/AccountMenu";
+import { CalendarDays, ListTodo, Mic, UsersRound } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -21,22 +16,37 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const NAV = [
-  { to: "/hoje", label: "Hoje" },
-  { to: "/reunioes", label: "Reuniões" },
-  { to: "/tarefas", label: "Tarefas" },
-  { to: "/pessoas", label: "Pessoas" },
+  { to: "/hoje", label: "Hoje", icon: CalendarDays },
+  { to: "/reunioes", label: "Reuniões", icon: Mic },
+  { to: "/tarefas", label: "Tarefas", icon: ListTodo },
+  { to: "/pessoas", label: "Pessoas", icon: UsersRound },
   { to: "/ajustes", label: "Ajustes" },
 ] as const;
 
 function AppLayout() {
   const { user } = Route.useRouteContext();
-  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isRecorder = pathname.endsWith("/gravar");
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const update = () => setKeyboardOpen(window.innerHeight - viewport.height > 150);
+    viewport.addEventListener("resize", update);
+    update();
+    return () => viewport.removeEventListener("resize", update);
+  }, []);
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
   const displayName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Minha conta";
-  const initials = displayName.slice(0, 2).toUpperCase();
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[220px_1fr]">
-      <aside className="border-b bg-sidebar md:sticky md:top-0 md:flex md:h-screen md:flex-col md:border-b-0 md:border-r">
+    <div className="app-shell min-h-dvh md:grid md:grid-cols-[220px_minmax(0,1fr)]" data-keyboard-open={keyboardOpen}>
+      <header className="mobile-app-header sticky top-0 z-30 border-b bg-background md:hidden">
+        <div className="grid h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <Link to="/hoje" className="w-fit font-serif text-3xl" aria-label="Ata — Hoje">Ata</Link>
+          <AccountMenu name={displayName} email={user.email} compact />
+        </div>
+      </header>
+      <aside className="hidden border-r bg-sidebar md:sticky md:top-0 md:flex md:h-dvh md:flex-col">
         <div className="flex items-center justify-between p-5 md:block">
           <Link to="/hoje" className="font-serif text-3xl">Ata</Link>
         </div>
@@ -57,39 +67,21 @@ function AppLayout() {
             <Link to="/reunioes/nova">Nova gravação</Link>
           </Button>
         </div>
-        <div className="hidden p-3 md:mt-auto md:block">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-sidebar-accent">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground">
-                  {initials}
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm text-sidebar-foreground">{displayName}</span>
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" className="w-56">
-              <DropdownMenuLabel className="flex flex-col">
-                <span className="truncate text-sm">{displayName}</span>
-                <span className="truncate text-xs font-normal text-muted-foreground">{user.email}</span>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/ajustes">Minha conta</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); }}
-              >
-                Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <div className="mt-auto p-3"><AccountMenu name={displayName} email={user.email} /></div>
       </aside>
-      <main className="mx-auto w-full max-w-4xl px-5 py-8 md:px-10 md:py-12">
+      <main className="app-main mx-auto min-w-0 w-full max-w-4xl px-5 py-7 md:px-10 md:py-12">
         <Outlet />
       </main>
+      {!isRecorder && <nav aria-label="Navegação principal no celular" className="mobile-tab-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t bg-background md:hidden">
+        {NAV.filter((n) => "icon" in n).map((n) => {
+          if (!("icon" in n)) return null;
+          const Icon = n.icon;
+          const active = pathname === n.to || pathname.startsWith(n.to + "/") || (n.to === "/reunioes" && pathname === "/buscar");
+          return <Button key={n.to} asChild variant="ghost" className={`h-16 min-w-0 flex-col gap-1 rounded-none px-1 text-xs hover:bg-secondary ${active ? "text-accent" : "text-muted-foreground"}`}>
+            <Link to={n.to} aria-current={active ? "page" : undefined}><Icon className="size-5" strokeWidth={active ? 2 : 1.6} /><span>{n.label}</span></Link>
+          </Button>;
+        })}
+      </nav>}
     </div>
   );
 }
