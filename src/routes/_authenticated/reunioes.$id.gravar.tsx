@@ -188,6 +188,29 @@ function Gravar() {
   }
   const [retry, setRetry] = useState<null | (() => void)>(null);
 
+  // Modo sem distrações: enquanto grava ou está pausada, só o círculo na tela.
+  if (phase === "recording" || phase === "paused") {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background">
+        <VoiceOrb level={phase === "recording" ? level : 0} active />
+        <p className="mt-12 font-serif text-2xl tabular-nums text-muted-foreground">
+          {formatDuration(elapsed) === "—" ? "0:00" : formatDuration(elapsed)}
+        </p>
+        {phase === "paused" && (
+          <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">Pausada</p>
+        )}
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 pb-[max(2rem,env(safe-area-inset-bottom))]">
+          {phase === "recording" ? (
+            <Button variant="ghost" size="sm" onClick={pause}>Pausar</Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={resume}>Retomar</Button>
+          )}
+          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={stop}>Encerrar</Button>
+        </div>
+      </div>
+    );
+  }
+
   async function importFile(file: File) {
     try {
       const duration = await new Promise<number>((res) => {
