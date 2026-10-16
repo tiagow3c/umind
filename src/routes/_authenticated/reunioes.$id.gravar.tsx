@@ -188,8 +188,11 @@ function Gravar() {
   }
   const [retry, setRetry] = useState<null | (() => void)>(null);
 
-  // Modo sem distrações: enquanto grava ou está pausada, só o círculo na tela.
-  if (phase === "recording" || phase === "paused") {
+  const isImport = m.source_type === "import";
+  const inCapture = !isImport && allowed && (phase === "idle" || phase === "recording" || phase === "paused");
+
+  // Modo sem distrações: do preparo ao encerrar, só o círculo na tela.
+  if (inCapture) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background">
         <VoiceOrb level={phase === "recording" ? level : 0} active size={320} />
@@ -199,17 +202,27 @@ function Gravar() {
         {phase === "paused" && (
           <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">Pausada</p>
         )}
+        {phase === "idle" && (
+          <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">
+            {starting || autoStart ? "Preparando microfone…" : "Pronto quando você estiver"}
+          </p>
+        )}
         <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 pb-[max(2rem,env(safe-area-inset-bottom))]">
-          {phase === "recording" ? (
+          {phase === "idle" ? (
+            <Button variant="ghost" size="sm" disabled={starting} onClick={() => void start()}>Começar a gravar</Button>
+          ) : phase === "recording" ? (
             <Button variant="ghost" size="sm" onClick={pause}>Pausar</Button>
           ) : (
             <Button variant="ghost" size="sm" onClick={resume}>Retomar</Button>
           )}
-          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={stop}>Encerrar</Button>
+          {phase !== "idle" && (
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={stop}>Encerrar</Button>
+          )}
         </div>
       </div>
     );
   }
+
 
   async function importFile(file: File) {
     try {
@@ -230,7 +243,6 @@ function Gravar() {
     } catch (e) { toast.error(friendlyError(e)); }
   }
 
-  const isImport = m.source_type === "import";
   return (
     <div className="space-y-10">
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:justify-between sm:gap-4">
