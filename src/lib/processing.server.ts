@@ -1,8 +1,8 @@
 import { matchPerson } from "./people-rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
-import { alignTranscripts, assignSpeakersByTime, parsePyannote, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
-import { PyannoteError, hasPyannote, submitDiarize, uploadMedia, waitJob } from "./pyannote.server";
+import { alignTranscripts, assignSpeakersByTime, matchIdentifiedSpeakers, parsePyannote, tasksToReplace, validateAnalysis, type RawAnalysis, type Utterance } from "./pipeline-rules";
+import { PyannoteError, hasPyannote, submitDiarize, submitIdentify, uploadMedia, waitJob } from "./pyannote.server";
 import { AUTO_TITLE } from "./meeting-rules";
 import { joinChunkTexts, planChunks, MAX_TRANSCRIBE_BYTES } from "./chunking-rules";
 
@@ -172,26 +172,56 @@ async function stageDiarize(admin: Admin, recordingId: string, meeting: { id: st
 async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
   try {
     const { data: run } = await admin.from("processing_runs").select("output").eq("id", runId).single();
-    let jobId = (run?.output as { jobId?: string } | null)?.jobId;
-    if (!jobId) {
+    const state = { ...((run?.output as { jobId?: string; media?: string; identifyJobId?: string; transcriptionOutput?: Record<string, unknown>; identificationOutput?: Record<string, unknown> } | null) ?? {}) };
+    const save = async () => {
+      const result = await admin.from("processing_runs").update({ output: state as unknown as Json }).eq("id", runId);
+      if (result.error) throw new StageError("save job failed", "db", true);
+    };
+    if (!state.media) {
       const audio = await loadAudio(admin, recordingId);
-      const media = await uploadMedia(`${recordingId}-${Date.now()}`, audio);
-      const { data: vps } = await admin.from("person_voiceprints").select("person_id, voiceprint").eq("workspace_id", meeting.workspace_id).order("created_at", { ascending: false }).limit(200);
-      const seen = new Set<string>();
-      const voiceprints = (vps ?? []).filter((v) => !seen.has(v.person_id) && seen.add(v.person_id)).map((v) => ({ label: v.person_id, voiceprint: v.voiceprint }));
-      jobId = await submitDiarize(media, voiceprints);
-      await admin.from("processing_runs").update({ output: { jobId } }).eq("id", runId);
+      state.media = await uploadMedia(`${recordingId}-${Date.now()}`, audio);
+      await save();
     }
-    const job = await waitJob(jobId, 40_000);
-    if (!job) throw new StageError("pending", "pending", true);
-    if (job.status !== "succeeded") {
-      await admin.from("processing_runs").update({ output: {} }).eq("id", runId);
-      throw new StageError(`pyannote job ${job.status}`, "pyannote_failed", true);
+    if (!state.jobId) {
+      state.jobId = await submitDiarize(state.media);
+      await save();
     }
-    const { utterances, matches } = parsePyannote(job.output);
+    if (!state.transcriptionOutput) {
+      const job = await waitJob(state.jobId, 40_000);
+      if (!job) throw new StageError("pending", "pending", true);
+      if (job.status !== "succeeded") {
+        delete state.jobId;
+        await save();
+        throw new StageError(`pyannote job ${job.status}`, "pyannote_failed", true);
+      }
+      state.transcriptionOutput = job.output ?? {};
+      await save();
+    }
+    const { utterances } = parsePyannote(state.transcriptionOutput);
+    const { data: vps, error: vpError } = await admin.from("person_voiceprints").select("person_id, voiceprint").eq("workspace_id", meeting.workspace_id).order("created_at", { ascending: false }).limit(200);
+    if (vpError) throw new StageError("load voiceprints failed", "db", true);
+    const seen = new Set<string>();
+    const voiceprints = (vps ?? []).filter((v) => !seen.has(v.person_id) && seen.add(v.person_id)).slice(0, 50).map((v) => ({ label: v.person_id, voiceprint: v.voiceprint }));
+    if (voiceprints.length && !state.identificationOutput) {
+      if (!state.identifyJobId) {
+        state.identifyJobId = await submitIdentify(state.media, voiceprints);
+        await save();
+      }
+      // Poll the second job in a fresh call to keep the stage bounded.
+      const job = await waitJob(state.identifyJobId, 0);
+      if (!job) throw new StageError("pending", "pending", true);
+      if (job.status !== "succeeded") {
+        delete state.identifyJobId;
+        await save();
+        throw new StageError(`pyannote identification ${job.status}`, "pyannote_failed", true);
+      }
+      state.identificationOutput = job.output ?? {};
+      await save();
+    }
+    const matches = state.identificationOutput ? matchIdentifiedSpeakers(utterances, parsePyannote(state.identificationOutput)) : {};
     if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
     await admin.from("transcripts").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: "pyannote", kind: "raw_pyannote", raw_text: utterances.map((u) => u.text).join(" ") });
-    return { utterances, matches, jobId } as unknown as Record<string, Json>;
+    return { utterances, matches, jobId: state.jobId, identifyJobId: state.identifyJobId ?? null } as unknown as Record<string, Json>;
   } catch (e) {
     if (e instanceof PyannoteError) throw providerError("pyannote", e.status || 500, e.message);
     throw e;
