@@ -98,6 +98,9 @@
 }
 .mobile-tab-bar { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .pull-bar { will-change: transform; }
+@media (max-width: 767px) {
+  html[data-pulling="true"] .mobile-app-header, html[data-pulling="true"] .app-main { transform: translateY(var(--pull-offset, 0px)); }
+}
 
 @media (max-width: 767px) {
   html { scroll-padding-top: 6rem; }

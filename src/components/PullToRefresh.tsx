@@ -14,6 +14,7 @@ export function PullToRefresh() {
   const busyRef = useRef(false);
 
   useEffect(() => {
+    const root = document.documentElement;
     const mobile = () => window.matchMedia("(max-width: 767px)").matches;
     const atTop = () => window.scrollY <= 0;
     /** Não compete com listas internas que já rolam (transcrição, popovers, diálogos). */
@@ -26,7 +27,13 @@ export function PullToRefresh() {
       }
       return false;
     };
-    const show = (px: number) => { offsetRef.current = px; setOffset(px); };
+    /** A barra e o conteúdo descem juntos: a distância vai para uma variável do layout. */
+    const show = (px: number) => {
+      offsetRef.current = px;
+      setOffset(px);
+      root.style.setProperty("--pull-offset", `${px}px`);
+      root.dataset.pulling = px > 0 || busyRef.current ? "true" : "false";
+    };
 
     const onStart = (e: TouchEvent) => {
       if (busyRef.current || !mobile() || !atTop() || inScrollable(e.target) || e.touches.length !== 1) {
@@ -82,6 +89,8 @@ export function PullToRefresh() {
       window.removeEventListener("touchmove", onMove);
       window.removeEventListener("touchend", onEnd);
       window.removeEventListener("touchcancel", onEnd);
+      root.style.removeProperty("--pull-offset");
+      root.dataset.pulling = "false";
     };
   }, [qc]);
 
@@ -90,7 +99,7 @@ export function PullToRefresh() {
   return (
     <div
       aria-live="polite"
-      className="pull-bar pointer-events-none fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-center border-b bg-background"
+      className="pull-bar pointer-events-none fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-center bg-background"
       style={{ transform: `translateY(${refreshing ? 0 : offset - PULL_THRESHOLD}px)`, opacity: refreshing ? 1 : pullOpacity(offset) }}
     >
       <span className="sr-only">{refreshing ? "Atualizando" : "Puxe para atualizar"}</span>
