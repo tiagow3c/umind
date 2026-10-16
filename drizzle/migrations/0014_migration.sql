@@ -1,0 +1,2 @@
+ALTER TABLE public.meetings ADD COLUMN IF NOT EXISTS analysis_requested_at timestamptz;
+UPDATE public.meetings SET analysis_requested_at = now() WHERE analysis_requested_at IS NULL AND status <> 'draft' AND status <> 'recording';
