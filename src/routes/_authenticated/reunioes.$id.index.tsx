@@ -67,12 +67,6 @@ function Detalhe() {
         <StatusBadge status={m.status} />
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <Stage label="Captura" value={rec ? (m.source_type === "import" ? "Arquivo importado" : "Gravada no navegador") : "Não iniciada"} />
-        <Stage label="Envio" value={rec ? `${REC_LABEL[rec.status]} · ${confirmed}/${parts.length} partes` : "—"} />
-        <Stage label="Processamento" value={m.status === "processing" ? "Em andamento" : m.status === "failed" ? "Falhou" : m.current_transcript_id ? "Concluído" : "—"} />
-      </section>
-
       {(m.status === "processing" || m.status === "failed") && rec?.finalized_at && <ProcessingPanel meetingId={m.id} status={m.status} />}
 
       {m.status === "processing" && rec?.finalized_at && !m.current_transcript_id && <MeetingSkeleton />}
@@ -84,6 +78,17 @@ function Detalhe() {
       )}
 
       <Accordion type="multiple" className="w-full">
+        <AccordionItem value="detalhes">
+          <AccordionTrigger className="text-2xl">Detalhes</AccordionTrigger>
+          <AccordionContent>
+            <div className="grid gap-3 py-2 sm:grid-cols-3">
+              <Stage label="Captura" value={rec ? (m.source_type === "import" ? "Arquivo importado" : "Gravada no navegador") : "Não iniciada"} />
+              <Stage label="Envio" value={rec ? `${REC_LABEL[rec.status]} · ${confirmed}/${parts.length} partes` : "—"} />
+              <Stage label="Processamento" value={m.status === "processing" ? "Em andamento" : m.status === "failed" ? "Falhou" : m.current_transcript_id ? "Concluído" : "—"} />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
         {rec && (
           <AccordionItem value="gravacao">
             <AccordionTrigger className="text-2xl">Gravação</AccordionTrigger>
