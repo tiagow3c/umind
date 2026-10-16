@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tansta
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { AccountMenu } from "@/components/AccountMenu";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { CalendarDays, ListTodo, Mic, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -82,6 +83,7 @@ function AppLayout() {
           </Button>;
         })}
       </nav>}
+      {!isRecorder && <PullToRefresh />}
     </div>
   );
 }

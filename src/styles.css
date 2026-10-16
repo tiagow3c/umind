@@ -82,6 +82,7 @@
 
 @layer base {
   * { border-color: var(--color-border); }
+  html { overscroll-behavior-y: none; }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -96,6 +97,10 @@
   padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
 }
 .mobile-tab-bar { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pull-bar { will-change: transform; }
+@media (max-width: 767px) {
+  html[data-pulling="true"] .mobile-app-header, html[data-pulling="true"] .app-main { transform: translateY(var(--pull-offset, 0px)); }
+}
 
 @media (max-width: 767px) {
   html { scroll-padding-top: 6rem; }

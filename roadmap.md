@@ -10,3 +10,8 @@
 # Gravação sem distrações
 - [x] Manter só o círculo do preparo ao encerrar, sem cabeçalho nem menu.
 - [x] Testar no celular e no computador com gravação real.
+
+# Atualizar com puxão
+- [x] Recarregar a tela ao puxar para baixo no topo, só no celular.
+- [x] Cobrir o gesto com testes das regras de distância e limiar.
+- [x] Validar no celular com toque real: puxão curto nada, puxão longo atualiza.
