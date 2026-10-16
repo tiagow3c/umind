@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchPerson } from "./people-rules";
+import { inferSpeakersFromConversation, matchPerson } from "./people-rules";
 
 const people = [
   { id: "1", display_name: "João Silva", aliases: [] },
