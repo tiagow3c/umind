@@ -36,9 +36,8 @@ export function canTransition(from: MeetingStatus, to: MeetingStatus) {
 
 export type Consent = { withdrawn_at: string | null };
 
-export function canStartCapture(status: MeetingStatus, consents: Consent[]) {
-  if (status !== "draft" && status !== "consent_pending") return false;
-  return consents.some((c) => c.withdrawn_at === null);
+export function canStartCapture(status: MeetingStatus, _consents: Consent[] = []) {
+  return status === "draft" || status === "consent_pending";
 }
 
 export const MAX_DURATION_MS = 120 * 60 * 1000;

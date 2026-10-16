@@ -41,7 +41,6 @@ export async function createMeeting(input: {
   timezone: string;
   sourceType: "live" | "import";
   participants: { display_name: string; email?: string | undefined }[];
-  consentMethod: "verbal" | "written" | "file_authorization";
 }) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("Sessão expirada");
@@ -49,7 +48,7 @@ export async function createMeeting(input: {
   const m = ok(
     await supabase
       .from("meetings")
-      .insert({ workspace_id: ws.id, owner_id: u.user.id, title: input.title, timezone: input.timezone, source_type: input.sourceType, status: "consent_pending" })
+      .insert({ workspace_id: ws.id, owner_id: u.user.id, title: input.title, timezone: input.timezone, source_type: input.sourceType, status: "draft" })
       .select("id")
       .single(),
   );
@@ -60,15 +59,6 @@ export async function createMeeting(input: {
       ),
     );
   }
-  ok(
-    await supabase.from("consent_records").insert({
-      workspace_id: ws.id,
-      meeting_id: m.id,
-      declared_by: u.user.id,
-      method: input.consentMethod,
-      notice_version: "aviso-v1",
-    }),
-  );
   return m.id;
 }
 

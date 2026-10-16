@@ -63,21 +63,21 @@ function AppLayout() {
           ))}
         </nav>
         <div className="hidden p-5 md:mt-8 md:block">
-          <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-            <Link to="/reunioes/nova">Nova gravação</Link>
-          </Button>
+          {isRecorder ? <Button disabled className="w-full"><Mic className="size-4" />Gravar</Button> : <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+            <Link to="/reunioes/nova"><Mic className="size-4" />Gravar</Link>
+          </Button>}
         </div>
         <div className="mt-auto p-3"><AccountMenu name={displayName} email={user.email} /></div>
       </aside>
       <main className="app-main mx-auto min-w-0 w-full max-w-4xl px-5 py-7 md:px-10 md:py-12">
         <Outlet />
       </main>
-      {!isRecorder && <nav aria-label="Navegação principal no celular" className="mobile-tab-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t bg-background md:hidden">
-        {NAV.filter((n) => "icon" in n).map((n) => {
+      {!isRecorder && <nav aria-label="Navegação principal no celular" className="mobile-tab-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-background md:hidden">
+        {[NAV[0], NAV[1], { to: "/reunioes/nova", label: "Gravar", icon: Mic } as const, NAV[2], NAV[3]].map((n) => {
           if (!("icon" in n)) return null;
           const Icon = n.icon;
           const active = pathname === n.to || pathname.startsWith(n.to + "/") || (n.to === "/reunioes" && pathname === "/buscar");
-          return <Button key={n.to} asChild variant="ghost" className={`h-16 min-w-0 flex-col gap-1 rounded-none px-1 text-xs hover:bg-secondary ${active ? "text-accent" : "text-muted-foreground"}`}>
+          return <Button key={n.to} asChild variant="ghost" className={`h-16 min-w-0 flex-col gap-1 rounded-none px-1 text-xs hover:bg-secondary ${n.label === "Gravar" ? "bg-accent text-accent-foreground hover:bg-accent/90" : active ? "text-accent" : "text-muted-foreground"}`}>
             <Link to={n.to} aria-current={active ? "page" : undefined}><Icon className="size-5" strokeWidth={active ? 2 : 1.6} /><span>{n.label}</span></Link>
           </Button>;
         })}

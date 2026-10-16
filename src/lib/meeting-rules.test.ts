@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { canStartCapture, canTransition, MAX_DURATION_MS } from "./meeting-rules";
 
 describe("regras de reunião", () => {
-  it("só inicia captura com consentimento válido", () => {
-    expect(canStartCapture("draft", [])).toBe(false);
-    expect(canStartCapture("draft", [{ withdrawn_at: "2026-01-01" }])).toBe(false);
+  it("inicia captura sem exigir consentimento por enquanto", () => {
+    expect(canStartCapture("draft", [])).toBe(true);
+    expect(canStartCapture("draft", [{ withdrawn_at: "2026-01-01" }])).toBe(true);
     expect(canStartCapture("draft", [{ withdrawn_at: null }])).toBe(true);
   });
   it("só inicia captura a partir de draft ou consent_pending", () => {
