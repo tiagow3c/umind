@@ -95,3 +95,34 @@ describe("pyannote", () => {
     expect(out[0]!.speaker).toBe(1);
   });
 });
+
+import { pickCleanSamples } from "./pipeline-rules";
+describe("separação de vozes", () => {
+  it("divide palavras pelos turnos exclusivos, sem misturar falantes numa fala", () => {
+    const r = parsePyannote({
+      exclusiveDiarization: [{ speaker: "SPEAKER_00", start: 0, end: 4 }, { speaker: "SPEAKER_01", start: 4, end: 6 }],
+      wordLevelTranscription: [
+        { speaker: "SPEAKER_00", start: 0.1, end: 0.5, text: "Ô," }, { speaker: "SPEAKER_01", start: 1, end: 1.4, text: "João" },
+        { speaker: "SPEAKER_00", start: 4.2, end: 4.6, text: "Beleza." },
+      ],
+      turnLevelTranscription: [{ speaker: "SPEAKER_00", start: 0, end: 6, text: "Ô, João Beleza." }],
+    });
+    expect(r.utterances).toEqual([
+      { start_ms: 0, end_ms: 4000, speaker: 0, text: "Ô, João" },
+      { start_ms: 4000, end_ms: 6000, speaker: 1, text: "Beleza." },
+    ]);
+  });
+  const u = (speaker: number, start_ms: number, end_ms: number) => ({ speaker, start_ms, end_ms });
+  it("amostra de voz tem no máximo 10 segundos", () => {
+    const s = pickCleanSamples([u(0, 0, 30_000)], []);
+    expect(s["0"]!.end_ms - s["0"]!.start_ms).toBe(10_000);
+  });
+  it("amostra nunca inclui outra pessoa falando, nem por cima", () => {
+    const s = pickCleanSamples([u(0, 0, 8_000), u(1, 8_000, 12_000)], [u(0, 0, 8_000), u(1, 5_000, 5_200), u(1, 8_000, 12_000)]);
+    expect(s["0"]).toEqual({ start_ms: 300, end_ms: 4_700 });
+    expect(s["1"]).toEqual({ start_ms: 8_300, end_ms: 11_700 });
+  });
+  it("sem trecho limpo longo o bastante, a voz fica sem amostra", () => {
+    expect(pickCleanSamples([u(0, 0, 1_800)], [])).toEqual({});
+  });
+});
