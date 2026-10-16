@@ -81,8 +81,9 @@ function AuthPage() {
         </div>
         <span className="text-xs opacity-60">Versão 1.0</span>
       </section>
-      <section className="flex items-center justify-center p-8">
+      <section className="flex min-h-dvh items-center justify-center px-6 py-10 sm:p-8">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5">
+          <span className="mb-10 block font-serif text-4xl md:hidden">Ata</span>
           <h2 className="text-4xl">{mode === "in" ? "Entrar" : "Criar conta"}</h2>
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>

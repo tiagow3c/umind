@@ -41,7 +41,7 @@ function SearchPage() {
     <div>
       <h1 className="text-5xl">Buscar</h1>
       <p className="mt-4 max-w-md text-muted-foreground">Pergunte “o que combinamos sobre a proposta?” e veja os trechos de origem em todas as reuniões.</p>
-      <form onSubmit={run} className="mt-6 flex gap-2">
+      <form onSubmit={run} className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="O que você procura?" aria-label="Termo de busca" />
         <Button type="submit" disabled={loading || query.trim().length < 2}>{loading ? "Buscando…" : "Buscar"}</Button>
       </form>

@@ -59,8 +59,8 @@ function Detalhe() {
   return (
     <div className="space-y-10">
       {full && <button onClick={() => setFull(false)} className="text-sm text-muted-foreground hover:text-foreground">← Voltar à visão geral</button>}
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{new Date(m.created_at).toLocaleString("pt-BR")} · {m.timezone}</p>
           <h1 className="mt-1 text-5xl">{m.title}</h1>
         </div>

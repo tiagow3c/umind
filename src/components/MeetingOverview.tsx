@@ -58,7 +58,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   };
 
   return (
-    <div className="max-w-3xl space-y-16">
+    <div className="max-w-3xl space-y-10 sm:space-y-16">
       <section>
         {an?.summary ? (
           <p className="font-serif text-2xl leading-snug">{firstSentences(an.summary)}</p>
@@ -86,7 +86,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
       {speakers && speakers.length > 0 && (
         <section>
           <h2 className="text-3xl">Participantes</h2>
-          <ul className="mt-8 flex flex-wrap gap-8">
+          <ul className="mt-6 grid grid-cols-2 justify-items-center gap-x-6 gap-y-8 sm:mt-8 sm:flex sm:flex-wrap sm:gap-8">
             {speakers.map((s, i) => {
               const part = meeting.participants.find((p) => p.id === s.participant_id);
               const name = part?.display_name ?? "";
@@ -101,7 +101,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                     onPlay={() => { if (!name) inputRefs.current.get(s.id)?.focus(); }}
                   />
                   {person && (
-                    <label title="Trocar foto" className="absolute right-1 top-[68px] flex size-7 cursor-pointer items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm hover:text-foreground">
+                    <label title="Trocar foto" className="absolute right-0 top-[60px] flex size-10 cursor-pointer items-center justify-center rounded-full border bg-background text-muted-foreground hover:text-foreground sm:right-1 sm:top-[68px] sm:size-7">
                       <Camera className="size-3.5" />
                       <input type="file" accept="image/*" className="sr-only" onChange={async (e) => {
                         const f = e.target.files?.[0]; e.target.value = "";
@@ -185,7 +185,7 @@ const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => Promise<
           void save();
         }
       }}
-      className="w-32 border-b border-transparent bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground focus:border-accent"
+      className="h-11 w-36 border-b border-transparent bg-transparent text-center text-base outline-none placeholder:text-muted-foreground focus:border-accent sm:h-auto sm:w-32 sm:text-sm"
     />
   );
 });

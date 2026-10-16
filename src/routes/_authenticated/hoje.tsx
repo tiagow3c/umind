@@ -52,7 +52,7 @@ function Row({ m }: { m: { id: string; title: string; status: MeetingStatus; cre
   return (
     <li>
       <Link to="/reunioes/$id" params={{ id: m.id }} className="flex items-center justify-between gap-4 py-4 hover:bg-secondary/50">
-        <div>
+        <div className="min-w-0">
           <p className="font-medium">{m.title}</p>
           <p className="text-xs text-muted-foreground">{new Date(m.created_at).toLocaleString("pt-BR")}</p>
         </div>
