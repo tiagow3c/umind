@@ -257,26 +257,12 @@ function Gravar() {
       ) : (
         <div className="py-5 text-center sm:rounded-md sm:border sm:bg-card sm:p-8">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
-            {phase === "recording" ? "Gravando" : phase === "paused" ? "Pausada" : phase === "uploading" ? "Enviando" : "Pronto para gravar"}
+            {phase === "uploading" ? "Enviando" : "Pronto para gravar"}
           </p>
           <p className="mt-3 font-serif text-6xl tabular-nums sm:text-7xl">{formatDuration(elapsed) === "—" ? "0:00" : formatDuration(elapsed)}</p>
-          {phase === "recording" && <div className="mt-6" role="meter" aria-label="Nível do microfone" aria-valuenow={Math.round(level * 100)}>
-            <VoiceOrb level={phase === "recording" ? level : 0} active />
-          </div>}
           <div className="mt-8 flex justify-center gap-3">
             {phase === "idle" && <Button size="lg" onClick={start} disabled={starting} className="bg-accent text-accent-foreground hover:bg-accent/90">{starting ? "Iniciando…" : "Iniciar gravação"}</Button>}
-            {phase === "recording" && <><Button variant="outline" onClick={pause}>Pausar</Button><Button onClick={stop}>Encerrar</Button></>}
-            {phase === "paused" && <><Button variant="outline" onClick={resume}>Retomar</Button><Button onClick={stop}>Encerrar</Button></>}
           </div>
-          {phase !== "idle" && (
-            <div className="mx-auto mt-8 max-h-56 max-w-xl overflow-y-auto border-t pt-5 text-left">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Transcrição ao vivo</p>
-              {liveText.length === 0
-                ? <p className="mt-2 text-sm text-muted-foreground">O texto aparece aqui a cada 30 segundos de conversa.</p>
-                : liveText.map((c) => <p key={c.seq} className="mt-2 text-sm leading-relaxed">{c.text}</p>)}
-              <div ref={liveEnd} />
-            </div>
-          )}
           <p className="mt-6 text-xs text-muted-foreground">O áudio é salvo neste navegador a cada 30 segundos antes de ser enviado.</p>
         </div>
       )}
