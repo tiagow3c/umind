@@ -74,7 +74,7 @@ function Gravar() {
     if (phase !== "recording") return;
     const t = setInterval(() => {
       if (!timer.current) return;
-      const e = timer.current.acc + (Date.now() - timer.current.start);
+      const e = elapsedNow();
       setElapsed(e);
       if (e >= MAX_DURATION_MS) void stop();
     }, 250);
@@ -117,7 +117,7 @@ function Gravar() {
         if (!ev.data.size || !rec.current) return;
         const r = rec.current;
         r.seq += 1;
-        const now = timer.current ? timer.current.acc + (Date.now() - timer.current.start) : r.lastMs;
+        const now = timer.current ? elapsedNow() : r.lastMs;
         await putChunk({ key: `${recordingId}:${r.seq}`, recordingId, sequence: r.seq, blob: ev.data, startMs: r.lastMs, endMs: Math.max(now, r.lastMs), uploaded: false });
         r.lastMs = Math.max(now, r.lastMs);
         uploadPending({ ...meta, recordingId }).catch(() => {});
@@ -157,9 +157,11 @@ function Gravar() {
 
   async function stop() {
     const r = rec.current; if (!r) return;
-    if (timer.current && phase === "recording") timer.current = { start: Date.now(), acc: timer.current.acc + (Date.now() - timer.current.start) };
-    const finalMs = timer.current?.acc ?? elapsed;
+    if (r.mr.state === "inactive") return;
+    const finalMs = elapsedNow();
     if (timer.current) timer.current = { start: 0, acc: finalMs };
+    setElapsed(finalMs);
+    setPhase("uploading");
     stopLiveLoop();
     await new Promise<void>((res) => { r.mr.addEventListener("stop", () => setTimeout(res, 300), { once: true }); r.mr.stop(); });
     r.stream.getTracks().forEach((t) => t.stop());
