@@ -112,3 +112,17 @@ export function pickSamples(segments: { speaker_id: string | null; start_ms: num
   }
   return best;
 }
+
+/** Clean sample chosen on the server (one voice only, ≤ 10 s); older meetings fall back to the transcript. */
+export function speakerSamples(
+  speakers: { id: string; sample_start_ms: number | null; sample_end_ms: number | null }[],
+  segments: { speaker_id: string | null; start_ms: number; end_ms: number; overlap?: boolean }[],
+) {
+  const fallback = pickSamples(segments);
+  const out = new Map<string, { start: number; end: number }>();
+  for (const sp of speakers) {
+    if (sp.sample_start_ms !== null && sp.sample_end_ms !== null) out.set(sp.id, { start: sp.sample_start_ms, end: Math.min(sp.sample_end_ms, sp.sample_start_ms + 10_000) });
+    else if (!speakers.some((x) => x.sample_start_ms !== null)) { const f = fallback.get(sp.id); if (f) out.set(sp.id, f); }
+  }
+  return out;
+}

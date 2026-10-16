@@ -207,9 +207,12 @@ export async function enrollSpeakerVoice(speakerId: string, personId: string) {
   if (!sp) return;
   const { data: m } = await supabase.from("meetings").select("current_transcript_id").eq("id", sp.meeting_id).single();
   if (!m?.current_transcript_id) return;
-  const { data: segs } = await supabase.from("transcript_segments").select("speaker_id, start_ms, end_ms, overlap").eq("transcript_id", m.current_transcript_id);
-  const { pickSamples } = await import("@/components/VoiceAvatar");
-  const sample = pickSamples((segs ?? []).map((x) => ({ ...x, start_ms: Number(x.start_ms), end_ms: Number(x.end_ms) }))).get(speakerId);
+  const [{ data: segs }, { data: sps }] = await Promise.all([
+    supabase.from("transcript_segments").select("speaker_id, start_ms, end_ms, overlap").eq("transcript_id", m.current_transcript_id),
+    supabase.from("speakers").select("id, sample_start_ms, sample_end_ms").eq("meeting_id", sp.meeting_id),
+  ]);
+  const { speakerSamples } = await import("@/components/VoiceAvatar");
+  const sample = speakerSamples(sps ?? [], (segs ?? []).map((x) => ({ ...x, start_ms: Number(x.start_ms), end_ms: Number(x.end_ms) }))).get(speakerId);
   if (!sample || sample.end - sample.start < 2000) return;
   const { data: rec } = await supabase.from("recordings").select("id, codec, recording_parts(object_key, sequence)").eq("meeting_id", sp.meeting_id).not("finalized_at", "is", null).order("created_at", { ascending: false }).limit(1).single();
   if (!rec) return;
