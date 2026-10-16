@@ -7,7 +7,7 @@ import { requestAnalysis } from "@/lib/processing.functions";
 import { analysisQuery, assignSpeakerPerson, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
-import { avatarSrc, suggestCandidates } from "@/lib/people-rules";
+import { avatarSrc } from "@/lib/people-rules";
 import { fmtTime } from "@/lib/review";
 import { VoiceAvatar, pickSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
 
