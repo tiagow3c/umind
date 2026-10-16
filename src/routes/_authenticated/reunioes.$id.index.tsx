@@ -67,7 +67,6 @@ function Detalhe() {
         <StatusBadge status={m.status} />
       </header>
 
-
       {(m.status === "processing" || m.status === "failed") && rec?.finalized_at && <ProcessingPanel meetingId={m.id} status={m.status} />}
 
       {m.status === "processing" && rec?.finalized_at && !m.current_transcript_id && <MeetingSkeleton />}
