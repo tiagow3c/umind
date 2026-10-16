@@ -32,7 +32,7 @@ export function PullToRefresh() {
       offsetRef.current = px;
       setOffset(px);
       root.style.setProperty("--pull-offset", `${px}px`);
-      root.dataset.pulling = px > 0 || busyRef.current ? "true" : "false";
+      root.dataset["pulling"] = px > 0 || busyRef.current ? "true" : "false";
     };
 
     const onStart = (e: TouchEvent) => {
@@ -90,7 +90,7 @@ export function PullToRefresh() {
       window.removeEventListener("touchend", onEnd);
       window.removeEventListener("touchcancel", onEnd);
       root.style.removeProperty("--pull-offset");
-      root.dataset.pulling = "false";
+      root.dataset["pulling"] = "false";
     };
   }, [qc]);
 
