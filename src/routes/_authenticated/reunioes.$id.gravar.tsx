@@ -29,6 +29,8 @@ function Gravar() {
   const [phase, setPhase] = useState<"idle" | "recording" | "paused" | "uploading" | "done">("idle");
   const [elapsed, setElapsed] = useState(0);
   const [level, setLevel] = useState(0);
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
   const [progress, setProgress] = useState<[number, number]>([0, 0]);
   const rec = useRef<{ mr: MediaRecorder; stream: MediaStream; recordingId: string; seq: number; lastMs: number; ctx: AudioContext } | null>(null);
   const timer = useRef<{ start: number; acc: number } | null>(null);
@@ -53,7 +55,7 @@ function Gravar() {
       const p = (async () => {
         const buf = new Uint8Array(await blob.arrayBuffer());
         let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-        const r = await transcribeLive({ data: { meetingId: m!.id, recordingId, sequence: seq, startMs, endMs, mime: mime || "audio/webm", audioBase64: btoa(bin) } });
+        const r = await transcribeLive({ data: { meetingId: id, recordingId, sequence: seq, startMs, endMs, mime: mime || "audio/webm", audioBase64: btoa(bin) } });
         if (r.text) setLiveText((t) => [...t, { seq, text: r.text }].sort((a, b) => a.seq - b.seq));
       })().catch(() => {}).finally(() => l.pending.delete(p));
       l.pending.add(p);
@@ -95,10 +97,14 @@ function Gravar() {
   const allowed = canStartCapture(m.status, m.consent_records);
 
   async function start() {
+    if (startingRef.current || rec.current || !m || !canStartCapture(m.status)) return;
+    startingRef.current = true;
+    setStarting(true);
+    let stream: MediaStream | undefined;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "";
-      const recordingId = await startRecording(m!.id, "live", mime || "default");
+      const recordingId = await startRecording(id, "live", mime || "default");
       const mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : undefined);
       const ctx = new AudioContext();
       const an = ctx.createAnalyser();
@@ -120,9 +126,14 @@ function Gravar() {
       timer.current = { start: Date.now(), acc: 0 };
       startLiveLoop(stream, recordingId, mime);
       setPhase("recording");
+      void qc.invalidateQueries({ queryKey: ["meeting", id] });
     } catch (e) {
+      stream?.getTracks().forEach((track) => track.stop());
       if (e instanceof DOMException && e.name === "NotAllowedError") toast.error("Permissão de microfone negada. Libere nas configurações do navegador.");
       else toast.error(friendlyError(e));
+    } finally {
+      startingRef.current = false;
+      setStarting(false);
     }
   }
 
@@ -132,7 +143,7 @@ function Gravar() {
     r.mr.pause(); r.mr.requestData();
     if (timer.current) timer.current = { start: 0, acc: timer.current.acc + (Date.now() - timer.current.start) };
     setPhase("paused");
-    await setMeetingStatus(m!.id, "paused").catch(() => {});
+    await setMeetingStatus(id, "paused").catch(() => {});
   }
 
   async function resume() {
@@ -141,7 +152,7 @@ function Gravar() {
     if (timer.current) timer.current = { start: Date.now(), acc: timer.current.acc };
     startLiveLoop(r.stream, r.recordingId, r.mr.mimeType);
     setPhase("recording");
-    await setMeetingStatus(m!.id, "recording").catch(() => {});
+    await setMeetingStatus(id, "recording").catch(() => {});
   }
 
   async function stop() {
@@ -160,13 +171,13 @@ function Gravar() {
   async function finishUpload(recordingId: string, durationMs: number) {
     setPhase("uploading");
     try {
-      await setMeetingStatus(m!.id, "uploading").catch(() => {});
+      await setMeetingStatus(id, "uploading").catch(() => {});
       await uploadPending({ ...meta, recordingId }, (d, t) => setProgress([d, t]));
       await finalizeRecording(recordingId, Math.min(durationMs, MAX_DURATION_MS));
       setPhase("done");
       toast.success("Áudio enviado. A reunião está na fila de processamento.");
       qc.invalidateQueries();
-      navigate({ to: "/reunioes/$id", params: { id: m!.id } });
+      navigate({ to: "/reunioes/$id", params: { id } });
     } catch (e) {
       toast.error(friendlyError(e) + " O áudio continua salvo neste navegador.");
       setPhase("uploading");
@@ -182,7 +193,7 @@ function Gravar() {
         a.onloadedmetadata = () => res(isFinite(a.duration) ? a.duration * 1000 : 0); a.onerror = () => res(0);
       });
       if (duration > MAX_DURATION_MS) { toast.error("O limite é de 120 minutos por reunião."); return; }
-      const recordingId = await startRecording(m!.id, "import", file.type || "unknown");
+      const recordingId = await startRecording(id, "import", file.type || "unknown");
       const parts = Math.max(1, Math.ceil(file.size / IMPORT_PART));
       for (let i = 0; i < parts; i++) {
         const blob = file.slice(i * IMPORT_PART, (i + 1) * IMPORT_PART, file.type);
@@ -206,7 +217,7 @@ function Gravar() {
       </header>
 
       {!allowed && phase === "idle" ? (
-        <p className="rounded-md border p-5 text-sm">Esta reunião não pode iniciar uma nova captura no estado atual{m.consent_records.every((c) => c.withdrawn_at) ? " — registre o consentimento primeiro" : ""}.</p>
+        <p className="rounded-md border p-5 text-sm">Esta reunião não pode iniciar uma nova captura no estado atual.</p>
       ) : isImport ? (
         <div className="rounded-md border bg-card p-8">
           <p className="font-serif text-2xl">Importar áudio</p>
@@ -228,7 +239,7 @@ function Gravar() {
             <VoiceOrb level={phase === "recording" ? level : 0} active />
           </div>}
           <div className="mt-8 flex justify-center gap-3">
-            {phase === "idle" && <Button size="lg" onClick={start} className="bg-accent text-accent-foreground hover:bg-accent/90">Iniciar gravação</Button>}
+            {phase === "idle" && <Button size="lg" onClick={start} disabled={starting} className="bg-accent text-accent-foreground hover:bg-accent/90">{starting ? "Iniciando…" : "Iniciar gravação"}</Button>}
             {phase === "recording" && <><Button variant="outline" onClick={pause}>Pausar</Button><Button onClick={stop}>Encerrar</Button></>}
             {phase === "paused" && <><Button variant="outline" onClick={resume}>Retomar</Button><Button onClick={stop}>Encerrar</Button></>}
           </div>

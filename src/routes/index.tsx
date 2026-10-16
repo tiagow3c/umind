@@ -5,9 +5,11 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Ata — Assistente pessoal de reuniões" },
-      { name: "description", content: "Grave reuniões com consentimento e transforme-as em registros pesquisáveis e revisáveis." },
+      { name: "description", content: "Grave reuniões e encontre transcrições, resumos e tarefas em um só lugar." },
       { property: "og:title", content: "Ata — Assistente pessoal de reuniões" },
-      { property: "og:description", content: "Grave reuniões com consentimento e transforme-as em registros pesquisáveis e revisáveis." },
+      { property: "og:description", content: "Grave reuniões e encontre transcrições, resumos e tarefas em um só lugar." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,
@@ -26,14 +28,14 @@ function Index() {
           Lembre o que foi combinado — <em>e de onde veio.</em>
         </h1>
         <p className="mt-8 max-w-xl text-lg text-muted-foreground">
-          Registre o consentimento, grave ou importe o áudio e guarde tudo com segurança. Privado por padrão.
+          Grave suas reuniões e guarde tudo com segurança. Privado por padrão.
         </p>
         <div className="mt-10">
           <Button asChild size="lg"><Link to="/auth">Começar</Link></Button>
         </div>
       </section>
       <footer className="grid gap-6 border-t pt-8 text-sm text-muted-foreground md:grid-cols-3">
-        <p><strong className="text-foreground">Consentimento primeiro.</strong> Nenhuma captura começa sem registro.</p>
+        <p><strong className="text-foreground">Privado por padrão.</strong> Suas reuniões ficam na sua conta.</p>
         <p><strong className="text-foreground">Salvo no aparelho.</strong> O áudio fica local até o envio terminar.</p>
         <p><strong className="text-foreground">Você controla.</strong> Exclua uma reunião e o acesso some na hora.</p>
       </footer>
