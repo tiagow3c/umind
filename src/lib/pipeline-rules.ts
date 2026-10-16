@@ -151,3 +151,28 @@ export function assignSpeakersByTime<T extends { start_ms: number; end_ms: numbe
     return { ...s, speaker: best };
   });
 }
+
+/** Separate jobs do not share speaker numbering. Map identity by time, never label. */
+export function matchIdentifiedSpeakers(transcribed: Utterance[], identified: ReturnType<typeof parsePyannote>): Record<string, string> {
+  const overlaps = new Map<number, Map<number, number>>();
+  for (const t of transcribed) {
+    if (t.speaker === null) continue;
+    for (const i of identified.utterances) {
+      if (i.speaker === null) continue;
+      const overlap = Math.min(t.end_ms, i.end_ms) - Math.max(t.start_ms, i.start_ms);
+      if (overlap <= 0) continue;
+      const scores = overlaps.get(t.speaker) ?? new Map<number, number>();
+      scores.set(i.speaker, (scores.get(i.speaker) ?? 0) + overlap);
+      overlaps.set(t.speaker, scores);
+    }
+  }
+  const matches: Record<string, string> = {};
+  for (const [speaker, scores] of overlaps) {
+    const sorted = [...scores].sort((a, b) => b[1] - a[1]);
+    const best = sorted[0];
+    if (!best || best[1] <= [...scores.values()].reduce((sum, n) => sum + n, 0) / 2) continue;
+    const person = identified.matches[String(best[0])];
+    if (person) matches[String(speaker)] = person;
+  }
+  return matches;
+}

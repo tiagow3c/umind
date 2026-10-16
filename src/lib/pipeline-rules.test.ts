@@ -56,8 +56,27 @@ describe("reprocessamento de tarefas", () => {
   });
 });
 
-import { parsePyannote, assignSpeakersByTime } from "./pipeline-rules";
+import { parsePyannote, assignSpeakersByTime, matchIdentifiedSpeakers } from "./pipeline-rules";
 describe("pyannote", () => {
+  it("maps separate identification labels by timing, not speaker number", () => {
+    const transcribed = parsePyannote({ turnLevelTranscription: [
+      { speaker: "SPEAKER_00", start: 0, end: 2, text: "Olá" },
+      { speaker: "SPEAKER_01", start: 2, end: 4, text: "Bom dia" },
+    ] });
+    const identified = parsePyannote({ diarization: [
+      { speaker: "SPEAKER_01", start: 0, end: 2 }, { speaker: "SPEAKER_00", start: 2, end: 4 },
+    ], voiceprints: [
+      { speaker: "SPEAKER_01", match: "person-a", confidence: { "person-a": 90 } },
+      { speaker: "SPEAKER_00", match: "person-b", confidence: { "person-b": 90 } },
+    ] });
+    expect(matchIdentifiedSpeakers(transcribed.utterances, identified)).toEqual({ "0": "person-a", "1": "person-b" });
+  });
+  it("does not assign an identity when timing is ambiguous", () => {
+    expect(matchIdentifiedSpeakers([{ start_ms: 0, end_ms: 2000, text: "Oi", speaker: 0 }], {
+      utterances: [{ start_ms: 0, end_ms: 1000, text: "", speaker: 0 }, { start_ms: 1000, end_ms: 2000, text: "", speaker: 1 }],
+      matches: { "0": "person-a", "1": "person-b" },
+    })).toEqual({});
+  });
   it("lê falas com texto e falante", () => {
     const r = parsePyannote({ turnLevelTranscription: [{ speaker: "SPEAKER_01", start: 1.2, end: 3, text: " oi " }] });
     expect(r.utterances).toEqual([{ start_ms: 1200, end_ms: 3000, text: "oi", speaker: 1 }]);

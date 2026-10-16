@@ -32,11 +32,19 @@ export async function uploadMedia(name: string, data: Blob) {
   return mediaUrl;
 }
 
-export async function submitDiarize(url: string, voiceprints: { label: string; voiceprint: string }[]) {
-  const body = voiceprints.length
-    ? { url, voiceprints, model: "precision-2", transcription: true, matching: { threshold: 50, exclusive: true } }
-    : { url, model: "precision-2", transcription: true };
-  const r = await call(voiceprints.length ? "/identify" : "/diarize", { method: "POST", body: JSON.stringify(body) });
+/** Transcription is supported only by /diarize, never by /identify. */
+export async function submitDiarize(url: string) {
+  const r = await call("/diarize", { method: "POST", body: JSON.stringify({
+    url, model: "precision-2", transcription: true,
+    transcriptionConfig: { model: "faster-whisper-large-v3-turbo" },
+  }) });
+  return String(r["jobId"]);
+}
+
+export async function submitIdentify(url: string, voiceprints: { label: string; voiceprint: string }[]) {
+  const r = await call("/identify", { method: "POST", body: JSON.stringify({
+    url, voiceprints: voiceprints.slice(0, 50), model: "precision-2", matching: { threshold: 70, exclusive: true },
+  }) });
   return String(r["jobId"]);
 }
 
