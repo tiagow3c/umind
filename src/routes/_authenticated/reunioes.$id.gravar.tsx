@@ -102,7 +102,8 @@ function Gravar() {
     setStarting(true);
     let stream: MediaStream | undefined;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Raw capture: echo cancellation/noise suppression/AGC flatten distant or loudspeaker voices and merge speakers.
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "";
       const recordingId = await startRecording(id, "live", mime || "default");
       const mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : undefined);

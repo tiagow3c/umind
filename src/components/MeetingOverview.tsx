@@ -7,7 +7,7 @@ import { requestAnalysis } from "@/lib/processing.functions";
 import { analysisQuery, assignSpeakerPerson, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
-import { avatarSrc, suggestCandidates } from "@/lib/people-rules";
+import { avatarSrc } from "@/lib/people-rules";
 import { fmtTime } from "@/lib/review";
 import { VoiceAvatar, pickSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
 
@@ -36,7 +36,6 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
 
   const used = new Set(meeting.participants.map((p) => p.person_id).filter((x): x is string => !!x));
-  const candidates = suggestCandidates(tr?.segments ?? [], people ?? [], used, 3);
   const pick = async (speakerId: string, personId: string) => {
     try { await assignSpeakerPerson(speakerId, { personId }); qc.invalidateQueries(); advance(speakerId); }
     catch { toast.error("Não foi possível salvar."); }
@@ -145,17 +144,9 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                         } catch { toast.error("Não foi possível salvar."); }
                       }}
                       onSkip={() => advance(s.id)}
+                      options={(people ?? []).filter((p) => !used.has(p.id))}
+                      onPick={(pid) => pick(s.id, pid)}
                     />
-                  )}
-                  {!name && candidates.length > 0 && (
-                    <div className="flex w-36 flex-col items-center gap-1">
-                      {candidates.map((c) => (
-                        <button key={c.person.id} onClick={() => pick(s.id, c.person.id)}
-                          className="max-w-36 truncate rounded-full border px-2.5 py-0.5 text-[11px] text-muted-foreground hover:border-accent hover:text-foreground">
-                          {c.person.display_name}{c.mentionMs != null && ` · citado aos ${fmtTime(c.mentionMs)}`}
-                        </button>
-                      ))}
-                    </div>
                   )}
                   {person?.instagram && <a href={`https://instagram.com/${person.instagram}`} target="_blank" rel="noreferrer" className="-mt-1.5 max-w-28 truncate text-xs text-muted-foreground hover:text-accent">@{person.instagram}</a>}
                   {suggested && <span className="-mt-1 text-[11px] text-muted-foreground">{s.mapping_source === "voice" ? "reconhecido pela voz" : "sugerido"}</span>}
@@ -179,13 +170,21 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
 }
 
 /** Inline name input that replaces the "Quem é?" label. Tab/Enter saves and moves on. Shows a spinner while saving (e.g. fetching the Instagram avatar). */
-const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => Promise<void>; onSkip: () => void }>(function NameField({ onSave, onSkip }, ref) {
+type Opt = { id: string; display_name: string };
+const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/^@/, "");
+const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => Promise<void>; onSkip: () => void; options: Opt[]; onPick: (id: string) => Promise<void> }>(function NameField({ onSave, onSkip, options, onPick }, ref) {
   const [v, setV] = useState("");
   const [saving, setSaving] = useState(false);
+  const q = norm(v.trim());
+  const matches = q ? options.filter((o) => norm(o.display_name).split(/\s+/).some((w) => w.startsWith(q)) || norm(o.display_name).startsWith(q)).slice(0, 5) : [];
   const save = async () => {
     if (!v.trim()) { onSkip(); return; }
     setSaving(true);
     try { await onSave(v.trim()); } finally { setSaving(false); }
+  };
+  const choose = async (id: string) => {
+    setSaving(true);
+    try { await onPick(id); } finally { setSaving(false); }
   };
   if (saving) {
     return (
@@ -195,16 +194,28 @@ const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => Promise<
     );
   }
   return (
-    <input
-      ref={ref} value={v} onChange={(e) => setV(e.target.value)} placeholder="Nome ou @instagram"
-      aria-label="Nome desta pessoa"
-      onKeyDown={(e) => {
-        if (e.key === "Tab" || e.key === "Enter") {
-          e.preventDefault();
-          void save();
-        }
-      }}
-      className="h-11 w-36 border-b border-transparent bg-transparent text-center text-base outline-none placeholder:text-muted-foreground focus:border-accent sm:h-auto sm:w-32 sm:text-sm"
-    />
+    <div className="relative">
+      <input
+        ref={ref} value={v} onChange={(e) => setV(e.target.value)} placeholder="Nome ou @instagram"
+        aria-label="Nome desta pessoa" autoComplete="off"
+        onKeyDown={(e) => {
+          if (e.key === "Tab" || e.key === "Enter") {
+            e.preventDefault();
+            void save();
+          }
+        }}
+        className="h-11 w-36 border-b border-transparent bg-transparent text-center text-base outline-none placeholder:text-muted-foreground focus:border-accent sm:h-auto sm:w-32 sm:text-sm"
+      />
+      {matches.length > 0 && (
+        <ul role="listbox" className="absolute left-1/2 top-full z-20 mt-1 w-44 -translate-x-1/2 border bg-background py-1 text-sm">
+          {matches.map((o) => (
+            <li key={o.id}>
+              <button type="button" onMouseDown={(e) => { e.preventDefault(); void choose(o.id); }}
+                className="block w-full truncate px-3 py-2 text-left hover:bg-muted">{o.display_name}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 });
