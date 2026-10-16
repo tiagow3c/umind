@@ -78,13 +78,6 @@ function Detalhe() {
 
       {m.status === "processing" && rec?.finalized_at && !m.current_transcript_id && <MeetingSkeleton />}
 
-      {m.status === "review_ready" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-success p-4 text-sm">
-          <span>Conteúdo gerado e pronto para sua revisão.</span>
-          <Button size="sm" variant="outline" onClick={async () => { await markCompleted(m.id); qc.invalidateQueries(); toast.success("Revisão concluída."); }}>Marcar revisão como concluída</Button>
-        </div>
-      )}
-
       {m.current_transcript_id && <MeetingReview meeting={m} />}
 
       {canStartCapture(m.status, m.consent_records) && (
