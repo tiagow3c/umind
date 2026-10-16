@@ -67,16 +67,16 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
 
   return (
     <li className="py-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <button onClick={() => setOpen(!open)} className="group flex min-w-0 max-w-xl items-start gap-2 text-left" aria-expanded={open}>
+      <div className="flex items-center justify-between gap-4">
+        <button onClick={() => setOpen(!open)} className="group flex min-w-0 flex-1 items-start gap-2 text-left" aria-expanded={open}>
           <ChevronRight className={cn("mt-1.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground", open && "rotate-90")} />
           <span className="min-w-0">
             <span className={cn("block text-lg font-medium", done && "text-muted-foreground line-through")}>{task.title}</span>
             <span className="mt-1 block text-sm text-muted-foreground">{meta}</span>
           </span>
         </button>
-        {done ? <span className="text-sm text-muted-foreground">Feita</span> : (
-          <div className="flex gap-2">
+        {done ? <span className="shrink-0 text-sm text-muted-foreground">Feita</span> : (
+          <div className="ml-auto flex shrink-0 gap-2">
             {d.kind === "email" ? (
               <>
                 <button onClick={() => go(gmailUrl(d))} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-secondary"><GmailIcon /> Enviar</button>
