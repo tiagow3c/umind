@@ -197,7 +197,8 @@ async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: 
       state.transcriptionOutput = job.output ?? {};
       await save();
     }
-    const { utterances } = parsePyannote(state.transcriptionOutput);
+    const { utterances, turns } = parsePyannote(state.transcriptionOutput);
+    const samples = pickCleanSamples(utterances, turns);
     const { data: vps, error: vpError } = await admin.from("person_voiceprints").select("person_id, voiceprint").eq("workspace_id", meeting.workspace_id).order("created_at", { ascending: false }).limit(200);
     if (vpError) throw new StageError("load voiceprints failed", "db", true);
     const seen = new Set<string>();
@@ -221,7 +222,7 @@ async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: 
     const matches = state.identificationOutput ? matchIdentifiedSpeakers(utterances, parsePyannote(state.identificationOutput)) : {};
     if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
     await admin.from("transcripts").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: "pyannote", kind: "raw_pyannote", raw_text: utterances.map((u) => u.text).join(" ") });
-    return { utterances, matches, jobId: state.jobId, identifyJobId: state.identifyJobId ?? null } as unknown as Record<string, Json>;
+    return { utterances, matches, samples, jobId: state.jobId, identifyJobId: state.identifyJobId ?? null } as unknown as Record<string, Json>;
   } catch (e) {
     if (e instanceof PyannoteError) throw providerError("pyannote", e.status || 500, e.message);
     throw e;
