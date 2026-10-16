@@ -120,16 +120,41 @@ function speakerIndex(label: string | undefined, extra: Map<string, number>) {
   return extra.get(label)!;
 }
 
+export type SpeakerTurn = { start_ms: number; end_ms: number; speaker: number | null };
+
 /**
  * Turn a pyannoteAI job output into utterances (timing + speaker + text) and
  * voice matches (speaker index → voiceprint label) above the confidence floor.
+ * With exclusive diarization, its non-overlapping turns are the truth for who speaks when;
+ * words are redistributed into those turns so no utterance crosses a speaker change.
+ * `turns` keeps the overlapping diarization (crosstalk) for picking clean voice samples.
  */
-export function parsePyannote(output: Record<string, unknown> | null): { utterances: Utterance[]; matches: Record<string, string> } {
+export function parsePyannote(output: Record<string, unknown> | null): { utterances: Utterance[]; matches: Record<string, string>; turns: SpeakerTurn[] } {
   const extra = new Map<string, number>();
-  const turns = ((output?.["turnLevelTranscription"] as PyTurn[] | undefined) ?? (output?.["diarization"] as PyTurn[] | undefined) ?? []);
-  const utterances = turns
-    .filter((t) => typeof t.start === "number" && typeof t.end === "number")
-    .map((t) => ({ start_ms: Math.round(t.start! * 1000), end_ms: Math.round(t.end! * 1000), text: (t.text ?? "").trim(), speaker: speakerIndex(t.speaker, extra) }));
+  const timed = (list: PyTurn[] | undefined) => (list ?? []).filter((t) => typeof t.start === "number" && typeof t.end === "number");
+  const toMs = (t: PyTurn) => ({ start_ms: Math.round(t.start! * 1000), end_ms: Math.round(t.end! * 1000), speaker: speakerIndex(t.speaker, extra) });
+  const exclusive = timed(output?.["exclusiveDiarization"] as PyTurn[] | undefined).map(toMs);
+  const words = timed(output?.["wordLevelTranscription"] as PyTurn[] | undefined);
+  let utterances: Utterance[];
+  if (exclusive.length && words.length) {
+    const texts: string[][] = exclusive.map(() => []);
+    for (const w of words) {
+      const s = w.start! * 1000, e = w.end! * 1000, mid = (s + e) / 2;
+      let best = -1, bestOv = 0, nearest = 0, nearestD = Infinity;
+      exclusive.forEach((t, i) => {
+        const ov = Math.min(e, t.end_ms) - Math.max(s, t.start_ms);
+        if (ov > bestOv) { bestOv = ov; best = i; }
+        const d = mid < t.start_ms ? t.start_ms - mid : mid > t.end_ms ? mid - t.end_ms : 0;
+        if (d < nearestD) { nearestD = d; nearest = i; }
+      });
+      texts[best >= 0 ? best : nearest]!.push((w.text ?? "").trim());
+    }
+    utterances = exclusive.map((t, i) => ({ ...t, text: texts[i]!.filter(Boolean).join(" ") })).filter((u) => u.text);
+  } else {
+    const src = timed((output?.["turnLevelTranscription"] as PyTurn[] | undefined) ?? (output?.["exclusiveDiarization"] as PyTurn[] | undefined) ?? (output?.["diarization"] as PyTurn[] | undefined));
+    utterances = src.map((t) => ({ ...toMs(t), text: (t.text ?? "").trim() }));
+  }
+  const overlapping = timed(output?.["diarization"] as PyTurn[] | undefined).map(toMs);
   const matches: Record<string, string> = {};
   for (const v of (output?.["voiceprints"] as PyVoice[] | undefined) ?? []) {
     const idx = speakerIndex(v.speaker, extra);
@@ -137,7 +162,36 @@ export function parsePyannote(output: Record<string, unknown> | null): { utteran
     const score = v.confidence?.[v.match] ?? 0;
     if (score >= VOICE_MATCH_MIN) matches[String(idx)] = v.match;
   }
-  return { utterances, matches };
+  return { utterances, matches, turns: overlapping.length ? overlapping : exclusive };
+}
+
+export const SAMPLE_MAX_MS = 10_000;
+export const SAMPLE_MIN_MS = 1_500;
+export const SAMPLE_EDGE_MS = 300;
+
+/**
+ * One voice sample per speaker that contains only that speaker: their longest solo turn,
+ * shrunk by a safety margin at both edges, capped at 10 s, and cut wherever any other
+ * speaker (including crosstalk) is heard. No sample when nothing clean is long enough.
+ */
+export function pickCleanSamples(utterances: SpeakerTurn[], turns: SpeakerTurn[]): Record<string, { start_ms: number; end_ms: number }> {
+  const all = [...utterances, ...turns];
+  const best: Record<string, { start_ms: number; end_ms: number }> = {};
+  for (const u of utterances) {
+    if (u.speaker === null) continue;
+    let s = u.start_ms + SAMPLE_EDGE_MS;
+    let e = u.end_ms - SAMPLE_EDGE_MS;
+    // Push the start past anyone else still talking at the beginning.
+    for (const o of all) if (o.speaker !== u.speaker && o.start_ms <= s && o.end_ms > s) s = o.end_ms + SAMPLE_EDGE_MS;
+    e = Math.min(e, s + SAMPLE_MAX_MS);
+    // Stop before anyone else starts.
+    for (const o of all) if (o.speaker !== u.speaker && o.start_ms > s - SAMPLE_EDGE_MS && o.start_ms < e + SAMPLE_EDGE_MS) e = Math.min(e, o.start_ms - SAMPLE_EDGE_MS);
+    if (e - s < SAMPLE_MIN_MS) continue;
+    const key = String(u.speaker);
+    const cur = best[key];
+    if (!cur || e - s > cur.end_ms - cur.start_ms) best[key] = { start_ms: s, end_ms: e };
+  }
+  return best;
 }
 
 /** Give speakers to timed sentences (no text from diarizer) by the turn that overlaps them most. */
