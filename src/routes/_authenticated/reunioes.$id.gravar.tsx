@@ -192,7 +192,7 @@ function Gravar() {
   if (phase === "recording" || phase === "paused") {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background">
-        <VoiceOrb level={phase === "recording" ? level : 0} active />
+        <VoiceOrb level={phase === "recording" ? level : 0} active size={320} />
         <p className="mt-12 font-serif text-2xl tabular-nums text-muted-foreground">
           {formatDuration(elapsed) === "—" ? "0:00" : formatDuration(elapsed)}
         </p>
