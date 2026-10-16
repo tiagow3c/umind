@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { STATUS_LABEL, type MeetingStatus } from "@/lib/meeting-rules";
 
 export const Route = createFileRoute("/_authenticated/reunioes/")({
-  head: () => ({ meta: [{ title: "Reuniões — Ata" }, { name: "description", content: "Todas as suas reuniões gravadas e importadas." }, { property: "og:title", content: "Reuniões — Ata" }, { property: "og:description", content: "Todas as suas reuniões gravadas e importadas." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Reuniões — Ata" }, { name: "description", content: "Todas as suas reuniões gravadas." }, { property: "og:title", content: "Reuniões — Ata" }, { property: "og:description", content: "Todas as suas reuniões gravadas." }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(meetingsQuery),
   component: Lista,
 });

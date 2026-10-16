@@ -4,6 +4,6 @@
 - [x] Validar o processamento autenticado com o áudio salvo.
 
 # Gravação direta
-- [ ] Disponibilizar Gravar no menu fixo e iniciar sem tela de preparação.
-- [ ] Retirar a exigência temporária de consentimento sem inventar registros.
-- [ ] Testar início real autenticado e regras de captura.
+- [x] Disponibilizar Gravar no menu fixo e iniciar sem tela de preparação.
+- [x] Retirar a exigência temporária de consentimento sem inventar registros.
+- [x] Testar início real autenticado e regras de captura.
