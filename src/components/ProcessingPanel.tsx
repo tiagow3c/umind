@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type StageState = { stage: string; status: string; error_code: string | null; attempt: number };
 
-export function ProcessingPanel({ meetingId, status, compact = false }: { meetingId: string; status: string; compact?: boolean }) {
+export function ProcessingPanel({ meetingId, status, compact = false, waiting = false }: { meetingId: string; status: string; compact?: boolean; waiting?: boolean }) {
   const advance = useServerFn(advanceProcessing);
   const retry = useServerFn(retryProcessing);
   const qc = useQueryClient();
@@ -68,7 +68,7 @@ export function ProcessingPanel({ meetingId, status, compact = false }: { meetin
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground" aria-live="polite">
         <span className="flex items-center gap-2">
           <span className="size-1.5 animate-pulse rounded-full bg-accent" />
-          {paused ? "Processamento pausado — limite do provedor atingido." : `${label[current?.stage ?? "transcribe"] ?? "Processando"}…`}
+          {waiting ? "Transcrição pronta — aguardando participantes" : paused ? "Processamento pausado — limite do provedor atingido." : `${label[current?.stage ?? "transcribe"] ?? "Processando"}…`}
         </span>
         <button onClick={cancel} className="underline-offset-4 hover:text-foreground hover:underline">Cancelar processamento</button>
       </div>

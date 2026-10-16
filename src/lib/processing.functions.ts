@@ -19,6 +19,17 @@ export const advanceProcessing = createServerFn({ method: "POST" })
     return advanceMeeting(supabaseAdmin, data.meetingId);
   });
 
+/** Release the analysis stage (after participants are named, or on explicit request). */
+export const requestAnalysis = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => idInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertOwner(context.supabase, data.meetingId, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("meetings").update({ analysis_requested_at: new Date().toISOString() }).eq("id", data.meetingId).is("analysis_requested_at", null);
+    return advanceMeeting(supabaseAdmin, data.meetingId);
+  });
+
 export const retryProcessing = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => idInput.parse(d))

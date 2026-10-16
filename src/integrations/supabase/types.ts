@@ -258,6 +258,7 @@ export type Database = {
       }
       meetings: {
         Row: {
+          analysis_requested_at: string | null
           created_at: string
           current_transcript_id: string | null
           deleted_at: string | null
@@ -276,6 +277,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          analysis_requested_at?: string | null
           created_at?: string
           current_transcript_id?: string | null
           deleted_at?: string | null
@@ -294,6 +296,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          analysis_requested_at?: string | null
           created_at?: string
           current_transcript_id?: string | null
           deleted_at?: string | null
