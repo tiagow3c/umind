@@ -40,7 +40,7 @@ export const enrollVoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ speakerId: z.string().uuid(), personId: z.string().uuid(), wavBase64: z.string().min(100).max(3_000_000) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { hasPyannote, uploadMedia, submitVoiceprint, waitJob } = await import("./pyannote.server");
+    const { hasPyannote, uploadMedia, submitVoiceprint, waitJob, PyannoteError } = await import("./pyannote.server");
     if (!hasPyannote()) return { ok: false, reason: "not_configured" };
     const sb = context.supabase;
     const { data: sp } = await sb.from("speakers").select("id, workspace_id").eq("id", data.speakerId).single();
@@ -48,7 +48,13 @@ export const enrollVoice = createServerFn({ method: "POST" })
     if (!sp || !p || sp.workspace_id !== p.workspace_id) throw new Error("not_found");
     const bin = Uint8Array.from(atob(data.wavBase64), (c) => c.charCodeAt(0));
     const media = await uploadMedia(`vp-${data.speakerId}-${Date.now()}.wav`, new Blob([bin], { type: "audio/wav" }));
-    const job = await waitJob(await submitVoiceprint(media), 50_000);
+    let job: Awaited<ReturnType<typeof waitJob>> = null;
+    try {
+      job = await waitJob(await submitVoiceprint(media), 50_000);
+    } catch (e) {
+      if (e instanceof PyannoteError && (e.status === 402 || e.status === 403)) return { ok: false, reason: "credits" };
+      throw e;
+    }
     const vp = job?.status === "succeeded" ? (job.output?.["voiceprint"] as string | undefined) : undefined;
     if (!vp) return { ok: false, reason: job ? "failed" : "timeout" };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
