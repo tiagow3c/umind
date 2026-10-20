@@ -54,3 +54,7 @@
 # Círculo da gravação mais vivo
 - [x] Inchar mais com a voz e fazer a borda onduolar devagar.
 - [x] Testar com microfone de teste: medir o raio do círculo quadro a quadro.
+
+# Botões da tela de gravação
+- [x] Pausar, Retomar e Encerrar como botões com ícones (pausa, play, quadrado).
+- [x] Testar com microfone de teste nos dois estados e apagar a gravação do teste.
