@@ -57,7 +57,7 @@ function AppLayout() {
           <AccountMenu name={displayName} email={user.email} compact />
         </div>
       </header>}
-      {!isRecorder && <aside className="app-side hidden border-r bg-sidebar md:flex md:flex-col">
+      {!isRecorder && <aside className="app-side hidden bg-sidebar md:flex md:flex-col">
         <div className="flex items-center justify-between p-5 md:block">
           <Link to="/hoje" className="font-serif text-3xl">Ata</Link>
         </div>
