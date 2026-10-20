@@ -102,14 +102,14 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
           </div>
         )}
         {an?.summary ? (
-          <p className="font-serif text-2xl leading-snug">{firstSentences(an.summary)}</p>
+          <p className="text-base leading-relaxed">{firstSentences(an.summary)}</p>
         ) : processing ? (
           <div className="space-y-3" aria-label="Resumo sendo preparado">
-            <div className="h-6 w-11/12 animate-pulse rounded bg-muted" />
-            <div className="h-6 w-3/5 animate-pulse rounded bg-muted [animation-delay:300ms]" />
+            <div className="h-4 w-11/12 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-3/5 animate-pulse rounded bg-muted [animation-delay:300ms]" />
           </div>
         ) : (
-          <p className="font-serif text-2xl leading-snug">Resumo sendo preparado.</p>
+          <p className="text-base leading-relaxed">Resumo sendo preparado.</p>
         )}
         {!processing && <button onClick={onFull} className="mt-6 text-sm underline underline-offset-4 hover:text-accent">Ver resumo completo</button>}
       </section>
