@@ -40,3 +40,8 @@
 - [x] Escolher claro, escuro ou automático em Ajustes > Aparência; automático segue o aparelho.
 - [x] Guardar a escolha no aparelho e aplicar antes da tela aparecer, sem piscar.
 - [x] Testar no celular e no computador: Reuniões, uma reunião, Hoje e a gravação.
+
+# Paleta do Lovable
+- [x] Aplicar creme #F7F4ED no fundo, preto #1B1B1B no texto e azul #4B73FF (apoio violeta #BBC1FF) no destaque.
+- [x] Escuro em preto #1B1B1B com texto creme; barra do app e manifesto na mesma cor.
+- [x] Testar no celular e no computador: Reuniões (claro e escuro), Hoje e a tela de gravação.
