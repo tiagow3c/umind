@@ -203,31 +203,41 @@ function toWav(buf: AudioBuffer, startS: number, endS: number): string | null {
   return btoa(bin);
 }
 
-/** Save the voice of a just-named speaker so future meetings recognise this person automatically. */
-export async function enrollSpeakerVoice(speakerId: string, personId: string) {
-  const warn = (why: string) => console.warn(`[enroll] ${speakerId}: ${why}`);
+/** Save the voice of a just-named speaker so future meetings recognise this person automatically.
+ *  Returns null on success, or a short reason ("credits" when the voice service is out of credits). */
+export async function enrollSpeakerVoice(speakerId: string, personId: string): Promise<string | null> {
+  const fail = (why: string) => { console.warn(`[enroll] ${speakerId}: ${why}`); return why; };
   const { data: sp } = await supabase.from("speakers").select("meeting_id").eq("id", speakerId).single();
-  if (!sp) return warn("speaker não encontrado");
+  if (!sp) return fail("speaker não encontrado");
   const { data: m } = await supabase.from("meetings").select("current_transcript_id").eq("id", sp.meeting_id).single();
-  if (!m?.current_transcript_id) return warn("sem transcrição");
+  if (!m?.current_transcript_id) return fail("sem transcrição");
   const [{ data: segs }, { data: sps }] = await Promise.all([
     supabase.from("transcript_segments").select("speaker_id, start_ms, end_ms, overlap").eq("transcript_id", m.current_transcript_id),
     supabase.from("speakers").select("id, sample_start_ms, sample_end_ms").eq("meeting_id", sp.meeting_id),
   ]);
   const { speakerSamples } = await import("@/components/VoiceAvatar");
   const sample = speakerSamples(sps ?? [], (segs ?? []).map((x) => ({ ...x, start_ms: Number(x.start_ms), end_ms: Number(x.end_ms) }))).get(speakerId);
-  if (!sample || sample.end - sample.start < 2000) return warn("trecho de voz curto demais");
+  if (!sample || sample.end - sample.start < 2000) return fail("trecho de voz curto demais");
   const { data: rec } = await supabase.from("recordings").select("id, codec, recording_parts(object_key, sequence)").eq("meeting_id", sp.meeting_id).not("finalized_at", "is", null).order("created_at", { ascending: false }).limit(1).single();
-  if (!rec) return warn("gravação não finalizada");
+  if (!rec) return fail("gravação não finalizada");
   const url = await loadPlayableAudio(rec.id, rec.recording_parts, (rec.codec ?? "audio/webm").split(";")[0]!);
   const ctx = new AudioContext();
   try {
     const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
     const wav = toWav(buf, sample.start / 1000, sample.end / 1000);
-    if (!wav) return warn("trecho quase silencioso");
+    if (!wav) return fail("trecho quase silencioso");
     const r = await enrollVoice({ data: { speakerId, personId, wavBase64: wav } });
-    if (!r?.ok) warn(`servidor recusou: ${r?.reason ?? "erro"}`);
+    if (!r?.ok) return fail(r?.reason ?? "erro");
+    return null;
   } finally { void ctx.close(); }
+}
+
+/** People among `personIds` that still have no saved voice. */
+export async function missingVoicePersons(personIds: string[]) {
+  if (!personIds.length) return new Set<string>();
+  const { data } = await supabase.from("person_voiceprints").select("person_id").in("person_id", personIds);
+  const have = new Set((data ?? []).map((r) => r.person_id));
+  return new Set(personIds.filter((id) => !have.has(id)));
 }
 
 export async function confirmParticipant(participantId: string) {
