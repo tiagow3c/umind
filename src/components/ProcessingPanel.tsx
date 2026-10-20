@@ -18,6 +18,13 @@ export function ProcessingPanel({ meetingId, status, compact = false, waiting = 
   const [stages, setStages] = useState<StageState[] | null>(null);
   const [paused, setPaused] = useState<string | null>(null);
   const busy = useRef(false);
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (status !== "processing") return;
+    const t0 = Date.now();
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - t0) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [status, meetingId]);
 
   useEffect(() => {
     let alive = true;
@@ -65,13 +72,22 @@ export function ProcessingPanel({ meetingId, status, compact = false, waiting = 
   if (compact && status === "processing") {
     const current = stages?.find((s) => s.status === "running" || s.status === "queued" || s.status === "retry_wait");
     const label: Record<string, string> = { transcribe: "Transcrevendo", diarize: "Identificando vozes", align: "Separando participantes", analyze: "Analisando a conversa", embed: "Preparando a busca" };
+    const total = stages?.length || 5;
+    const done = stages?.filter((s) => s.status === "succeeded").length ?? 0;
+    const pct = Math.min(99, Math.round(((done + (current?.status === "running" ? 0.5 : 0)) / total) * 100));
+    const mm = Math.floor(elapsed / 60), ss = String(elapsed % 60).padStart(2, "0");
     return (
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground" aria-live="polite">
-        <span className="flex items-center gap-2">
-          <span className="size-1.5 animate-pulse rounded-full bg-accent" />
-          {waiting ? "Transcrição pronta — aguardando participantes" : paused ? "Processamento pausado — limite do provedor atingido." : `${label[current?.stage ?? "transcribe"] ?? "Processando"}…`}
-        </span>
-        <button onClick={cancel} className="underline-offset-4 hover:text-foreground hover:underline">Cancelar processamento</button>
+      <div className="space-y-2 text-sm text-muted-foreground" aria-live="polite">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span>
+            {waiting ? "Transcrição pronta — aguardando participantes" : paused ? "Processamento pausado — limite do provedor atingido." : `${label[current?.stage ?? "transcribe"] ?? "Processando"}…`}
+            <span className="ml-2 tabular-nums">Etapa {Math.min(done + 1, total)} de {total} · {pct}% · {mm}:{ss}</span>
+          </span>
+          <button onClick={cancel} className="underline-offset-4 hover:text-foreground hover:underline">Cancelar processamento</button>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${pct}%` }} />
+        </div>
       </div>
     );
   }
