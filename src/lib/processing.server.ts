@@ -362,6 +362,7 @@ Regras:
   - Se OUTRA pessoa deve fazer: NUNCA vira tarefa do dono. action.assignee="follow_up", counterpart=nome da pessoa, e o title é um lembrete para o dono acompanhar ou cobrar: "Cobrar da Taylor a integração com as redes sociais", "Lembrar a Taylor de te avisar quando o onboarding estiver concluído". Nesse caso action.kind="email" com um rascunho curto e cordial para a pessoa perguntando do andamento (to_name = counterpart).
   - Quando a tarefa do dono é encaminhar/repassar e-mails existentes: action.kind="forward", to_name = destinatário, search_query = termos de busca do Gmail que acham esse e-mail (palavras-chave do assunto, sem operadores inventados), body = nota curta de encaminhamento.
   - counterpart = outra pessoa envolvida (ou null).
+  - Sempre chame as pessoas pelo NOME, nunca pelo parentesco ou papel. Se na conversa ou nos participantes ficar claro quem é (ex.: a filha se chama Celina), escreva "Pensar com a Celina em um dia para o nosso Vale Night", e não "com minha filha". Vale para title, counterpart, to_name e rascunhos.
 - Resumo executivo curto (até 5 frases).
 - title: título curto e específico da reunião (até 8 palavras), sem data.
 - speakers: para cada rótulo "Falante N" presente, o nome da pessoa SOMENTE se ficar claro na conversa (ex.: alguém a chama pelo nome ou ela se apresenta); caso contrário name = null. Nunca adivinhe.`;
