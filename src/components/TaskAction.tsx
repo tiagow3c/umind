@@ -1,4 +1,4 @@
-import { CalendarPlus, ChevronRight, Forward, Loader2 } from "lucide-react";
+import { ChevronRight, Forward, ListPlus, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { forwardGmail, searchGmail, type MailHit } from "@/lib/gmail.functions";
@@ -8,7 +8,7 @@ import { counterpartOf, isFollowUp } from "@/lib/task-rules";
 import { normalizeName } from "@/lib/people-rules";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { addTaskToAgenda } from "@/lib/todos";
+import { addTaskToTodo } from "@/lib/todos";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -81,8 +81,8 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
   const meta = [follow ? (other ? `Com ${other}` : null) : "Você", when].filter(Boolean).join(" · ");
   const done = task.status === "done";
   const qc = useQueryClient();
-  const toAgenda = async () => {
-    try { const added = await addTaskToAgenda(task); qc.invalidateQueries({ queryKey: ["todos"] }); toast.success(added ? "Adicionada às tarefas." : "Já está nas tarefas."); }
+  const toTodo = async () => {
+    try { const added = await addTaskToTodo(task); qc.invalidateQueries({ queryKey: ["todos"] }); toast.success(added ? "Adicionada às tarefas." : "Já está nas tarefas."); }
     catch { toast.error("Não foi possível adicionar às tarefas."); }
   };
 
@@ -98,7 +98,7 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
         </Button>
         {done ? <span className="shrink-0 text-sm text-muted-foreground">Feita</span> : (
           <div className="ml-auto flex shrink-0 flex-col items-end gap-2 sm:flex-row">
-            <Button variant="outline" onClick={toAgenda} className="w-full px-3 shadow-none" aria-label="Adicionar às tarefas"><CalendarPlus className="size-4" /> Tarefa</Button>
+            <Button variant="outline" onClick={toTodo} className="w-full px-3 shadow-none" aria-label="Adicionar às tarefas"><ListPlus className="size-4" /> Tarefa</Button>
             {(task.action as { kind?: string } | null)?.kind === "none" ? null : d.kind === "forward" ? (
               <Button variant="outline" onClick={() => setOpen(true)} className="w-full px-3 shadow-none"><GmailIcon /> Encaminhar</Button>
             ) : d.kind === "email" ? (

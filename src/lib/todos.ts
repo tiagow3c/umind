@@ -34,8 +34,8 @@ export async function deleteTodo(id: string) {
   if (error) throw new Error(error.message);
 }
 
-/** Puts a meeting task on the agenda (its due day, or today). Returns false when it was already there. */
-export async function addTaskToAgenda(task: { id: string; title: string; due_date: string | null }) {
+/** Puts a meeting task on the to-do list (its due day, or today). Returns false when it was already there. */
+export async function addTaskToTodo(task: { id: string; title: string; due_date: string | null }) {
   const { data } = await supabase.from("todos").select("id").eq("task_id", task.id).limit(1);
   if (data?.length) return false;
   await addTodo(task.title, dayForTask(task.due_date, isoDay(new Date())), task.id);
