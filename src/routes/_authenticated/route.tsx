@@ -84,7 +84,7 @@ function AppLayout() {
         })}
       </nav>}
       {!isRecorder && <PullToRefresh />}
-      {!isRecorder && <Assistant />}
+      {!isRecorder && <Assistant key={user.id} />}
     </div>
   );
 }
