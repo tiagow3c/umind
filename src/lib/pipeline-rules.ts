@@ -165,13 +165,13 @@ export function parsePyannote(output: Record<string, unknown> | null): { utteran
   return { utterances, matches, turns: overlapping.length ? overlapping : exclusive };
 }
 
-export const SAMPLE_MAX_MS = 10_000;
+export const SAMPLE_MAX_MS = 15_000;
 export const SAMPLE_MIN_MS = 1_500;
 export const SAMPLE_EDGE_MS = 300;
 
 /**
  * One voice sample per speaker that contains only that speaker: their longest solo turn,
- * shrunk by a safety margin at both edges, capped at 10 s, and cut wherever any other
+ * shrunk by a safety margin at both edges, capped at 15 s, and cut wherever any other
  * speaker (including crosstalk) is heard. No sample when nothing clean is long enough.
  */
 export function pickCleanSamples(utterances: SpeakerTurn[], turns: SpeakerTurn[]): Record<string, { start_ms: number; end_ms: number }> {

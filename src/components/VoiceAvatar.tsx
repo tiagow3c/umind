@@ -93,7 +93,7 @@ export const VoiceAvatar = forwardRef<VoiceAvatarHandle, {
   );
 });
 
-/** Pick a representative sample per speaker: their longest solo utterance, capped at 10 s,
+/** Pick a representative sample per speaker: their longest solo utterance, capped at 15 s,
  *  never crossing into another speaker's turn or an overlapped region. */
 export function pickSamples(segments: { speaker_id: string | null; start_ms: number; end_ms: number; overlap?: boolean }[]) {
   const best = new Map<string, { start: number; end: number }>();
@@ -103,7 +103,7 @@ export function pickSamples(segments: { speaker_id: string | null; start_ms: num
     if (!cur || s.end_ms - s.start_ms > cur.end - cur.start) best.set(s.speaker_id, { start: s.start_ms, end: s.end_ms });
   }
   for (const [k, v] of best) {
-    let end = Math.min(v.end, v.start + 10_000);
+    let end = Math.min(v.end, v.start + 15_000);
     for (const s of segments) {
       if (s.speaker_id === k || !s.speaker_id) continue;
       if (s.start_ms > v.start && s.start_ms < end) end = s.start_ms;
@@ -113,7 +113,7 @@ export function pickSamples(segments: { speaker_id: string | null; start_ms: num
   return best;
 }
 
-/** Clean sample chosen on the server (one voice only, ≤ 10 s); older meetings fall back to the transcript. */
+/** Clean sample chosen on the server (one voice only, ≤ 15 s); older meetings fall back to the transcript. */
 export function speakerSamples(
   speakers: { id: string; sample_start_ms: number | null; sample_end_ms: number | null }[],
   segments: { speaker_id: string | null; start_ms: number; end_ms: number; overlap?: boolean }[],
@@ -121,7 +121,7 @@ export function speakerSamples(
   const fallback = pickSamples(segments);
   const out = new Map<string, { start: number; end: number }>();
   for (const sp of speakers) {
-    if (sp.sample_start_ms !== null && sp.sample_end_ms !== null) out.set(sp.id, { start: sp.sample_start_ms, end: Math.min(sp.sample_end_ms, sp.sample_start_ms + 10_000) });
+    if (sp.sample_start_ms !== null && sp.sample_end_ms !== null) out.set(sp.id, { start: sp.sample_start_ms, end: Math.min(sp.sample_end_ms, sp.sample_start_ms + 15_000) });
     else if (!speakers.some((x) => x.sample_start_ms !== null)) { const f = fallback.get(sp.id); if (f) out.set(sp.id, f); }
   }
   return out;

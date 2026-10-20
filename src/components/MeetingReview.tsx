@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { addTaskToAgenda } from "@/lib/todos";
 
 type Meeting = {
   id: string;
@@ -243,6 +244,7 @@ export function TaskRow({ t, index, onEvidence }: { t: Task; index?: Map<string,
               <Button size="sm" variant="ghost" onClick={() => act({ status: "dismissed" })}>Descartar</Button>
             </>}
             {(t.status === "accepted" || t.status === "in_progress") && <Button size="sm" variant="outline" onClick={() => act({ status: "done" })}>Marcar como feita</Button>}
+            {t.status !== "done" && <Button size="sm" variant="outline" onClick={async () => { try { const added = await addTaskToAgenda(t); qc.invalidateQueries({ queryKey: ["todos"] }); toast.success(added ? "Adicionada à agenda." : "Já está na agenda."); } catch { toast.error("Não foi possível adicionar à agenda."); } }}>Adicionar à agenda</Button>}
           </div>
         </div>
       )}
