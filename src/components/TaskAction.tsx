@@ -1,4 +1,11 @@
-import { CalendarPlus, ChevronRight } from "lucide-react";
+import { CalendarPlus, ChevronRight, Forward, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { forwardGmail, searchGmail, type MailHit } from "@/lib/gmail.functions";
+import { peopleQuery } from "@/lib/review";
+import { supabase } from "@/integrations/supabase/client";
+import { counterpartOf, isFollowUp } from "@/lib/task-rules";
+import { normalizeName } from "@/lib/people-rules";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { addTaskToAgenda } from "@/lib/todos";
@@ -6,7 +13,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-export type TaskDraft = { kind: "email" | "calendar"; to_name: string | null; subject: string | null; body: string | null; event_title: string | null; event_start: string | null; event_minutes: number | null };
+export type TaskDraft = { kind: "email" | "calendar" | "forward"; search_query?: string | null; to_name: string | null; subject: string | null; body: string | null; event_title: string | null; event_start: string | null; event_minutes: number | null };
 type Task = { id: string; title: string; owner_text: string | null; due_text: string | null; due_date: string | null; status: string; action?: unknown };
 
 function GmailIcon() {
@@ -33,7 +40,7 @@ function CalendarIcon() {
 /** Draft from the analysis; older tasks without one get a simple draft from the title. */
 export function draftFor(t: Task): TaskDraft {
   const a = t.action as TaskDraft | null | undefined;
-  if (a && (a.kind === "email" || a.kind === "calendar")) return a;
+  if (a && (a.kind === "email" || a.kind === "calendar" || a.kind === "forward")) return a;
   const isCal = /\b(marcar|agendar|reuni[aã]o|ligar|liga[cç][aã]o|call)\b/i.test(t.title);
   return isCal
     ? { kind: "calendar", to_name: null, subject: null, body: t.title, event_title: t.title, event_start: null, event_minutes: 30 }
@@ -66,7 +73,12 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
   const [d, setD] = useState<TaskDraft>(() => draftFor(task));
   const set = (k: keyof TaskDraft) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value });
   const go = (url: string) => { window.open(url, "_blank", "noopener"); onDone(); };
-  const meta = [task.owner_text && `Responsável: ${task.owner_text}`, task.due_date ? `Prazo: ${new Date(task.due_date + "T12:00:00").toLocaleDateString("pt-BR")}` : task.due_text].filter(Boolean).join(" · ") || "Mencionada na conversa";
+  const { data: people } = useQuery(peopleQuery);
+  const self = people?.find((p) => p.is_self) ?? null;
+  const follow = isFollowUp(task, self?.display_name ?? null);
+  const other = counterpartOf(task, self?.display_name ?? null);
+  const when = task.due_date ? new Date(task.due_date + "T12:00:00").toLocaleDateString("pt-BR") : task.due_text;
+  const meta = [follow ? (other ? `Com ${other}` : null) : "Você", when].filter(Boolean).join(" · ");
   const done = task.status === "done";
   const qc = useQueryClient();
   const toAgenda = async () => {
@@ -86,8 +98,10 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
         </Button>
         {done ? <span className="shrink-0 text-sm text-muted-foreground">Feita</span> : (
           <div className="ml-auto flex shrink-0 flex-col items-end gap-2 sm:flex-row">
-            <Button variant="outline" onClick={toAgenda} className="w-full px-3 shadow-none" aria-label="Adicionar à agenda"><CalendarPlus className="size-4" /> Agenda</Button>
-            {d.kind === "email" ? (
+            <Button variant="outline" onClick={toAgenda} className="w-full px-3 shadow-none" aria-label="Adicionar à agenda"><CalendarPlus className="size-4" /> Tarefa</Button>
+            {d.kind === "forward" ? (
+              <Button variant="outline" onClick={() => setOpen(true)} className="w-full px-3 shadow-none"><GmailIcon /> Encaminhar</Button>
+            ) : d.kind === "email" ? (
               <>
                 <Button variant="outline" onClick={() => go(gmailUrl(d))} className="w-full px-3 shadow-none"><GmailIcon /> Enviar</Button>
                 <Button variant="outline" onClick={() => go(calendarUrl(d, task.due_date))} className="w-full px-3 shadow-none"><CalendarIcon /> Agendar</Button>
@@ -100,7 +114,7 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
       </div>
       {open && (
         <div className="ml-6 mt-4 space-y-2 rounded-lg border bg-background p-4 text-sm">
-          {d.kind === "email" ? (
+          {d.kind === "forward" ? <ForwardPanel draft={d} toName={d.to_name ?? other} people={people ?? []} onSent={onDone} /> : d.kind === "email" ? (
             <>
               {d.to_name && <p className="text-muted-foreground">Para: {d.to_name}</p>}
               <input value={d.subject ?? ""} onChange={set("subject")} aria-label="Assunto" className="w-full border-b bg-transparent py-1 font-medium outline-none focus:border-accent" />
@@ -108,9 +122,63 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
           ) : (
             <input value={d.event_title ?? ""} onChange={set("event_title")} aria-label="Título do evento" className="w-full border-b bg-transparent py-1 font-medium outline-none focus:border-accent" />
           )}
-          <textarea value={d.body ?? ""} onChange={set("body")} rows={8} aria-label="Conteúdo" className="w-full resize-y bg-transparent py-1 leading-relaxed outline-none" />
+          {d.kind !== "forward" && <textarea value={d.body ?? ""} onChange={set("body")} rows={8} aria-label="Conteúdo" className="w-full resize-y bg-transparent py-1 leading-relaxed outline-none" />}
         </div>
       )}
     </li>
+  );
+}
+
+type P = { id: string; display_name: string; email?: string | null };
+function emailOf(h: string) { return /<([^>]+)>/.exec(h)?.[1] ?? (h.includes("@") ? h.trim() : ""); }
+
+/** Finds the e-mail in the connected Gmail, lets you pick one and forwards it with the original attached. */
+function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toName: string | null; people: P[]; onSent: () => void }) {
+  const search = useServerFn(searchGmail);
+  const forward = useServerFn(forwardGmail);
+  const query = draft.search_query || draft.subject || "";
+  const { data, isLoading, error } = useQuery({ queryKey: ["gmail", query], enabled: !!query, staleTime: 60_000, queryFn: () => search({ data: { query } }) });
+  const person = toName ? people.find((p) => normalizeName(p.display_name).split(" ")[0] === normalizeName(toName).split(" ")[0]) ?? null : null;
+  const guessed = (() => {
+    if (!toName) return "";
+    const first = normalizeName(toName).split(" ")[0] ?? "";
+    for (const h of data?.hits ?? []) for (const x of [h.from, ...h.to.split(",")]) if (normalizeName(x).includes(first)) { const e = emailOf(x); if (e) return e; }
+    return "";
+  })();
+  const [to, setTo] = useState<string | null>(null);
+  const [note, setNote] = useState(draft.body ?? "");
+  const [pick, setPick] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const dest = to ?? person?.email ?? guessed;
+  const chosen = pick ?? data?.hits[0]?.id ?? null;
+
+  if (!query) return <p className="text-muted-foreground">Sem termos para procurar o e-mail.</p>;
+  if (isLoading) return <p className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-3.5 animate-spin" /> Procurando no seu Gmail…</p>;
+  if (error || !data?.connected) return <p className="text-muted-foreground">Não foi possível ler o seu Gmail agora.</p>;
+  if (!data.hits.length) return <p className="text-muted-foreground">Nenhum e-mail encontrado para “{query}”.</p>;
+  const send = async () => {
+    if (!chosen || !/^[^@\s]+@[^@\s]+$/.test(dest)) { toast.error("Informe um e-mail válido."); return; }
+    setSending(true);
+    try {
+      await forward({ data: { messageId: chosen, to: dest, note } });
+      if (person && person.email !== dest) await supabase.from("people").update({ email: dest }).eq("id", person.id);
+      toast.success("E-mail encaminhado."); onSent();
+    } catch { toast.error("Não foi possível encaminhar."); } finally { setSending(false); }
+  };
+  return (
+    <div className="space-y-3">
+      <ul className="divide-y border-y">
+        {data.hits.map((h: MailHit) => (
+          <li key={h.id}><label className="flex cursor-pointer gap-3 py-2">
+            <input type="radio" name={`fw-${query}`} checked={chosen === h.id} onChange={() => setPick(h.id)} className="mt-1" />
+            <span className="min-w-0"><span className="block truncate font-medium">{h.subject || "(sem assunto)"}</span>
+              <span className="block truncate text-xs text-muted-foreground">{h.from} · {h.date ? new Date(h.date).toLocaleDateString("pt-BR") : ""}</span></span>
+          </label></li>
+        ))}
+      </ul>
+      <input value={dest} onChange={(e) => setTo(e.target.value)} placeholder={`E-mail de ${toName ?? "destino"}`} aria-label="Para" className="w-full border-b bg-transparent py-1 outline-none focus:border-accent" />
+      <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} aria-label="Mensagem" className="w-full resize-y bg-transparent py-1 outline-none" />
+      <Button variant="outline" onClick={send} disabled={sending} className="shadow-none">{sending ? <Loader2 className="size-4 animate-spin" /> : <Forward className="size-4" />} Encaminhar</Button>
+    </div>
   );
 }
