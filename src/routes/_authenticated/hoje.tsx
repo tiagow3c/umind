@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Mic } from "lucide-react";
 import { meetingsQuery, workspaceQuery } from "@/lib/meetings";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Button } from "@/components/ui/button";
 import type { MeetingStatus } from "@/lib/meeting-rules";
 
 export const Route = createFileRoute("/_authenticated/hoje")({
@@ -22,6 +22,16 @@ function Hoje() {
         <p className="text-sm capitalize text-muted-foreground">{today}</p>
         <h1 className="mt-1 text-5xl">Olá, {ws.name}</h1>
       </header>
+      <section className="flex min-h-[36dvh] flex-col items-center justify-center gap-5 text-center">
+        <Link
+          to="/reunioes/nova"
+          aria-label="Iniciar reunião"
+          className="flex size-28 items-center justify-center rounded-full bg-accent text-accent-foreground transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:size-32"
+        >
+          <Mic className="size-11" strokeWidth={1.5} aria-hidden />
+        </Link>
+        <p className="font-serif text-3xl">Iniciar reunião</p>
+      </section>
       <section>
         <h2 className="border-b pb-2 text-2xl">Pendências</h2>
         {pending.length === 0 ? (
