@@ -127,6 +127,13 @@
       "when": 1792501092145,
       "tag": "0017_create_todos",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792503745569,
+      "tag": "0018_people_email",
+      "breakpoints": true
     }
   ]
 }

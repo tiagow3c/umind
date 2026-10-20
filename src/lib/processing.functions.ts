@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { advanceMeeting, retryMeeting } from "./processing.server";
+import { advanceMeeting, retryMeeting, rewriteMeetingTasks } from "./processing.server";
 
 const idInput = z.object({ meetingId: z.string().uuid() });
 
@@ -28,6 +28,16 @@ export const requestAnalysis = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("meetings").update({ analysis_requested_at: new Date().toISOString() }).eq("id", data.meetingId).is("analysis_requested_at", null);
     return advanceMeeting(supabaseAdmin, data.meetingId);
+  });
+
+/** Rewrites the suggested tasks of a meeting in the owner's voice; nothing else changes. */
+export const rewriteTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => idInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertOwner(context.supabase, data.meetingId, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return rewriteMeetingTasks(supabaseAdmin, data.meetingId);
   });
 
 export const retryProcessing = createServerFn({ method: "POST" })

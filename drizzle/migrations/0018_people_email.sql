@@ -1,0 +1,1 @@
+ALTER TABLE public.people ADD COLUMN IF NOT EXISTS email text CHECK (email IS NULL OR char_length(email) <= 320);
