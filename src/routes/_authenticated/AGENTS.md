@@ -1,0 +1,5 @@
+## Authenticated routes rules
+- The authenticated layout owns desktop navigation and a safe-area-aware mobile header/bottom navigation; both share AccountMenu to keep account actions consistent.
+- The new-meeting route creates a draft once per mount and opens the recorder with auto-start; all recording entry points use it to avoid separate preparation flows.
+- While recording, a parallel MediaRecorder produces standalone ~30 s windows transcribed immediately into public.live_transcript_chunks; the transcribe stage reuses them only when contiguous and covering the full duration, otherwise it re-transcribes the uploaded parts (diarize/analyze always run on the full audio after stop).
+- Mobile pull-to-refresh keeps touch handling in src/components/PullToRefresh.tsx and the distance/threshold math in src/lib/pull-to-refresh-rules.ts with tests; the layout only reads the --pull-offset CSS variable (html[data-pulling]) so the header and content follow the finger, and the gesture is disabled on recorder routes.
