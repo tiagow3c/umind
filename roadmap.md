@@ -45,3 +45,8 @@
 - [x] Aplicar creme #F7F4ED no fundo, preto #1B1B1B no texto e azul #4B73FF (apoio violeta #BBC1FF) no destaque.
 - [x] Escuro em preto #1B1B1B com texto creme; barra do app e manifesto na mesma cor.
 - [x] Testar no celular e no computador: Reuniões (claro e escuro), Hoje e a tela de gravação.
+
+# Fundo por baixo do conteúdo
+- [x] Pintar a faixa por baixo/ao redor da moldura com a mesma cor do menu.
+- [x] Deixar esse tom um pouco mais fundo (menos claro): creme #E8E6DE, escuro #262626.
+- [x] Testar no computador em claro e escuro: faixa, menu e conteúdo com as cores certas.
