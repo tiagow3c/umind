@@ -58,3 +58,9 @@
 # Botões da tela de gravação
 - [x] Pausar, Retomar e Encerrar como botões com ícones (pausa, play, quadrado).
 - [x] Testar com microfone de teste nos dois estados e apagar a gravação do teste.
+
+# Identificação automática da voz do dono
+- [x] Diagnosticar: conta pyannote sem créditos (402) bloqueava o cadastro de voz — falha era silenciosa.
+- [x] Cadastro de voz agora avisa (toast) quando falha e distingue "sem créditos".
+- [x] Página da reunião tenta de novo sozinha enquanto a pessoa não tiver voz guardada.
+- [ ] Usuário recarregar créditos na conta pyannote (bloqueio externo).
