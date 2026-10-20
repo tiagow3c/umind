@@ -51,19 +51,19 @@ export function Assistant() {
 
   /** Mesmo conteúdo para a barra lateral (desktop) e o painel flutuante (celular). */
   const renderPanel = (variant: "rail" | "mobile") => (
-    <section aria-label="Assistente do Ata" className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-background ${variant === "rail" ? "border-l" : "assistant-panel rounded-md border"}`}>
+    <section aria-label="Ata AI" className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-background ${variant === "rail" ? "border-l" : "assistant-panel rounded-md border"}`}>
       <header className="flex shrink-0 items-center justify-between border-b px-4 py-3">
-        <h2 className="text-2xl">Assistente</h2>
+        <h2 className="text-2xl">Ata&nbsp;AI</h2>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" title="Nova conversa" aria-label="Nova conversa" disabled={pending} onClick={() => { setMessages([]); setError(null); setQuestion(""); }}><RotateCcw /></Button>
-          <Button variant="ghost" size="icon" className="md:hidden" title="Fechar assistente" aria-label="Fechar assistente" onClick={() => setOpen(false)}><X /></Button>
+          <Button variant="ghost" size="icon" className="md:hidden" title="Fechar Ata AI" aria-label="Fechar Ata AI" onClick={() => setOpen(false)}><X /></Button>
         </div>
       </header>
-      <div ref={(node) => { logs.current[variant === "rail" ? 0 : 1] = node; }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" role="log" aria-live="polite" aria-label="Conversa com assistente">
+      <div ref={(node) => { logs.current[variant === "rail" ? 0 : 1] = node; }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" role="log" aria-live="polite" aria-label="Conversa com o Ata AI">
         {messages.length === 0 && <p className="py-8 font-serif text-2xl text-muted-foreground">{meetingId ? "O que você quer saber sobre esta reunião?" : "O que você tem em mente?"}</p>}
         {messages.map((message, i) => <div key={i} className={`mb-4 flex min-w-0 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
           <div className={`min-w-0 max-w-[90%] rounded-lg px-3 py-2.5 ${message.role === "user" ? "rounded-br-none bg-primary text-primary-foreground" : "rounded-bl-none border bg-muted text-foreground"}`}>
-          <p className={`mb-1 text-xs ${message.role === "user" ? "text-primary-foreground" : "text-muted-foreground"}`}>{message.role === "user" ? "Você" : "Ata"}</p>
+          <p className={`mb-1 text-xs ${message.role === "user" ? "text-primary-foreground" : "text-muted-foreground"}`}>{message.role === "user" ? "Você" : "Ata AI"}</p>
           <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
           {!!message.sources?.length && <div className="mt-2 flex flex-col gap-1">{message.sources.map((source) => <Link key={source.id} to="/reunioes/$id" params={{ id: source.id }} className="flex min-w-0 items-center gap-1 text-xs text-accent hover:underline"><FileText className="size-3 shrink-0" /><span className="truncate">{source.title}</span></Link>)}</div>}
           </div>
@@ -77,7 +77,7 @@ export function Assistant() {
             <FileText className="size-3 shrink-0" /><span className="min-w-0 flex-1 truncate">{meeting?.title ?? "Esta reunião"}</span>
             <Button variant="ghost" size="icon" className="size-6 shrink-0" aria-label="Remover contexto da reunião" title="Remover contexto da reunião" onClick={() => { setRemovedFor(currentMeetingId); setError(null); }}><X /></Button>
           </div>}
-          <Textarea ref={input} aria-label="Pergunta ao assistente" placeholder={meetingId ? "Pergunte sobre a reunião…" : "Pergunte ao Ata…"} value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={4000} rows={2} className="resize-none border-0 shadow-none focus-visible:ring-0" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(); } }} />
+          <Textarea ref={input} aria-label="Pergunta ao Ata AI" placeholder={meetingId ? "Pergunte sobre a reunião…" : "Pergunte ao Ata AI…"} value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={4000} rows={2} className="resize-none border-0 shadow-none focus-visible:ring-0" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(); } }} />
           <div className="flex justify-end px-2 pb-2"><Button type="submit" size="icon" className="shadow-none" title="Enviar pergunta" aria-label="Enviar pergunta" disabled={pending || !question.trim()}>{pending ? <Loader2 className="animate-spin" /> : <ArrowUp />}</Button></div>
         </div>
       </form>
@@ -90,7 +90,7 @@ export function Assistant() {
         {renderPanel("rail")}
       </aside>
       <div className="assistant-dock fixed z-40 md:hidden">
-        {!open ? <Button onClick={() => setOpen(true)} variant="outline" className="gap-2 border-accent bg-background text-foreground shadow-none" aria-label="Abrir assistente"><MessageCircle /><span>Assistente</span></Button> : renderPanel("mobile")}
+        {!open ? <Button onClick={() => setOpen(true)} variant="outline" className="gap-2 border-accent bg-background text-foreground shadow-none" aria-label="Abrir Ata AI"><MessageCircle /><span>Ata AI</span></Button> : renderPanel("mobile")}
       </div>
     </>
   );
