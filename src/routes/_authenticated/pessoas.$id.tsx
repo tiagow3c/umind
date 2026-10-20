@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { deletePerson, mergePeople, peopleQuery, removePersonPhoto, renamePerson, setPersonInstagram, uploadPersonPhoto } from "@/lib/review";
+import { deletePerson, mergePeople, peopleQuery, removePersonPhoto, renamePerson, uploadPersonPhoto } from "@/lib/review";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -53,9 +53,6 @@ function Pessoa() {
             <input type="checkbox" checked={p.is_self} onChange={async (e) => { await supabase.from("people").update({ is_self: e.target.checked }).eq("id", p.id); refresh(); }} />
             Sou eu
           </label>
-          <input key={p.instagram ?? ""} defaultValue={p.instagram ? `@${p.instagram}` : ""} placeholder="@instagram" aria-label="Instagram"
-            className="mt-2 block w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            onBlur={async (e) => { const v = e.target.value.replace(/^@/, "").trim().toLowerCase(); if (v !== (p.instagram ?? "")) { try { await setPersonInstagram(p.id, v); refresh(); } catch { toast.error("@ inválido."); } } }} />
         </div>
       </header>
 

@@ -1,7 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { parseNameHandle } from "@/lib/people-rules";
-import { enrollVoice, fetchInstagramAvatar } from "@/lib/people.functions";
+import { enrollVoice } from "@/lib/people.functions";
 
 export const transcriptQuery = (transcriptId: string | null) =>
   queryOptions({
@@ -160,13 +159,11 @@ export async function assignSpeakerPerson(speakerId: string, target: { personId:
     if (e || !p) throw new Error("person");
     personId = p.id; name = p.display_name;
   } else {
-    const parsed = parseNameHandle(target.newName);
-    name = parsed.name.slice(0, 120);
+    name = target.newName.replace(/\s+/g, " ").trim().slice(0, 120);
     if (!name) throw new Error("name");
-    const { data: p, error: e } = await supabase.from("people").insert({ workspace_id: sp.workspace_id, display_name: name, instagram: parsed.instagram }).select("id").single();
+    const { data: p, error: e } = await supabase.from("people").insert({ workspace_id: sp.workspace_id, display_name: name }).select("id").single();
     if (e || !p) throw new Error(e?.message ?? "person");
     personId = p.id;
-    if (parsed.instagram) await fetchInstagramAvatar({ data: { personId } }).catch(() => null);
   }
   if (sp.participant_id) {
     const r = await supabase.from("participants").update({ display_name: name, person_id: personId, person_confirmed: true }).eq("id", sp.participant_id);
@@ -182,18 +179,24 @@ export async function assignSpeakerPerson(speakerId: string, target: { personId:
 }
 
 /** Encode mono 16 kHz PCM WAV from a slice of a decoded buffer. */
-function toWav(buf: AudioBuffer, startS: number, endS: number) {
+function toWav(buf: AudioBuffer, startS: number, endS: number): string | null {
   const rate = 16000;
   const src = buf.getChannelData(0);
   const from = Math.floor(startS * buf.sampleRate), to = Math.min(src.length, Math.floor(endS * buf.sampleRate));
   const n = Math.max(0, Math.floor(((to - from) * rate) / buf.sampleRate));
+  // Raw capture (no auto gain) is often quiet: normalise the peak, and refuse near-silent clips that make useless voiceprints.
+  let peak = 0, sum = 0;
+  for (let i = from; i < to; i++) { const a = Math.abs(src[i] ?? 0); if (a > peak) peak = a; sum += a * a; }
+  const rms = Math.sqrt(sum / Math.max(1, to - from));
+  if (peak < 0.01 || rms < 0.002) return null;
+  const gain = Math.min(20, 0.9 / peak);
   const out = new DataView(new ArrayBuffer(44 + n * 2));
   const w = (o: number, t: string) => { for (let i = 0; i < t.length; i++) out.setUint8(o + i, t.charCodeAt(i)); };
   w(0, "RIFF"); out.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt ");
   out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true); out.setUint32(24, rate, true);
   out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true); w(36, "data"); out.setUint32(40, n * 2, true);
   for (let i = 0; i < n; i++) {
-    const v = Math.max(-1, Math.min(1, src[from + Math.floor((i * buf.sampleRate) / rate)] ?? 0));
+    const v = Math.max(-1, Math.min(1, (src[from + Math.floor((i * buf.sampleRate) / rate)] ?? 0) * gain));
     out.setInt16(44 + i * 2, v * 0x7fff, true);
   }
   let bin = ""; const bytes = new Uint8Array(out.buffer);
@@ -220,7 +223,8 @@ export async function enrollSpeakerVoice(speakerId: string, personId: string) {
   const ctx = new AudioContext();
   try {
     const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
-    await enrollVoice({ data: { speakerId, personId, wavBase64: toWav(buf, sample.start / 1000, sample.end / 1000) } });
+    const wav = toWav(buf, sample.start / 1000, sample.end / 1000);
+    if (wav) await enrollVoice({ data: { speakerId, personId, wavBase64: wav } });
   } finally { void ctx.close(); }
 }
 
@@ -268,15 +272,7 @@ export async function removePersonPhoto(id: string) {
   if (error) throw new Error(error.message);
 }
 
-export async function setPersonInstagram(id: string, handle: string) {
-  const h = handle.replace(/^@/, "").trim().toLowerCase();
-  if (h && !/^[a-z0-9._]{1,30}$/.test(h)) throw new Error("invalid");
-  const { error } = await supabase.from("people").update({ instagram: h || null }).eq("id", id);
-  if (error) throw new Error(error.message);
-  if (h) await fetchInstagramAvatar({ data: { personId: id } }).catch(() => null);
-}
-
-/** "É minha voz": links the speaker to the owner's person (created once, marked is_self) and saves the voiceprint. */
+/** Picking yourself: links the speaker to the owner's person (created once, marked is_self) and saves the voiceprint. */
 export async function assignSelf(speakerId: string) {
   const { data: sp } = await supabase.from("speakers").select("workspace_id").eq("id", speakerId).single();
   if (!sp) throw new Error("speaker");

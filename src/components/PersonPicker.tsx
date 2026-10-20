@@ -10,7 +10,7 @@ export function PersonPicker({ speakerId, participantId, suggested, children }: 
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const list = (people ?? []).filter((p) => !q || normalizeName(p.display_name).includes(normalizeName(q))).slice(0, 8);
+  const list = (people ?? []).filter((p) => !q || normalizeName(p.display_name).includes(normalizeName(q))).sort((x, y) => Number(y.is_self) - Number(x.is_self)).slice(0, 8);
   const done = () => { setOpen(false); setQ(""); qc.invalidateQueries(); };
   const run = async (fn: () => Promise<void>) => { try { await fn(); done(); } catch { toast.error("Não foi possível salvar."); } };
 

@@ -113,9 +113,9 @@ describe("separação de vozes", () => {
     ]);
   });
   const u = (speaker: number, start_ms: number, end_ms: number) => ({ speaker, start_ms, end_ms });
-  it("amostra de voz tem no máximo 10 segundos", () => {
+  it("amostra de voz tem no máximo 15 segundos", () => {
     const s = pickCleanSamples([u(0, 0, 30_000)], []);
-    expect(s["0"]!.end_ms - s["0"]!.start_ms).toBe(10_000);
+    expect(s["0"]!.end_ms - s["0"]!.start_ms).toBe(15_000);
   });
   it("amostra nunca inclui outra pessoa falando, nem por cima", () => {
     const s = pickCleanSamples([u(0, 0, 8_000), u(1, 8_000, 12_000)], [u(0, 0, 8_000), u(1, 5_000, 5_200), u(1, 8_000, 12_000)]);

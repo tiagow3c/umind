@@ -858,6 +858,57 @@ export type Database = {
           },
         ]
       }
+      todos: {
+        Row: {
+          created_at: string
+          day: string
+          done_at: string | null
+          id: string
+          position: number
+          task_id: string | null
+          title: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          day?: string
+          done_at?: string | null
+          id?: string
+          position?: number
+          task_id?: string | null
+          title: string
+          user_id?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          done_at?: string | null
+          id?: string
+          position?: number
+          task_id?: string | null
+          title?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "todos_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "todos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transcript_segments: {
         Row: {
           alignment_score: number | null

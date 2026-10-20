@@ -1,4 +1,7 @@
-import { ChevronRight } from "lucide-react";
+import { CalendarPlus, ChevronRight } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { addTaskToAgenda } from "@/lib/todos";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -65,6 +68,11 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
   const go = (url: string) => { window.open(url, "_blank", "noopener"); onDone(); };
   const meta = [task.owner_text && `Responsável: ${task.owner_text}`, task.due_date ? `Prazo: ${new Date(task.due_date + "T12:00:00").toLocaleDateString("pt-BR")}` : task.due_text].filter(Boolean).join(" · ") || "Mencionada na conversa";
   const done = task.status === "done";
+  const qc = useQueryClient();
+  const toAgenda = async () => {
+    try { const added = await addTaskToAgenda(task); qc.invalidateQueries({ queryKey: ["todos"] }); toast.success(added ? "Adicionada à agenda." : "Já está na agenda."); }
+    catch { toast.error("Não foi possível adicionar à agenda."); }
+  };
 
   return (
     <li className="py-6">
@@ -78,6 +86,7 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
         </Button>
         {done ? <span className="shrink-0 text-sm text-muted-foreground">Feita</span> : (
           <div className="ml-auto flex shrink-0 flex-col items-end gap-2 sm:flex-row">
+            <Button variant="outline" onClick={toAgenda} className="w-full px-3 shadow-none" aria-label="Adicionar à agenda"><CalendarPlus className="size-4" /> Agenda</Button>
             {d.kind === "email" ? (
               <>
                 <Button variant="outline" onClick={() => go(gmailUrl(d))} className="w-full px-3 shadow-none"><GmailIcon /> Enviar</Button>
