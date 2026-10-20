@@ -340,8 +340,8 @@ const ANALYSIS_JSON_SCHEMA = {
     tasks: { type: "array", items: { type: "object", additionalProperties: false,
       required: ["title", "owner_text", "due_text", "due_date", "priority_suggestion", "evidence", "action"],
       properties: { action: { type: "object", additionalProperties: false,
-        required: ["kind", "to_name", "subject", "body", "event_title", "event_start", "event_minutes"],
-        properties: { kind: { type: "string", enum: ["email", "calendar", "none"] }, to_name: { type: ["string", "null"] }, subject: { type: ["string", "null"] }, body: { type: ["string", "null"] },
+        required: ["kind", "assignee", "counterpart", "search_query", "to_name", "subject", "body", "event_title", "event_start", "event_minutes"],
+        properties: { kind: { type: "string", enum: ["email", "calendar", "forward", "none"] }, assignee: { type: "string", enum: ["mine", "follow_up"] }, counterpart: { type: ["string", "null"] }, search_query: { type: ["string", "null"] }, to_name: { type: ["string", "null"] }, subject: { type: ["string", "null"] }, body: { type: ["string", "null"] },
           event_title: { type: ["string", "null"] }, event_start: { type: ["string", "null"] }, event_minutes: { type: ["integer", "null"] } } },
         title: { type: "string" }, owner_text: { type: ["string", "null"] }, due_text: { type: ["string", "null"] }, due_date: { type: ["string", "null"] }, priority_suggestion: { type: ["string", "null"] }, evidence } } },
   },
@@ -357,6 +357,11 @@ Regras:
 - priority_suggestion só se explícita; caso contrário null.
 - evidence: índices [n] dos trechos que sustentam o item. Decisões, propostas e tarefas precisam de evidência.
 - action: rascunho pronto para executar a tarefa. kind="email" quando a tarefa é enviar/escrever mensagem ou e-mail/entrar em contato: preencha to_name, subject e body (e-mail completo, cordial, em pt-BR, assinado pelo responsável, com o conteúdo concreto discutido). kind="calendar" quando é marcar reunião/ligação/lembrete: event_title, event_start (AAAA-MM-DDTHH:MM local, ou null se não dito), event_minutes, e body como descrição. Caso contrário kind="none" e demais campos null.
+- Tarefas são escritas para o DONO do app (nome informado), como um secretário falando com ele, sempre na 1ª pessoa dele, verbo no infinitivo.
+  - Se o dono deve fazer: action.assignee="mine", title direto ("Encaminhar à Taylor os e-mails do fluxo de cobrança").
+  - Se OUTRA pessoa deve fazer: NUNCA vira tarefa do dono. action.assignee="follow_up", counterpart=nome da pessoa, e o title é um lembrete para o dono acompanhar ou cobrar: "Cobrar da Taylor a integração com as redes sociais", "Lembrar a Taylor de te avisar quando o onboarding estiver concluído". Nesse caso action.kind="email" com um rascunho curto e cordial para a pessoa perguntando do andamento (to_name = counterpart).
+  - Quando a tarefa do dono é encaminhar/repassar e-mails existentes: action.kind="forward", to_name = destinatário, search_query = termos de busca do Gmail que acham esse e-mail (palavras-chave do assunto, sem operadores inventados), body = nota curta de encaminhamento.
+  - counterpart = outra pessoa envolvida (ou null).
 - Resumo executivo curto (até 5 frases).
 - title: título curto e específico da reunião (até 8 palavras), sem data.
 - speakers: para cada rótulo "Falante N" presente, o nome da pessoa SOMENTE se ficar claro na conversa (ex.: alguém a chama pelo nome ou ela se apresenta); caso contrário name = null. Nunca adivinhe.`;
@@ -397,20 +402,53 @@ async function callModel(instructions: string, prompt: string, name: string, sch
   return out;
 }
 
-async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: string; timezone: string; started_at: string | null; created_at: string; current_transcript_id: string | null }, partial: boolean) {
+const TASKS_SCHEMA = { type: "object", additionalProperties: false, required: ["tasks"], properties: { tasks: (ANALYSIS_JSON_SCHEMA.properties as Record<string, object>)["tasks"] } };
+
+async function analysisPrompt(admin: Admin, meeting: { workspace_id: string; timezone: string; started_at: string | null; created_at: string; current_transcript_id: string | null }) {
   if (!meeting.current_transcript_id) throw new StageError("no transcript", "no_transcript", false);
   const { data: segs } = await admin.from("transcript_segments").select("id, position, text, start_ms, speakers(provider_label, participants(display_name))")
     .eq("transcript_id", meeting.current_transcript_id).order("position");
   if (!segs?.length) throw new StageError("no segments", "no_transcript", false);
+  const { data: owner } = await admin.from("people").select("display_name").eq("workspace_id", meeting.workspace_id).eq("is_self", true).limit(1);
   const when = new Date(meeting.started_at ?? meeting.created_at);
   const dateStr = when.toLocaleDateString("sv-SE", { timeZone: meeting.timezone });
   const weekday = when.toLocaleDateString("pt-BR", { timeZone: meeting.timezone, weekday: "long" });
   const lines = segs.map((s, i) => {
     const sp = s.speakers as unknown as { provider_label: string; participants: { display_name: string } | null } | null;
-    const who = sp?.participants?.display_name ?? sp?.provider_label ?? "Desconhecido";
-    return `[${i}] ${who}: ${s.text}`;
+    return `[${i}] ${sp?.participants?.display_name ?? sp?.provider_label ?? "Desconhecido"}: ${s.text}`;
   });
-  const prompt = `Data da reunião: ${dateStr} (${weekday}), fuso ${meeting.timezone}.\n\nTRANSCRIÇÃO:\n<<<\n${lines.join("\n").slice(0, 400_000)}\n>>>`;
+  const ownerLine = owner?.[0] ? `Dono do app (você escreve para ele): ${owner[0].display_name}.\n` : "";
+  return { segs, prompt: `${ownerLine}Data da reunião: ${dateStr} (${weekday}), fuso ${meeting.timezone}.\n\nTRANSCRIÇÃO:\n<<<\n${lines.join("\n").slice(0, 400_000)}\n>>>` };
+}
+
+function taskRows(meeting: { id: string; workspace_id: string }, tasks: RawAnalysis["tasks"], ids: (ev: number[]) => string[], analysisId: string | null, version: number) {
+  return tasks.map((t) => {
+    const a = (t as { action?: { kind?: string } }).action;
+    return {
+      workspace_id: meeting.workspace_id, meeting_id: meeting.id, source_analysis_id: analysisId, title: t.title,
+      owner_text: t.owner_text, due_text: t.due_text, due_date: t.due_date, priority_suggestion: t.priority_suggestion,
+      evidence_segment_ids: ids(t.evidence), source_version: version, action: (a?.kind ? a : null) as never,
+    };
+  });
+}
+
+/** Rewrites only the still-suggested tasks of a meeting (summary and accepted tasks stay). */
+export async function rewriteMeetingTasks(admin: Admin, meetingId: string) {
+  const { data: meeting } = await admin.from("meetings").select("id, workspace_id, timezone, started_at, created_at, current_transcript_id").eq("id", meetingId).single();
+  if (!meeting) throw new Error("not_found");
+  const { segs, prompt } = await analysisPrompt(admin, meeting);
+  const out = JSON.parse(await callModel(SYSTEM, prompt + "\n\nGere apenas as tarefas.", "meeting_tasks", TASKS_SCHEMA, "medium")) as { tasks: RawAnalysis["tasks"] };
+  const v = validateAnalysis({ summary: "", topics: [], decisions: [], proposals: [], questions: [], tasks: out.tasks ?? [] }, segs.length);
+  const { data: existing } = await admin.from("tasks").select("id, status, manual, source_analysis_id, source_version").eq("meeting_id", meetingId);
+  const replace = tasksToReplace(existing ?? []).map((t) => t.id);
+  if (replace.length) await admin.from("tasks").update({ status: "dismissed" }).in("id", replace);
+  const ref = existing?.[0];
+  if (v.tasks.length) await admin.from("tasks").insert(taskRows(meeting, v.tasks, (ev) => ev.map((n) => segs[n]!.id), ref?.source_analysis_id ?? null, ref?.source_version ?? 1));
+  return { tasks: v.tasks.length };
+}
+
+async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: string; timezone: string; started_at: string | null; created_at: string; current_transcript_id: string | null }, partial: boolean) {
+  const { segs, prompt } = await analysisPrompt(admin, meeting);
 
   let parsed: RawAnalysis | null = null;
   for (let i = 0; i < 2 && !parsed; i++) {
@@ -441,12 +479,7 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
   if (replace.length) await admin.from("tasks").update({ status: "dismissed" }).in("id", replace);
   const { data: ver } = await admin.from("transcripts").select("version").eq("id", meeting.current_transcript_id).single();
   if (v.tasks.length) {
-    await admin.from("tasks").insert(v.tasks.map((t) => ({
-      workspace_id: meeting.workspace_id, meeting_id: meeting.id, source_analysis_id: an.id, title: t.title,
-      owner_text: t.owner_text, due_text: t.due_text, due_date: t.due_date, priority_suggestion: t.priority_suggestion,
-      evidence_segment_ids: idOf(t.evidence), source_version: ver?.version ?? 1,
-      action: (t as { action?: { kind: string } }).action?.kind && (t as { action?: { kind: string } }).action!.kind !== "none" ? (t as { action?: object }).action as never : null,
-    })));
+    await admin.from("tasks").insert(taskRows(meeting, v.tasks, idOf, an.id, ver?.version ?? 1));
   }
   const p2 = parsed as RawAnalysis & { title?: string; speakers?: { label: string; name: string | null }[] };
   const aiTitle = p2.title?.trim().slice(0, 200);
