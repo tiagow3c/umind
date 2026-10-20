@@ -2,9 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useServerFn } from "@tanstack/react-start";
-import { requestAnalysis } from "@/lib/processing.functions";
-import { analysisQuery, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
+import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
 import { avatarSrc } from "@/lib/people-rules";
@@ -51,7 +49,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   const used = new Set(meeting.participants.map((p) => p.person_id).filter((x): x is string => !!x));
   const selfUsed = !!self && used.has(self.id);
   const pick = async (speakerId: string, personId: string) => {
-    try { await assignSpeakerPerson(speakerId, { personId }); qc.invalidateQueries(); advance(speakerId); }
+    try { await assignSpeakerPerson(speakerId, { personId }); qc.invalidateQueries(); named(); advance(speakerId); }
     catch { toast.error("Não foi possível salvar."); }
   };
 
@@ -63,19 +61,28 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   const nameOf = (speakerId: string) =>
     meeting.participants.find((p) => p.id === speakers?.find((s) => s.id === speakerId)?.participant_id)?.display_name ?? "";
 
-  /** Focus the name field of the next unnamed speaker and play their voice. */
-  const analyzeFn = useServerFn(requestAnalysis);
-  const waiting = processing && !!meeting.current_transcript_id && !meeting.analysis_requested_at;
+  // After the analysis exists, naming people asks before re-running it; prior meetings with them make the suggestion stronger.
+  const [offer, setOffer] = useState<{ prior: number } | null>(null);
   const [starting, setStarting] = useState(false);
-  const startAnalysis = async () => {
+  const named = () => {
+    if (processing || !an?.summary) return;
+    setTimeout(async () => {
+      const { data: parts } = await (await import("@/integrations/supabase/client")).supabase.from("participants").select("person_id").eq("meeting_id", meeting.id).eq("person_confirmed", true);
+      const ids = (parts ?? []).map((p) => p.person_id).filter((x): x is string => !!x && x !== self?.id);
+      setOffer({ prior: await priorMeetingsWith(meeting.id, ids).catch(() => 0) });
+    }, 300);
+  };
+  const reanalyze = async () => {
     if (starting) return;
     setStarting(true);
-    try { await analyzeFn({ data: { meetingId: meeting.id } }); qc.invalidateQueries(); }
-    catch { toast.error("Não foi possível iniciar a análise."); setStarting(false); }
+    try { await reanalyzeMeeting(meeting.id); setOffer(null); qc.invalidateQueries(); }
+    catch { toast.error("Não foi possível reavaliar."); }
+    finally { setStarting(false); }
   };
+  /** Focus the name field of the next unnamed speaker and play their voice. */
   const advance = (afterId: string) => {
     const next = (speakers ?? []).find((s) => s.id !== afterId && !nameOf(s.id));
-    if (!next) { if (waiting) void startAnalysis(); return; }
+    if (!next) return;
     requestAnimationFrame(() => {
       avatarRefs.current.get(next.id)?.play();
       inputRefs.current.get(next.id)?.focus();
@@ -85,14 +92,16 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   return (
     <div className="max-w-3xl space-y-10 sm:space-y-16">
       <section>
-        {waiting ? (
-          <div>
-            <p className="font-serif text-2xl leading-snug">Transcrição pronta. Diga quem participou para a análise sair mais precisa.</p>
-            <button onClick={startAnalysis} disabled={starting} className="mt-5 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm hover:border-accent disabled:opacity-60">
-              {starting && <Loader2 className="size-3.5 animate-spin" />}Analisar agora
-            </button>
+        {offer && (
+          <div className="mb-8 border-l-2 border-accent pl-4">
+            <p className="text-sm">{offer.prior > 0 ? `Essas pessoas aparecem em ${offer.prior} ${offer.prior === 1 ? "reunião anterior" : "reuniões anteriores"}. Reavaliar a conversa conectando esses contextos?` : "Participantes atualizados. Reavaliar a conversa com esses nomes?"}</p>
+            <div className="mt-3 flex gap-4 text-sm">
+              <button onClick={reanalyze} disabled={starting} className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 hover:border-accent disabled:opacity-60">{starting && <Loader2 className="size-3.5 animate-spin" />}Reavaliar</button>
+              <button onClick={() => setOffer(null)} className="text-muted-foreground hover:text-foreground">Agora não</button>
+            </div>
           </div>
-        ) : an?.summary ? (
+        )}
+        {an?.summary ? (
           <p className="font-serif text-2xl leading-snug">{firstSentences(an.summary)}</p>
         ) : processing ? (
           <div className="space-y-3" aria-label="Resumo sendo preparado">
@@ -154,13 +163,14 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                         try {
                           await assignSpeakerPerson(s.id, { newName: value });
                           qc.invalidateQueries();
+                          named();
                           advance(s.id);
                         } catch { toast.error("Não foi possível salvar."); }
                       }}
                       onSkip={() => advance(s.id)}
                       options={(people ?? []).filter((p) => !used.has(p.id) && !p.is_self)}
                       onPick={(pid) => pick(s.id, pid)}
-                      self={selfUsed ? null : { label: self ? self.display_name : "Eu", onPick: async () => { try { await assignSelf(s.id); qc.invalidateQueries(); advance(s.id); } catch { toast.error("Não foi possível salvar."); } } }}
+                      self={selfUsed ? null : { label: self ? self.display_name : "Eu", onPick: async () => { try { await assignSelf(s.id); qc.invalidateQueries(); named(); advance(s.id); } catch { toast.error("Não foi possível salvar."); } } }}
                     />
                   )}
                   {suggested && <span className="-mt-1 text-[11px] text-muted-foreground">{s.mapping_source === "voice" ? "reconhecido pela voz" : "sugerido"}</span>}

@@ -174,7 +174,6 @@ export async function assignSpeakerPerson(speakerId: string, target: { personId:
     if (e2 || !part) throw new Error(e2?.message ?? "participant");
     await mapSpeaker(speakerId, part.id);
   }
-  await supabase.rpc("bump_people_version", { _meeting: sp.meeting_id });
   void enrollSpeakerVoice(speakerId, personId).catch(() => null);
 }
 
@@ -236,7 +235,6 @@ export async function confirmParticipant(participantId: string) {
   const { data: part } = await supabase.from("participants").select("person_id, speakers(id)").eq("id", participantId).single();
   const spId = (part?.speakers as unknown as { id: string }[] | null)?.[0]?.id;
   if (part?.person_id && spId) void enrollSpeakerVoice(spId, part.person_id).catch(() => null);
-  await supabase.rpc("bump_people_version", { _meeting: p.meeting_id });
 }
 
 export async function renamePerson(id: string, name: string) {
@@ -287,4 +285,17 @@ export async function assignSelf(speakerId: string) {
     personId = p.id;
   }
   await assignSpeakerPerson(speakerId, { personId });
+}
+
+/** Re-run the analysis with the participants as they are now (asked to the user after naming). */
+export async function reanalyzeMeeting(meetingId: string) {
+  const { error } = await supabase.rpc("bump_people_version", { _meeting: meetingId });
+  if (error) throw new Error(error.message);
+}
+
+/** How many other meetings these people already took part in (to suggest connecting contexts). */
+export async function priorMeetingsWith(meetingId: string, personIds: string[]) {
+  if (!personIds.length) return 0;
+  const { data } = await supabase.from("participants").select("meeting_id, meetings!inner(status)").in("person_id", personIds).neq("meeting_id", meetingId).not("meetings.status", "in", "(deleting,deleted)");
+  return new Set((data ?? []).map((r) => r.meeting_id)).size;
 }

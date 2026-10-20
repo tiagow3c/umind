@@ -50,7 +50,7 @@ function Detalhe() {
     return (
       <div className="space-y-6 py-4">
         <h1 className="text-5xl">{m.title}</h1>
-        {processingLive && <ProcessingPanel meetingId={m.id} status={m.status} compact waiting={!!m.current_transcript_id && !m.analysis_requested_at} />}
+        {processingLive && <ProcessingPanel meetingId={m.id} status={m.status} compact />}
         <MeetingOverview meeting={m} processing={processingLive} onFull={() => setFull(true)} />
       </div>
     );

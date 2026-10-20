@@ -17,5 +17,5 @@
 - Background work (transcription/analysis) is signalled through public.outbox_events, written in the same transaction as the state change; heavy media work belongs to an external worker, not server functions.
 - Pure business rules live in src/lib/meeting-rules.ts with vitest tests next to them.
 - Transcript corrections never edit rows in place: they create a new canonical version and mark analyses stale. Accepted tasks are never replaced by reprocessing.
-- Analyze/embed stages are gated by meetings.analysis_requested_at: transcription runs right after stop, analysis starts only once all speakers are named or the user taps "Analisar agora", so insights use the confirmed names.
+- Analysis runs automatically right after transcription; naming people afterwards never re-runs it silently: the meeting page asks, and re-analysis (bump_people_version) includes summaries of earlier meetings with the same confirmed people.
 - Subdirectories have their own AGENTS.md (src/lib: pipeline, voices, search, agenda; src/routes/_authenticated: layout, recorder, pull-to-refresh); read it before changing files there.

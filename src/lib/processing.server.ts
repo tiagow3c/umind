@@ -405,7 +405,27 @@ async function callModel(instructions: string, prompt: string, name: string, sch
 
 const TASKS_SCHEMA = { type: "object", additionalProperties: false, required: ["tasks"], properties: { tasks: (ANALYSIS_JSON_SCHEMA.properties as Record<string, object>)["tasks"] } };
 
-async function analysisPrompt(admin: Admin, meeting: { workspace_id: string; timezone: string; started_at: string | null; created_at: string; current_transcript_id: string | null }) {
+/** Short context from earlier meetings with the same confirmed people, so the analysis can spot continuity and pending agreements. */
+async function historyContext(admin: Admin, meetingId: string, workspaceId: string) {
+  const { data: mine } = await admin.from("participants").select("person_id").eq("meeting_id", meetingId).eq("person_confirmed", true).not("person_id", "is", null);
+  const { data: selfRows } = await admin.from("people").select("id").eq("workspace_id", workspaceId).eq("is_self", true);
+  const self = new Set((selfRows ?? []).map((r) => r.id));
+  const ids = [...new Set((mine ?? []).map((r) => r.person_id!).filter((id) => !self.has(id)))];
+  if (!ids.length) return "";
+  const { data: others } = await admin.from("participants").select("meeting_id, display_name").in("person_id", ids).neq("meeting_id", meetingId).limit(50);
+  const mids = [...new Set((others ?? []).map((o) => o.meeting_id))];
+  if (!mids.length) return "";
+  const { data: ans } = await admin.from("analyses").select("meeting_id, summary, created_at, meetings!inner(title, status, started_at)").in("meeting_id", mids).eq("stale", false).neq("meetings.status", "deleted").neq("meetings.status", "deleting").order("created_at", { ascending: false }).limit(6);
+  if (!ans?.length) return "";
+  const lines = ans.map((a) => {
+    const mt = a.meetings as unknown as { title: string | null; started_at: string | null };
+    const who = [...new Set((others ?? []).filter((o) => o.meeting_id === a.meeting_id).map((o) => o.display_name))].join(", ");
+    return `- ${mt.title ?? "Reunião"} (${(mt.started_at ?? a.created_at).slice(0, 10)}, com ${who}): ${(a.summary ?? "").slice(0, 600)}`;
+  });
+  return `\n\nREUNIÕES ANTERIORES COM ESTAS PESSOAS (use só para notar continuidade de assuntos e acordos pendentes; não invente):\n${lines.join("\n")}`;
+}
+
+async function analysisPrompt(admin: Admin, meeting: { id?: string; workspace_id: string; timezone: string; started_at: string | null; created_at: string; current_transcript_id: string | null }) {
   if (!meeting.current_transcript_id) throw new StageError("no transcript", "no_transcript", false);
   const { data: segs } = await admin.from("transcript_segments").select("id, position, text, start_ms, speakers(provider_label, participants(display_name))")
     .eq("transcript_id", meeting.current_transcript_id).order("position");
@@ -419,7 +439,8 @@ async function analysisPrompt(admin: Admin, meeting: { workspace_id: string; tim
     return `[${i}] ${sp?.participants?.display_name ?? sp?.provider_label ?? "Desconhecido"}: ${s.text}`;
   });
   const ownerLine = owner?.[0] ? `Dono do app (você escreve para ele): ${owner[0].display_name}.\n` : "";
-  return { segs, prompt: `${ownerLine}Data da reunião: ${dateStr} (${weekday}), fuso ${meeting.timezone}.\n\nTRANSCRIÇÃO:\n<<<\n${lines.join("\n").slice(0, 400_000)}\n>>>` };
+  const history = meeting.id ? await historyContext(admin, meeting.id, meeting.workspace_id) : "";
+  return { segs, prompt: `${ownerLine}Data da reunião: ${dateStr} (${weekday}), fuso ${meeting.timezone}.\n\nTRANSCRIÇÃO:\n<<<\n${lines.join("\n").slice(0, 400_000)}\n>>>${history}` };
 }
 
 function taskRows(meeting: { id: string; workspace_id: string }, tasks: RawAnalysis["tasks"], ids: (ev: number[]) => string[], analysisId: string, version: number) {
@@ -602,8 +623,6 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
 
   for (const stage of STAGES) {
     if (m.status !== "processing" && stage !== "embed") continue;
-    // Analysis waits until the user finishes naming participants or explicitly asks for it.
-    if (m.status === "processing" && (stage === "analyze" || stage === "embed") && !m.analysis_requested_at) return summarize();
     const inputVersion = stage === "analyze" || stage === "embed" ? `${m.current_transcript_id ?? "none"}:${m.people_version ?? 0}` : rec.manifest_hash ?? rec.id;
     const key = { recording_id: rec.id, stage, input_version: inputVersion, config_version: CONFIG_VERSION };
     let { data: run } = await admin.from("processing_runs").select("*").match(key).maybeSingle();
