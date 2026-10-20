@@ -421,7 +421,7 @@ async function analysisPrompt(admin: Admin, meeting: { workspace_id: string; tim
   return { segs, prompt: `${ownerLine}Data da reunião: ${dateStr} (${weekday}), fuso ${meeting.timezone}.\n\nTRANSCRIÇÃO:\n<<<\n${lines.join("\n").slice(0, 400_000)}\n>>>` };
 }
 
-function taskRows(meeting: { id: string; workspace_id: string }, tasks: RawAnalysis["tasks"], ids: (ev: number[]) => string[], analysisId: string | null, version: number) {
+function taskRows(meeting: { id: string; workspace_id: string }, tasks: RawAnalysis["tasks"], ids: (ev: number[]) => string[], analysisId: string, version: number) {
   return tasks.map((t) => {
     const a = (t as { action?: { kind?: string } }).action;
     return {
@@ -442,8 +442,10 @@ export async function rewriteMeetingTasks(admin: Admin, meetingId: string) {
   const { data: existing } = await admin.from("tasks").select("id, status, manual, source_analysis_id, source_version").eq("meeting_id", meetingId);
   const replace = tasksToReplace(existing ?? []).map((t) => t.id);
   if (replace.length) await admin.from("tasks").update({ status: "dismissed" }).in("id", replace);
+  const { data: an } = await admin.from("analyses").select("id").eq("meeting_id", meetingId).order("created_at", { ascending: false }).limit(1).single();
+  if (!an) throw new Error("no_analysis");
   const ref = existing?.[0];
-  if (v.tasks.length) await admin.from("tasks").insert(taskRows(meeting, v.tasks, (ev) => ev.map((n) => segs[n]!.id), ref?.source_analysis_id ?? null, ref?.source_version ?? 1));
+  if (v.tasks.length) await admin.from("tasks").insert(taskRows(meeting, v.tasks, (ev) => ev.map((n) => segs[n]!.id), an.id, ref?.source_version ?? 1));
   return { tasks: v.tasks.length };
 }
 
