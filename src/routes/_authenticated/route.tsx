@@ -48,8 +48,9 @@ function AppLayout() {
   }, []);
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
   const displayName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Minha conta";
+  const grid = isRecorder ? "" : assistantMin ? " md:grid md:grid-cols-[220px_minmax(0,1fr)]" : " md:grid md:grid-cols-[220px_minmax(0,1fr)_340px]";
   return (
-    <div className={`app-shell app-frame${isRecorder ? "" : assistantMin ? " md:grid md:grid-cols-[220px_minmax(0,1fr)]" : " md:grid md:grid-cols-[220px_minmax(0,1fr)_340px]"}`} data-keyboard-open={keyboardOpen}>
+    <div className={`app-shell app-frame${isRecorder ? "" : " app-frame--framed"}${grid}`} data-keyboard-open={keyboardOpen}>
       <div aria-hidden className="app-frame-edge hidden md:block" />
       {!isRecorder && <header className="mobile-app-header sticky top-0 z-30 border-b bg-background md:hidden">
         <div className="grid h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
@@ -57,7 +58,7 @@ function AppLayout() {
           <AccountMenu name={displayName} email={user.email} compact />
         </div>
       </header>}
-      {!isRecorder && <aside className="app-side hidden bg-sidebar md:flex md:flex-col">
+      {!isRecorder && <aside className="app-side app-side--menu z-50 hidden bg-sidebar md:flex md:flex-col">
         <div className="flex items-center justify-between p-5 md:block">
           <Link to="/hoje" className="font-serif text-3xl">Ata</Link>
         </div>
