@@ -166,7 +166,6 @@ function Gravar() {
       const mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : undefined);
       mr.ondataavailable = r.mr.ondataavailable;
       r.mr = mr; r.stream = stream;
-      r.ctx.createMediaStreamSource(stream);
       mr.start(CHUNK_MS);
       startLiveLoop(stream, r.recordingId, mime);
       toast("Gravação retomada.");
@@ -235,6 +234,9 @@ function Gravar() {
         <p className="mt-12 font-serif text-2xl tabular-nums text-muted-foreground">
           {formatDuration(elapsed) === "—" ? "0:00" : formatDuration(elapsed)}
         </p>
+        {phase === "recording" && (
+          <p className="mt-2 text-xs text-muted-foreground">Não bloqueie a tela enquanto grava</p>
+        )}
         {phase === "paused" && (
           <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">Pausada</p>
         )}
