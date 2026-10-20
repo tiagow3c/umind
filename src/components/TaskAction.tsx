@@ -112,7 +112,8 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
           </div>
         )}
       </div>
-      {open && (
+      {scheduling && <SchedulePanel draft={d} due={task.due_date} onCancel={() => setScheduling(false)} onDone={() => { setScheduling(false); onDone(); }} />}
+      {open && !scheduling && (
         <div className="ml-6 mt-4 space-y-2 rounded-lg border bg-background p-4 text-sm">
           {d.kind === "forward" ? <ForwardPanel draft={d} toName={d.to_name ?? other} people={people ?? []} onSent={onDone} /> : d.kind === "email" ? (
             <>
