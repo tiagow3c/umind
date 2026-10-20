@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUp, MessageCircle, X, RotateCcw, Loader2, FileText, PanelRightClose } from "lucide-react";
+import { ArrowUp, MessageCircle, X, RotateCcw, Loader2, FileText, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { askAssistant } from "@/lib/assistant.functions";
@@ -56,7 +56,7 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
         <h2 className="text-2xl">Ata&nbsp;AI</h2>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" title="Nova conversa" aria-label="Nova conversa" disabled={pending} onClick={() => { setMessages([]); setError(null); setQuestion(""); }}><RotateCcw /></Button>
-          {variant === "rail" && <Button variant="ghost" size="icon" className="shadow-none" title="Minimizar Ata AI" aria-label="Minimizar Ata AI" onClick={onToggle}><PanelRightClose /></Button>}
+          {variant === "rail" && <Button variant="ghost" size="icon" className="shadow-none" title="Minimizar Ata AI" aria-label="Minimizar Ata AI" onClick={onToggle}><ArrowRight className="size-5" strokeWidth={1.5} /></Button>}
           <Button variant="ghost" size="icon" className="md:hidden" title="Fechar Ata AI" aria-label="Fechar Ata AI" onClick={() => setOpen(false)}><X /></Button>
         </div>
 
