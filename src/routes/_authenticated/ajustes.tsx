@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useServerFn } from "@tanstack/react-start";
 import { createExtensionToken } from "@/lib/extension.functions";
+import { useTheme } from "@/hooks/use-theme";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/ajustes")({
   head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Ajustes — Ata" }, { name: "description", content: "Perfil, workspace e privacidade." }, { property: "og:title", content: "Ajustes — Ata" }, { property: "og:description", content: "Perfil, workspace e privacidade." }] }),
@@ -46,6 +48,7 @@ function Ajustes() {
         </div>
         <Button onClick={save}>Salvar</Button>
       </section>
+      <Appearance />
       <MeetExtension />
       <section className="space-y-2">
         <h2 className="border-b pb-2 text-2xl">Privacidade</h2>
@@ -95,6 +98,37 @@ function MeetExtension() {
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+function Appearance() {
+  const { choice, change } = useTheme();
+  const options = [
+    { value: "light", label: "Claro" },
+    { value: "dark", label: "Escuro" },
+    { value: "system", label: "Automático" },
+  ] as const;
+  return (
+    <section className="space-y-4">
+      <h2 className="border-b pb-2 text-2xl">Aparência</h2>
+      <p className="max-w-lg text-sm text-muted-foreground">Escolha claro ou escuro. Automático acompanha o ajuste do aparelho.</p>
+      <div role="group" aria-label="Aparência" className="flex w-fit gap-1 rounded-md border p-1">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={choice === o.value}
+            onClick={() => change(o.value)}
+            className={cn(
+              "rounded px-4 py-2 text-sm transition-colors",
+              choice === o.value ? "bg-primary text-primary-foreground" : "hover:bg-secondary",
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

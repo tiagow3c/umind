@@ -35,3 +35,8 @@
 - [x] Disponibilizar assistente em todas as telas fora da gravação.
 - [x] Incluir contexto removível da reunião e responder com os dados reais.
 - [x] Testar regras e perguntas autenticadas no computador e celular.
+
+# Modo escuro
+- [x] Escolher claro, escuro ou automático em Ajustes > Aparência; automático segue o aparelho.
+- [x] Guardar a escolha no aparelho e aplicar antes da tela aparecer, sem piscar.
+- [x] Testar no celular e no computador: Reuniões, uma reunião, Hoje e a gravação.

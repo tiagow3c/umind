@@ -56,7 +56,7 @@ function Lista() {
                 <span className="hidden text-sm tabular-nums text-muted-foreground md:block">{formatDuration(m.recordings?.[0]?.duration_ms)}</span>
                 <StatusBadge status={m.status} />
               </Link>
-              <Button variant="ghost" size="icon" className="text-muted-foreground/50 hover:bg-transparent hover:text-destructive" aria-label={`Excluir ${m.title}`} onClick={() => remove(m.id, m.title)}><Trash2 className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-transparent hover:text-destructive" aria-label={`Excluir ${m.title}`} onClick={() => remove(m.id, m.title)}><Trash2 className="h-4 w-4" /></Button>
             </li>
           ))}
         </ul>

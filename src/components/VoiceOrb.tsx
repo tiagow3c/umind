@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTheme } from "@/hooks/use-theme";
 
 /** Resolve any CSS color (incl. oklch) to normalized RGB via a 1px canvas. */
 function toRgb(css: string): [number, number, number] {
@@ -36,6 +37,7 @@ void main(){
 /** Recording indicator: a calm fluid disk that swells gently with mic level (0..1). */
 export function VoiceOrb({ level, active, size = 260 }: { level: number; active: boolean; size?: number }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const { dark } = useTheme();
   const target = useRef(0);
   target.current = active ? Math.min(1, level * 3.2) : 0;
   const activeRef = useRef(active);
@@ -83,7 +85,7 @@ export function VoiceOrb({ level, active, size = 260 }: { level: number; active:
     };
     frame();
     return () => cancelAnimationFrame(raf);
-  }, [size]);
+  }, [size, dark]);
 
   return <canvas ref={canvas} style={{ width: size, height: size }} className="mx-auto block" aria-hidden />;
 }
