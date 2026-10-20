@@ -92,6 +92,23 @@ function Gravar() {
 
   useEffect(() => () => { rec.current?.stream.getTracks().forEach((t) => t.stop()); }, []);
 
+  // Keep the screen on while capturing so the phone does not lock and cut the microphone.
+  const wake = useRef<{ release: () => Promise<void> } | null>(null);
+  useEffect(() => {
+    const capturing = phase === "recording" || phase === "paused";
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> } };
+    const lock = async () => { if (capturing && nav.wakeLock && document.visibilityState === "visible" && !wake.current) { try { wake.current = await nav.wakeLock.request("screen"); } catch { /* not supported */ } } };
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") { wake.current = null; return; }
+      void lock();
+      // If the system cut the microphone while away, pick it up again in the same recording.
+      if (phase === "recording" && rec.current && rec.current.stream.getAudioTracks().every((t) => t.readyState === "ended")) void reacquire();
+    };
+    void lock();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { document.removeEventListener("visibilitychange", onVisible); if (!capturing && wake.current) { void wake.current.release().catch(() => {}); wake.current = null; } };
+  }, [phase]);
+
   if (!m) return <p>Reunião não encontrada.</p>;
   const meta = { workspaceId: m.workspace_id, meetingId: m.id };
   const allowed = canStartCapture(m.status, m.consent_records);
@@ -136,6 +153,24 @@ function Gravar() {
       startingRef.current = false;
       setStarting(false);
     }
+  }
+
+  /** Restarts capture on the same recording after the phone stopped the microphone; already saved parts are kept. */
+  async function reacquire() {
+    const r = rec.current; if (!r) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+      stopLiveLoop();
+      if (r.mr.state !== "inactive") r.mr.stop();
+      const mime = r.mr.mimeType;
+      const mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : undefined);
+      mr.ondataavailable = r.mr.ondataavailable;
+      r.mr = mr; r.stream = stream;
+      r.ctx.createMediaStreamSource(stream);
+      mr.start(CHUNK_MS);
+      startLiveLoop(stream, r.recordingId, mime);
+      toast("Gravação retomada.");
+    } catch { toast.error("O celular interrompeu o microfone. Toque em Encerrar para salvar o que foi gravado."); }
   }
 
   async function pause() {
