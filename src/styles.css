@@ -111,6 +111,7 @@
 
 .app-frame {
   margin: var(--frame-margin);
+  margin-left: 0;
   min-height: calc(100dvh - (var(--frame-margin) * 2));
 }
 @media (min-width: 768px) {
@@ -120,7 +121,9 @@
 .app-frame-edge {
   position: fixed;
   inset: var(--frame-margin);
+  left: 0;
   border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
   box-shadow: 0 0 0 100vmax var(--color-background);
   pointer-events: none;
   z-index: 45;

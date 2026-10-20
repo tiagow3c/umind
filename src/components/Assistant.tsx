@@ -51,7 +51,7 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
 
   /** Mesmo conteúdo para a barra lateral (desktop) e o painel flutuante (celular). */
   const renderPanel = (variant: "rail" | "mobile") => (
-    <section aria-label="Ata AI" className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-background ${variant === "rail" ? "border-l" : "assistant-panel rounded-md border"}`}>
+    <section aria-label="Ata AI" className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-background ${variant === "rail" ? "" : "assistant-panel rounded-md border"}`}>
       <header className="flex shrink-0 items-center justify-between border-b px-4 py-3">
         <h2 className="text-2xl">Ata&nbsp;AI</h2>
         <div className="flex gap-1">
