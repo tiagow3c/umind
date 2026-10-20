@@ -61,7 +61,7 @@ export const Route = createFileRoute("/api/public/extension")({
             { workspace_id: tk.workspace_id, recording_id: rec.id, sequence: seq, object_key: key, sha256: sha, bytes: blob.byteLength, start_ms: startMs || 0, end_ms: endMs || 0, status: "confirmed" },
             { onConflict: "recording_id,sequence" },
           );
-          if (error) return json({ error: "part" }, 500);
+          if (error) return json({ error: "part", detail: error.message }, 500);
           return json({ ok: true });
         }
 
