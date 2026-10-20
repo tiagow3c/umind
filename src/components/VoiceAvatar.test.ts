@@ -4,9 +4,9 @@ import { pickSamples } from "./VoiceAvatar";
 const seg = (speaker_id: string | null, start_ms: number, end_ms: number, overlap = false) => ({ speaker_id, start_ms, end_ms, overlap });
 
 describe("pickSamples", () => {
-  it("pega a fala mais longa de cada voz, limitada a 10 s", () => {
+  it("pega a fala mais longa de cada voz, limitada a 15 s", () => {
     const r = pickSamples([seg("a", 0, 5_000), seg("a", 10_000, 40_000), seg("b", 50_000, 55_000)]);
-    expect(r.get("a")).toEqual({ start: 10_000, end: 20_000 });
+    expect(r.get("a")).toEqual({ start: 10_000, end: 25_000 });
     expect(r.get("b")).toEqual({ start: 50_000, end: 55_000 });
   });
   it("ignora falas sobrepostas", () => {
