@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Ata para Google Meet",
+  "version": "1.0.0",
+  "description": "Grava chamadas do Google Meet e envia para o Ata.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://idea-structurizer.lovable.app/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{ "matches": ["https://meet.google.com/*"], "js": ["content.js"], "css": ["content.css"] }],
+  "action": { "default_popup": "popup.html", "default_icon": "icon.png" },
+  "icons": { "48": "icon.png", "128": "icon.png" }
+}
