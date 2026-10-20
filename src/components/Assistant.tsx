@@ -23,11 +23,11 @@ export function Assistant() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ask = useServerFn(askAssistant);
-  const end = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const logs = useRef<(HTMLDivElement | null)[]>([]);
   useEffect(() => { setRemovedFor(null); setError(null); }, [pathname]);
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
-  useEffect(() => { end.current?.scrollIntoView({ block: "nearest" }); }, [messages, pending, open]);
+  useEffect(() => { logs.current.forEach((log) => { if (log) log.scrollTop = log.scrollHeight; }); }, [messages, pending, open]);
 
   async function submit() {
     const text = question.trim();
@@ -35,14 +35,15 @@ export function Assistant() {
     setPending(true);
     setError(null);
     const contextId = meetingId;
+    const history = historyForContext(messages, contextId);
+    setMessages((previous) => [...previous, { role: "user", content: text, meetingId: contextId }]);
+    setQuestion("");
     try {
-      const result = await ask({ data: { question: text, meetingId: contextId, history: historyForContext(messages, contextId) } });
+      const result = await ask({ data: { question: text, meetingId: contextId, history } });
       if (result.error || !result.answer) { setError(result.error ?? "Não foi possível responder agora."); return; }
       setMessages((previous) => [...previous,
-        { role: "user", content: text, meetingId: contextId },
         { role: "assistant", content: result.answer ?? "", meetingId: contextId, sources: result.sources },
       ]);
-      setQuestion("");
     } catch {
       setError("Não foi possível responder agora. Tente novamente.");
     } finally { setPending(false); }
@@ -58,15 +59,16 @@ export function Assistant() {
           <Button variant="ghost" size="icon" className="md:hidden" title="Fechar assistente" aria-label="Fechar assistente" onClick={() => setOpen(false)}><X /></Button>
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" role="log" aria-live="polite" aria-label="Conversa com assistente">
+      <div ref={(node) => { logs.current[variant === "rail" ? 0 : 1] = node; }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" role="log" aria-live="polite" aria-label="Conversa com assistente">
         {messages.length === 0 && <p className="py-8 font-serif text-2xl text-muted-foreground">{meetingId ? "O que você quer saber sobre esta reunião?" : "O que você tem em mente?"}</p>}
-        {messages.map((message, i) => <div key={i} className={`mb-5 min-w-0 ${message.role === "user" ? "border-l-2 border-accent pl-3" : ""}`}>
-          <p className="mb-1 text-xs text-muted-foreground">{message.role === "user" ? "Você" : "Ata"}</p>
+        {messages.map((message, i) => <div key={i} className={`mb-4 flex min-w-0 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div className={`min-w-0 max-w-[90%] rounded-lg px-3 py-2.5 ${message.role === "user" ? "rounded-br-none bg-primary text-primary-foreground" : "rounded-bl-none border bg-muted text-foreground"}`}>
+          <p className={`mb-1 text-xs ${message.role === "user" ? "text-primary-foreground" : "text-muted-foreground"}`}>{message.role === "user" ? "Você" : "Ata"}</p>
           <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
           {!!message.sources?.length && <div className="mt-2 flex flex-col gap-1">{message.sources.map((source) => <Link key={source.id} to="/reunioes/$id" params={{ id: source.id }} className="flex min-w-0 items-center gap-1 text-xs text-accent hover:underline"><FileText className="size-3 shrink-0" /><span className="truncate">{source.title}</span></Link>)}</div>}
+          </div>
         </div>)}
-        {pending && <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Pensando…</div>}
-        <div ref={end} />
+        {pending && <div role="status" className="mr-auto flex w-fit items-center gap-2 rounded-lg rounded-bl-none border bg-muted px-3 py-2.5 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Pensando…</div>}
       </div>
       <form className="shrink-0 border-t p-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         {error && <p role="alert" className="mb-2 text-sm text-destructive">{error}</p>}
