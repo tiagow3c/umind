@@ -19,3 +19,4 @@
 - Transcript corrections never edit rows in place: they create a new canonical version and mark analyses stale. Accepted tasks are never replaced by reprocessing.
 - Analysis runs automatically right after transcription; naming people afterwards never re-runs it silently: the meeting page asks, and re-analysis (bump_people_version) includes summaries of earlier meetings with the same confirmed people.
 - Subdirectories have their own AGENTS.md (src/lib: pipeline, voices, search, agenda; src/routes/_authenticated: layout, recorder, pull-to-refresh); read it before changing files there.
+- Google Meet capture is a Chrome MV3 extension in extension/ (packaged to public/ata-meet.zip): it records in the Meet tab and uploads 30 s parts to /api/public/extension, authenticated by per-user codes stored only as SHA-256 hashes, because the web app cannot capture another site's audio.
