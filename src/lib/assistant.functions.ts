@@ -51,7 +51,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const ws = await db.from("memberships").select("workspace_id").eq("user_id", context.userId);
     const wsIds = (ws.data ?? []).map((r) => r.workspace_id);
     const owner = wsIds.length ? await db.from("people").select("display_name").in("workspace_id", wsIds).eq("is_self", true).limit(1).maybeSingle() : { data: null };
-    const ownerName = owner?.data?.[0]?.display_name ?? null;
+    const ownerName = (owner?.data as { display_name?: string } | null)?.display_name ?? null;
     const { generateResponse, GatewayError } = await import("@lovable.dev/ai-gateway");
     try {
       const result = await generateResponse({
