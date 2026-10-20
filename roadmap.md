@@ -15,3 +15,10 @@
 - [x] Recarregar a tela ao puxar para baixo no topo, só no celular.
 - [x] Cobrir o gesto com testes das regras de distância e limiar.
 - [x] Validar no celular com toque real: puxão curto nada, puxão longo atualiza.
+
+# Ajustes de gravação, vozes e agenda
+- [x] Tela acesa durante a gravação e retomada do microfone ao voltar.
+- [x] Trecho de voz de até 15 s, só da pessoa.
+- [x] Seu nome primeiro na escolha; sem @ do Instagram.
+- [x] Vozes guardadas com melhor qualidade para reconhecer nas próximas reuniões.
+- [x] Agenda por dia com "Adicionar à agenda" nas tarefas.
