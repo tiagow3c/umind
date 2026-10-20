@@ -32,6 +32,6 @@
 - [x] Testar com sessão real: um toque abre a gravação.
 
 # Assistente geral
-- [ ] Disponibilizar assistente em todas as telas fora da gravação.
-- [ ] Incluir contexto removível da reunião e responder com os dados reais.
-- [ ] Testar regras e perguntas autenticadas no computador e celular.
+- [x] Disponibilizar assistente em todas as telas fora da gravação.
+- [x] Incluir contexto removível da reunião e responder com os dados reais.
+- [x] Testar regras e perguntas autenticadas no computador e celular.
