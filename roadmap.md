@@ -30,3 +30,8 @@
 # Botão central na tela Hoje
 - [x] Colocar o botão de iniciar reunião no centro da tela Hoje, no celular e no computador.
 - [x] Testar com sessão real: um toque abre a gravação.
+
+# Assistente geral
+- [x] Disponibilizar assistente em todas as telas fora da gravação.
+- [x] Incluir contexto removível da reunião e responder com os dados reais.
+- [x] Testar regras e perguntas autenticadas no computador e celular.
