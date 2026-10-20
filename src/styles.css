@@ -142,8 +142,14 @@
   }
 }
 
-/* The menu stands outside the frame: full height, flush with the window's left edge. */
-.app-side--menu { top: 0; height: 100dvh; }
+/* The menu stands outside the frame: full height, flush with the window's left edge.
+   Negative margins cancel the shell's top/bottom inset, which only the framed columns need. */
+.app-side--menu {
+  top: 0;
+  height: 100dvh;
+  margin-top: calc(var(--frame-margin) * -1);
+  margin-bottom: calc(var(--frame-margin) * -1);
+}
 
 @media (max-width: 767px) {
   .assistant-dock { right: max(1rem, env(safe-area-inset-right, 0px)); bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
