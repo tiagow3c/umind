@@ -12,8 +12,8 @@ export type ThemeChoice = "system" | "light" | "dark";
 
 const KEY = "ata-theme";
 const EVENT = "ata-theme-change";
-const LIGHT_BAR = "#ffffff";
-const DARK_BAR = "#141210";
+const LIGHT_BAR = "#f7f4ed";
+const DARK_BAR = "#1b1b1b";
 
 function store(): Storage | null {
   try {
