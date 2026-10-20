@@ -101,7 +101,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
             </div>
           </div>
         )}
-        {false ? null        ) : an?.summary ? (
+        {an?.summary ? (
           <p className="font-serif text-2xl leading-snug">{firstSentences(an.summary)}</p>
         ) : processing ? (
           <div className="space-y-3" aria-label="Resumo sendo preparado">
