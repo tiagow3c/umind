@@ -15,7 +15,6 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticated/ajustes'
 import { Route as AuthenticatedBuscarRouteImport } from './routes/_authenticated/buscar'
 import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
-import { Route as AuthenticatedSugestoesRouteImport } from './routes/_authenticated/sugestoes'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedPessoasIndexRouteImport } from './routes/_authenticated/pessoas.index'
 import { Route as AuthenticatedPessoasIdRouteImport } from './routes/_authenticated/pessoas.$id'
@@ -52,11 +51,6 @@ const AuthenticatedBuscarRoute = AuthenticatedBuscarRouteImport.update({
 const AuthenticatedHojeRoute = AuthenticatedHojeRouteImport.update({
   id: '/hoje',
   path: '/hoje',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedSugestoesRoute = AuthenticatedSugestoesRouteImport.update({
-  id: '/sugestoes',
-  path: '/sugestoes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
@@ -111,7 +105,6 @@ export interface FileRoutesByFullPath {
   '/ajustes': typeof AuthenticatedAjustesRoute
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
-  '/sugestoes': typeof AuthenticatedSugestoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
@@ -127,7 +120,6 @@ export interface FileRoutesByTo {
   '/ajustes': typeof AuthenticatedAjustesRoute
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
-  '/sugestoes': typeof AuthenticatedSugestoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
@@ -145,7 +137,6 @@ export interface FileRoutesById {
   '/_authenticated/ajustes': typeof AuthenticatedAjustesRoute
   '/_authenticated/buscar': typeof AuthenticatedBuscarRoute
   '/_authenticated/hoje': typeof AuthenticatedHojeRoute
-  '/_authenticated/sugestoes': typeof AuthenticatedSugestoesRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/_authenticated/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/_authenticated/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
@@ -163,7 +154,6 @@ export interface FileRouteTypes {
     | '/ajustes'
     | '/buscar'
     | '/hoje'
-    | '/sugestoes'
     | '/tarefas'
     | '/pessoas/$id'
     | '/reunioes/nova'
@@ -179,7 +169,6 @@ export interface FileRouteTypes {
     | '/ajustes'
     | '/buscar'
     | '/hoje'
-    | '/sugestoes'
     | '/tarefas'
     | '/pessoas/$id'
     | '/reunioes/nova'
@@ -196,7 +185,6 @@ export interface FileRouteTypes {
     | '/_authenticated/ajustes'
     | '/_authenticated/buscar'
     | '/_authenticated/hoje'
-    | '/_authenticated/sugestoes'
     | '/_authenticated/tarefas'
     | '/_authenticated/pessoas/$id'
     | '/_authenticated/reunioes/nova'
@@ -256,13 +244,6 @@ declare module '@tanstack/react-router' {
       path: '/hoje'
       fullPath: '/hoje'
       preLoaderRoute: typeof AuthenticatedHojeRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/sugestoes': {
-      id: '/_authenticated/sugestoes'
-      path: '/sugestoes'
-      fullPath: '/sugestoes'
-      preLoaderRoute: typeof AuthenticatedSugestoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tarefas': {
@@ -328,7 +309,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAjustesRoute: typeof AuthenticatedAjustesRoute
   AuthenticatedBuscarRoute: typeof AuthenticatedBuscarRoute
   AuthenticatedHojeRoute: typeof AuthenticatedHojeRoute
-  AuthenticatedSugestoesRoute: typeof AuthenticatedSugestoesRoute
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
   AuthenticatedPessoasIdRoute: typeof AuthenticatedPessoasIdRoute
   AuthenticatedReunioesNovaRoute: typeof AuthenticatedReunioesNovaRoute
@@ -342,7 +322,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAjustesRoute: AuthenticatedAjustesRoute,
   AuthenticatedBuscarRoute: AuthenticatedBuscarRoute,
   AuthenticatedHojeRoute: AuthenticatedHojeRoute,
-  AuthenticatedSugestoesRoute: AuthenticatedSugestoesRoute,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
   AuthenticatedPessoasIdRoute: AuthenticatedPessoasIdRoute,
   AuthenticatedReunioesNovaRoute: AuthenticatedReunioesNovaRoute,

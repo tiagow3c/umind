@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { AccountMenu } from "@/components/AccountMenu";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { CalendarCheck, CalendarDays, ListTodo, Mic, UsersRound } from "lucide-react";
+import { CalendarCheck, CalendarDays, Mic, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated")({
