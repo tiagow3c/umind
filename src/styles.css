@@ -101,6 +101,7 @@
 .pull-bar { will-change: transform; }
 .assistant-dock { right: 1.5rem; bottom: 1.5rem; }
 .assistant-panel { width: min(420px, calc(100vw - 3rem)); height: min(600px, calc(100dvh - 3rem)); }
+.assistant-rail { width: 340px; }
 @media (max-width: 767px) {
   .assistant-dock { right: max(1rem, env(safe-area-inset-right, 0px)); bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
   .assistant-panel { width: calc(100vw - 2rem); height: min(560px, calc(100dvh - 10rem - env(safe-area-inset-bottom, 0px))); }
