@@ -45,38 +45,39 @@
 
 :root {
   --radius: 0.375rem;
-  --background: oklch(0.975 0.008 85);
+  /* Pure white paper: surfaces are white, hierarchy comes from hairline borders. */
+  --background: oklch(1 0 0);
   --foreground: oklch(0.22 0.015 60);
-  --card: oklch(0.99 0.005 85);
+  --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.015 60);
-  --popover: oklch(0.99 0.005 85);
+  --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.015 60);
   --primary: oklch(0.25 0.015 60);
-  --primary-foreground: oklch(0.975 0.008 85);
-  --secondary: oklch(0.94 0.012 80);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.965 0.005 80);
   --secondary-foreground: oklch(0.25 0.015 60);
-  --muted: oklch(0.94 0.012 80);
+  --muted: oklch(0.965 0.005 80);
   --muted-foreground: oklch(0.5 0.015 60);
   --accent: oklch(0.58 0.12 45);
-  --accent-foreground: oklch(0.985 0.005 85);
+  --accent-foreground: oklch(1 0 0);
   /* Recording orb: clay -> warm sand, blended softly (no shadow, no highlight). */
   --orb-a: oklch(0.55 0.095 46);
   --orb-b: oklch(0.87 0.05 80);
 
   --destructive: oklch(0.52 0.18 28);
-  --destructive-foreground: oklch(0.985 0.005 85);
+  --destructive-foreground: oklch(1 0 0);
   --success: oklch(0.5 0.09 150);
   --warning: oklch(0.65 0.13 75);
-  --border: oklch(0.88 0.012 80);
-  --input: oklch(0.88 0.012 80);
+  --border: oklch(0.9 0.008 80);
+  --input: oklch(0.9 0.008 80);
   --ring: oklch(0.58 0.12 45);
-  --sidebar: oklch(0.955 0.012 82);
+  --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.22 0.015 60);
   --sidebar-primary: oklch(0.25 0.015 60);
-  --sidebar-primary-foreground: oklch(0.975 0.008 85);
-  --sidebar-accent: oklch(0.92 0.015 80);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.955 0.006 80);
   --sidebar-accent-foreground: oklch(0.22 0.015 60);
-  --sidebar-border: oklch(0.88 0.012 80);
+  --sidebar-border: oklch(0.9 0.008 80);
   --sidebar-ring: oklch(0.58 0.12 45);
 }
 
