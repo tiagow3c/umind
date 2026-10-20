@@ -1,0 +1,7 @@
+.ata-rec-btn {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 2147483647;
+  font: 500 13px/1 system-ui, sans-serif; padding: 9px 16px; border-radius: 999px;
+  border: 1px solid #b5603f; background: #f9f7f2; color: #2b2622; cursor: pointer;
+}
+.ata-rec-btn:hover { background: #efe7dc; }
+.ata-rec-btn.ata-on { background: #b5603f; color: #f9f7f2; }

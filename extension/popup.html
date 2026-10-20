@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<style>
+  body { width: 280px; margin: 0; padding: 16px; font: 13px/1.45 system-ui, sans-serif; background: #f9f7f2; color: #2b2622; }
+  h1 { font: 400 22px Georgia, serif; margin: 0 0 8px; }
+  p { margin: 0 0 10px; color: #6b625a; }
+  input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #d8cfc3; background: #fff; font: 12px monospace; }
+  button { margin-top: 8px; padding: 7px 14px; border-radius: 999px; border: 1px solid #b5603f; background: #b5603f; color: #f9f7f2; cursor: pointer; }
+  #status { margin-top: 10px; }
+</style>
+</head>
+<body>
+  <h1>Ata</h1>
+  <p>Em uma chamada do Meet, toque em “Gravar com Ata” no topo da tela.</p>
+  <div id="form">
+    <p>Cole o código gerado em Ajustes, no Ata:</p>
+    <input id="token" placeholder="ata_…" autocomplete="off" />
+    <button id="save">Conectar</button>
+  </div>
+  <div id="status"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
