@@ -103,6 +103,38 @@
 .assistant-panel { width: min(420px, calc(100vw - 3rem)); height: min(600px, calc(100dvh - 3rem)); }
 .assistant-rail { width: 340px; }
 
+/* Editorial frame: a hairline border that always frames the visible window.
+   The gutters outside it are painted over, so content is clipped at the line
+   and the Ata AI rail reads as sitting on the frame's right edge. */
+:root { --frame-margin: 0px; }
+@media (min-width: 768px) { :root { --frame-margin: 0.75rem; } }
+
+.app-frame {
+  margin: var(--frame-margin);
+  min-height: calc(100dvh - (var(--frame-margin) * 2));
+}
+@media (min-width: 768px) {
+  .app-frame > .assistant-dock { right: calc(var(--frame-margin) + 1rem); bottom: calc(var(--frame-margin) + 1rem); }
+}
+
+.app-frame-edge {
+  position: fixed;
+  inset: var(--frame-margin);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 0 0 100vmax var(--color-background);
+  pointer-events: none;
+  z-index: 45;
+}
+
+/* Full-height columns (menu, Ata AI) stick inside the frame, never over its border. */
+.app-side { position: sticky; top: 0; height: 100dvh; }
+@media (min-width: 768px) {
+  .app-side {
+    top: calc(var(--frame-margin) + 1px);
+    height: calc(100dvh - (var(--frame-margin) * 2) - 2px);
+  }
+}
+
 @media (max-width: 767px) {
   .assistant-dock { right: max(1rem, env(safe-area-inset-right, 0px)); bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
   .assistant-panel { width: calc(100vw - 2rem); height: min(560px, calc(100dvh - 10rem - env(safe-area-inset-bottom, 0px))); }
