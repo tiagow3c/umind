@@ -15,7 +15,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     let evidence: unknown;
     let sources: { id: string; title: string }[] = [];
     if (data.meetingId) {
-      const meeting = await db.from("meetings").select("id,title,created_at,status,current_transcript_id,current_analysis_id,participants(display_name,speaker_id,person_confirmed)").eq("id", data.meetingId).maybeSingle();
+      const meeting = await db.from("meetings").select("id,title,created_at,status,current_transcript_id,participants(id,display_name,person_confirmed)").eq("id", data.meetingId).maybeSingle();
       if (meeting.error) throw new Error("Não foi possível consultar a reunião.");
       if (!meeting.data) throw new Error("Reunião indisponível.");
       const m = meeting.data;
@@ -28,23 +28,24 @@ export const askAssistant = createServerFn({ method: "POST" })
           if ((page.data?.length ?? 0) < 1000) break;
         }
       }
-      const [analysis, items] = await Promise.all([
-        m.current_analysis_id ? db.from("analyses").select("summary,stale").eq("id", m.current_analysis_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-        m.current_analysis_id ? db.from("analysis_items").select("kind,text").eq("analysis_id", m.current_analysis_id).order("position") : Promise.resolve({ data: [], error: null }),
+      const [analysis, speakers, tasks] = await Promise.all([
+        db.from("analyses").select("summary,stale,analysis_items(kind,text)").eq("meeting_id", m.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        db.from("speakers").select("id,participant_id,provider_label").eq("meeting_id", m.id),
+        db.from("tasks").select("title,owner_text,due_text,status").eq("meeting_id", m.id).neq("status", "dismissed"),
       ]);
-      if (analysis.error || items.error) throw new Error("Não foi possível consultar a análise.");
-      evidence = { meeting: m, analysis: analysis.data, items: items.data, transcript: segments.map((s) => ({ time: `${Math.floor(s.start_ms / 60000)}:${String(Math.floor(s.start_ms / 1000) % 60).padStart(2, "0")}`, speaker: m.participants.find((p) => p.speaker_id === s.speaker_id)?.display_name ?? "Voz não identificada", text: s.text })) };
+      if (analysis.error || speakers.error || tasks.error) throw new Error("Não foi possível consultar a análise.");
+      evidence = { meeting: m, analysis: analysis.data, tasks: tasks.data, transcript: segments.map((s) => ({ time: `${Math.floor(s.start_ms / 60000)}:${String(Math.floor(s.start_ms / 1000) % 60).padStart(2, "0")}`, speaker: m.participants.find((p) => p.id === speakers.data?.find((voice) => voice.id === s.speaker_id)?.participant_id)?.display_name ?? "Voz não identificada", text: s.text })) };
       sources = [{ id: m.id, title: m.title }];
     } else {
       const [meetings, todos] = await Promise.all([
-        db.from("meetings").select("id,title,created_at,current_analysis_id").order("created_at", { ascending: false }).limit(30),
-        db.from("todos").select("text,scheduled_date,completed_at").eq("user_id", context.userId).order("created_at", { ascending: false }).limit(100),
+        db.from("meetings").select("id,title,created_at").order("created_at", { ascending: false }).limit(30),
+        db.from("todos").select("title,day,done_at").eq("user_id", context.userId).order("created_at", { ascending: false }).limit(100),
       ]);
       if (meetings.error || todos.error) throw new Error("Não foi possível consultar seus dados.");
-      const ids = (meetings.data ?? []).flatMap((m) => m.current_analysis_id ? [m.current_analysis_id] : []);
-      const analyses = ids.length ? await db.from("analyses").select("id,summary,stale").in("id", ids) : { data: [], error: null };
+      const ids = (meetings.data ?? []).map((m) => m.id);
+      const analyses = ids.length ? await db.from("analyses").select("meeting_id,summary,stale").in("meeting_id", ids).order("created_at", { ascending: false }) : { data: [], error: null };
       if (analyses.error) throw new Error("Não foi possível consultar os resumos.");
-      evidence = { recentMeetings: (meetings.data ?? []).map((m) => ({ ...m, analysis: analyses.data?.find((a) => a.id === m.current_analysis_id) })), todos: todos.data, coverage: "Até 30 reuniões mais recentes e 100 tarefas. Não inclui transcrição completa no modo geral." };
+      evidence = { recentMeetings: (meetings.data ?? []).map((m) => ({ ...m, analysis: analyses.data?.find((a) => a.meeting_id === m.id) })), todos: todos.data, coverage: "Até 30 reuniões mais recentes e 100 tarefas. Não inclui transcrição completa no modo geral." };
       sources = (meetings.data ?? []).map((m) => ({ id: m.id, title: m.title }));
     }
     const { generateResponse, GatewayError } = await import("@lovable.dev/ai-gateway");
