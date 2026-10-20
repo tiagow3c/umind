@@ -46,10 +46,7 @@ function Hoje() {
           <Link to="/reunioes" className="text-sm underline underline-offset-4">Ver todas</Link>
         </div>
         {meetings.length === 0 ? (
-          <div className="py-10">
-            <p className="text-muted-foreground">Nenhuma reunião ainda. Grave pelo microfone ou importe um arquivo.</p>
-            <Button asChild className="mt-4"><Link to="/reunioes/nova">Nova gravação</Link></Button>
-          </div>
+          <p className="py-10 text-muted-foreground">Nenhuma reunião ainda. Toque em Iniciar reunião para gravar a primeira.</p>
         ) : (
           <ul className="divide-y">{meetings.slice(0, 5).map((m) => <Row key={m.id} m={m} />)}</ul>
         )}
