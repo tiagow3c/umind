@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUp, MessageCircle, X, RotateCcw, Loader2, FileText, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { ArrowUp, MessageCircle, X, RotateCcw, Loader2, FileText, PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { askAssistant } from "@/lib/assistant.functions";
@@ -88,12 +88,11 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
 
   return (
     <>
-      <aside className={`assistant-rail hidden md:sticky md:top-0 md:flex md:h-dvh md:flex-col${minimized ? " assistant-rail--min" : ""}`}>
-        {minimized ? <div className="flex min-h-0 flex-1 flex-col items-center gap-4 border-l py-3">
-          <Button variant="ghost" size="icon" className="shadow-none" title="Abrir Ata AI" aria-label="Abrir Ata AI" onClick={onToggle}><PanelRightOpen /></Button>
-          <span className="assistant-rail__mini font-serif text-lg text-muted-foreground">Ata AI</span>
-        </div> : renderPanel("rail")}
-      </aside>
+      {!minimized && <aside className="assistant-rail hidden md:sticky md:top-0 md:flex md:h-dvh md:flex-col">{renderPanel("rail")}</aside>}
+
+      {minimized && <div className="assistant-dock fixed z-40 hidden md:block">
+        <Button onClick={onToggle} variant="outline" className="gap-2 border-accent bg-background text-foreground shadow-none" aria-label="Abrir Ata AI" title="Abrir Ata AI"><MessageCircle /><span>Ata AI</span></Button>
+      </div>}
 
       <div className="assistant-dock fixed z-40 md:hidden">
         {!open ? <Button onClick={() => setOpen(true)} variant="outline" className="gap-2 border-accent bg-background text-foreground shadow-none" aria-label="Abrir Ata AI"><MessageCircle /><span>Ata AI</span></Button> : renderPanel("mobile")}
