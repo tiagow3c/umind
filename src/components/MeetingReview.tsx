@@ -244,7 +244,7 @@ export function TaskRow({ t, index, onEvidence }: { t: Task; index?: Map<string,
               <Button size="sm" variant="ghost" onClick={() => act({ status: "dismissed" })}>Descartar</Button>
             </>}
             {(t.status === "accepted" || t.status === "in_progress") && <Button size="sm" variant="outline" onClick={() => act({ status: "done" })}>Marcar como feita</Button>}
-            {t.status !== "done" && <Button size="sm" variant="outline" onClick={async () => { try { const added = await addTaskToAgenda(t); qc.invalidateQueries({ queryKey: ["todos"] }); toast.success(added ? "Adicionada à agenda." : "Já está na agenda."); } catch { toast.error("Não foi possível adicionar à agenda."); } }}>Adicionar à agenda</Button>}
+            {t.status !== "done" && <Button size="sm" variant="outline" onClick={async () => { try { const added = await addTaskToAgenda(t); qc.invalidateQueries({ queryKey: ["todos"] }); toast.success(added ? "Adicionada às tarefas." : "Já está nas tarefas."); } catch { toast.error("Não foi possível adicionar às tarefas."); } }}>Tarefa</Button>}
           </div>
         </div>
       )}
