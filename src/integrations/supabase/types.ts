@@ -457,6 +457,7 @@ export type Database = {
           avatar_path: string | null
           created_at: string
           display_name: string
+          email: string | null
           id: string
           instagram: string | null
           is_self: boolean
@@ -469,6 +470,7 @@ export type Database = {
           avatar_path?: string | null
           created_at?: string
           display_name: string
+          email?: string | null
           id?: string
           instagram?: string | null
           is_self?: boolean
@@ -481,6 +483,7 @@ export type Database = {
           avatar_path?: string | null
           created_at?: string
           display_name?: string
+          email?: string | null
           id?: string
           instagram?: string | null
           is_self?: boolean
