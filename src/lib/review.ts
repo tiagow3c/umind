@@ -205,25 +205,28 @@ function toWav(buf: AudioBuffer, startS: number, endS: number): string | null {
 
 /** Save the voice of a just-named speaker so future meetings recognise this person automatically. */
 export async function enrollSpeakerVoice(speakerId: string, personId: string) {
+  const warn = (why: string) => console.warn(`[enroll] ${speakerId}: ${why}`);
   const { data: sp } = await supabase.from("speakers").select("meeting_id").eq("id", speakerId).single();
-  if (!sp) return;
+  if (!sp) return warn("speaker não encontrado");
   const { data: m } = await supabase.from("meetings").select("current_transcript_id").eq("id", sp.meeting_id).single();
-  if (!m?.current_transcript_id) return;
+  if (!m?.current_transcript_id) return warn("sem transcrição");
   const [{ data: segs }, { data: sps }] = await Promise.all([
     supabase.from("transcript_segments").select("speaker_id, start_ms, end_ms, overlap").eq("transcript_id", m.current_transcript_id),
     supabase.from("speakers").select("id, sample_start_ms, sample_end_ms").eq("meeting_id", sp.meeting_id),
   ]);
   const { speakerSamples } = await import("@/components/VoiceAvatar");
   const sample = speakerSamples(sps ?? [], (segs ?? []).map((x) => ({ ...x, start_ms: Number(x.start_ms), end_ms: Number(x.end_ms) }))).get(speakerId);
-  if (!sample || sample.end - sample.start < 2000) return;
+  if (!sample || sample.end - sample.start < 2000) return warn("trecho de voz curto demais");
   const { data: rec } = await supabase.from("recordings").select("id, codec, recording_parts(object_key, sequence)").eq("meeting_id", sp.meeting_id).not("finalized_at", "is", null).order("created_at", { ascending: false }).limit(1).single();
-  if (!rec) return;
+  if (!rec) return warn("gravação não finalizada");
   const url = await loadPlayableAudio(rec.id, rec.recording_parts, (rec.codec ?? "audio/webm").split(";")[0]!);
   const ctx = new AudioContext();
   try {
     const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
     const wav = toWav(buf, sample.start / 1000, sample.end / 1000);
-    if (wav) await enrollVoice({ data: { speakerId, personId, wavBase64: wav } });
+    if (!wav) return warn("trecho quase silencioso");
+    const r = await enrollVoice({ data: { speakerId, personId, wavBase64: wav } });
+    if (!r?.ok) warn(`servidor recusou: ${r?.reason ?? "erro"}`);
   } finally { void ctx.close(); }
 }
 
