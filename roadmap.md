@@ -64,3 +64,6 @@
 - [x] Cadastro de voz agora avisa (toast) quando falha e distingue "sem créditos".
 - [x] Página da reunião tenta de novo sozinha enquanto a pessoa não tiver voz guardada.
 - [ ] Usuário recarregar créditos na conta pyannote (bloqueio externo).
+
+# Arredondamento da moldura
+- [x] Cantos da moldura do conteúdo de 8px para 12px
