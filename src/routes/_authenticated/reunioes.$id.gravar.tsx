@@ -10,6 +10,7 @@ import { MAX_DURATION_MS, canStartCapture } from "@/lib/meeting-rules";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge, formatDuration } from "@/components/StatusBadge";
+import { Mic, Pause, Play, Square } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/reunioes/$id/gravar")({
   head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Gravar — Ata" }, { name: "description", content: "Grave o áudio da reunião." }, { property: "og:title", content: "Gravar — Ata" }, { property: "og:description", content: "Grave o áudio da reunião." }] }),
@@ -245,16 +246,16 @@ function Gravar() {
             {starting || autoStart ? "Preparando microfone…" : "Pronto quando você estiver"}
           </p>
         )}
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-[max(2rem,env(safe-area-inset-bottom))]">
           {phase === "idle" ? (
-            <Button variant="ghost" size="sm" disabled={starting} onClick={() => void start()}>Começar a gravar</Button>
+            <Button size="lg" disabled={starting} onClick={() => void start()}><Mic />Começar a gravar</Button>
           ) : phase === "recording" ? (
-            <Button variant="ghost" size="sm" onClick={pause}>Pausar</Button>
+            <Button variant="outline" size="lg" onClick={pause}><Pause />Pausar</Button>
           ) : (
-            <Button variant="ghost" size="sm" onClick={resume}>Retomar</Button>
+            <Button variant="outline" size="lg" onClick={resume}><Play />Retomar</Button>
           )}
           {phase !== "idle" && (
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={stop}>Encerrar</Button>
+            <Button size="lg" onClick={stop}><Square className="fill-current" />Encerrar</Button>
           )}
         </div>
       </div>
