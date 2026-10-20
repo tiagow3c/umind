@@ -106,8 +106,12 @@
 /* Editorial frame: a hairline border that always frames the visible window.
    The gutters outside it are painted over, so content is clipped at the line
    and the Ata AI rail reads as sitting on the frame's right edge. */
-:root { --frame-margin: 0px; }
-@media (min-width: 768px) { :root { --frame-margin: 0.75rem; } }
+:root { --frame-margin: 0px; --frame-left: 0px; }
+@media (min-width: 768px) {
+  :root { --frame-margin: 0.75rem; }
+  /* The frame wraps the content to the right of the menu, never the menu itself. */
+  .app-frame--framed { --frame-left: 220px; }
+}
 
 .app-frame {
   margin: var(--frame-margin);
@@ -121,7 +125,7 @@
 .app-frame-edge {
   position: fixed;
   inset: var(--frame-margin);
-  left: 0;
+  left: var(--frame-left);
   border: 1px solid var(--color-border);
   border-radius: 0.875rem;
   box-shadow: 0 0 0 100vmax var(--color-background);
@@ -137,6 +141,9 @@
     height: calc(100dvh - (var(--frame-margin) * 2) - 2px);
   }
 }
+
+/* The menu stands outside the frame: full height, flush with the window's left edge. */
+.app-side--menu { top: 0; height: 100dvh; }
 
 @media (max-width: 767px) {
   .assistant-dock { right: max(1rem, env(safe-area-inset-right, 0px)); bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
