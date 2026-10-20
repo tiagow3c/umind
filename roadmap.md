@@ -26,3 +26,7 @@
 # Menu e publicação
 - [x] Corrigir o espaço vazio da barra inferior, mantendo Hoje, Reuniões, Gravar, Tarefas e Pessoas.
 - [ ] Verificar a navegação com sessão real e solicitar publicação após conferir a segurança.
+
+# Botão central na tela Hoje
+- [x] Colocar o botão de iniciar reunião no centro da tela Hoje, no celular e no computador.
+- [x] Testar com sessão real: um toque abre a gravação.
