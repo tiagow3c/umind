@@ -113,6 +113,13 @@
       "when": 1792193373755,
       "tag": "0015_speaker_clean_sample",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792499601285,
+      "tag": "0016_lock_job_state",
+      "breakpoints": true
     }
   ]
 }
