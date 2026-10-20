@@ -20,7 +20,6 @@ const NAV = [
   { to: "/hoje", label: "Hoje", icon: CalendarDays },
   { to: "/reunioes", label: "Reuniões", icon: Mic },
   { to: "/tarefas", label: "Tarefas", icon: CalendarCheck },
-  { to: "/sugestoes", label: "Sugestões", icon: ListTodo },
   { to: "/pessoas", label: "Pessoas", icon: UsersRound },
   { to: "/ajustes", label: "Ajustes" },
 ] as const;
