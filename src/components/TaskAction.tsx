@@ -2,6 +2,7 @@ import { ChevronRight, Forward, ListPlus, Loader2, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { forwardGmail, searchGmail, type MailHit } from "@/lib/gmail.functions";
+import { createCalendarEvent } from "@/lib/calendar.functions";
 import { peopleQuery } from "@/lib/review";
 import { supabase } from "@/integrations/supabase/client";
 import { counterpartOf, isFollowUp } from "@/lib/task-rules";
@@ -70,6 +71,7 @@ export function calendarUrl(d: TaskDraft, due: string | null) {
 
 export function TaskAction({ task, onDone }: { task: Task; onDone: () => void }) {
   const [open, setOpen] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
   const [d, setD] = useState<TaskDraft>(() => draftFor(task));
   const set = (k: keyof TaskDraft) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value });
   const go = (url: string) => { window.open(url, "_blank", "noopener"); onDone(); };
@@ -104,15 +106,16 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
             ) : d.kind === "email" ? (
               <>
                 <Button variant="outline" onClick={() => go(gmailUrl(d))} className="w-full px-3 shadow-none"><GmailIcon /> Enviar</Button>
-                <Button variant="outline" onClick={() => go(calendarUrl(d, task.due_date))} className="w-full px-3 shadow-none"><CalendarIcon /> Agendar</Button>
+                <Button variant="outline" onClick={() => setScheduling(true)} className="w-full px-3 shadow-none"><CalendarIcon /> Agendar</Button>
               </>
             ) : (
-              <Button variant="outline" onClick={() => go(calendarUrl(d, task.due_date))} className="px-3 shadow-none"><CalendarIcon /> Agendar</Button>
+              <Button variant="outline" onClick={() => setScheduling(true)} className="px-3 shadow-none"><CalendarIcon /> Agendar</Button>
             )}
           </div>
         )}
       </div>
-      {open && (
+      {scheduling && <SchedulePanel draft={d} due={task.due_date} onCancel={() => setScheduling(false)} onDone={() => { setScheduling(false); onDone(); }} />}
+      {open && !scheduling && (
         <div className="ml-6 mt-4 space-y-2 rounded-lg border bg-background p-4 text-sm">
           {d.kind === "forward" ? <ForwardPanel draft={d} toName={d.to_name ?? other} people={people ?? []} onSent={onDone} /> : d.kind === "email" ? (
             <>
@@ -195,6 +198,51 @@ function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toN
       <input value={dest} onChange={(e) => setTo(e.target.value)} placeholder={`E-mail de ${toName ?? "destino"}`} aria-label="Para" className="w-full border-b bg-transparent py-1 outline-none focus:border-accent" />
       <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} aria-label="Mensagem" className="w-full resize-y bg-transparent py-1 outline-none" />
       <Button variant="outline" onClick={send} disabled={sending} className="shadow-none">{sending ? <Loader2 className="size-4 animate-spin" /> : <Forward className="size-4" />} Encaminhar</Button>
+    </div>
+  );
+}
+
+const toLocalInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const offsetOf = (d: Date) => { const m = -d.getTimezoneOffset(); const s = m >= 0 ? "+" : "-"; return `${s}${pad(Math.floor(Math.abs(m) / 60))}:${pad(Math.abs(m) % 60)}`; };
+
+/** Inline card with the event data; creates it in Google Calendar without leaving the screen. */
+function SchedulePanel({ draft, due, onCancel, onDone }: { draft: TaskDraft; due: string | null; onCancel: () => void; onDone: () => void }) {
+  const create = useServerFn(createCalendarEvent);
+  const s0 = startOf(draft, due);
+  const [title, setTitle] = useState(draft.kind === "email" ? `Enviar e-mail: ${draft.subject ?? ""}` : draft.event_title ?? "");
+  const [day, setDay] = useState(toLocalInput(s0));
+  const [time, setTime] = useState(`${pad(s0.getHours())}:${pad(s0.getMinutes())}`);
+  const [minutes, setMinutes] = useState(String(draft.event_minutes ?? 30));
+  const [desc, setDesc] = useState(draft.kind === "email" ? `Assunto: ${draft.subject ?? ""}\n\n${draft.body ?? ""}` : draft.body ?? "");
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    const start = new Date(`${day}T${time}:00`);
+    const mins = Math.max(5, Number(minutes) || 30);
+    if (!title.trim() || Number.isNaN(start.getTime())) { toast.error("Preencha título, dia e horário."); return; }
+    const end = new Date(start.getTime() + mins * 60_000);
+    const iso = (d: Date) => `${toLocalInput(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${offsetOf(d)}`;
+    setSaving(true);
+    try {
+      await create({ data: { title: title.trim(), description: desc, start: iso(start), end: iso(end), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone } });
+      toast.success(`Evento criado na sua agenda para ${start.toLocaleDateString("pt-BR")} às ${time}.`);
+      onDone();
+    } catch { toast.error("Não foi possível criar o evento."); } finally { setSaving(false); }
+  };
+  const field = "w-full border-b bg-transparent py-1 outline-none focus:border-accent";
+  return (
+    <div className="ml-6 mt-4 space-y-3 rounded-lg border bg-background p-4 text-sm">
+      <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground"><CalendarIcon /> Novo evento no Google Agenda</p>
+      <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Título do evento" className={cn(field, "font-medium")} />
+      <div className="grid grid-cols-3 gap-3">
+        <label className="space-y-1"><span className="text-xs text-muted-foreground">Dia</span><input type="date" value={day} onChange={(e) => setDay(e.target.value)} className={field} /></label>
+        <label className="space-y-1"><span className="text-xs text-muted-foreground">Horário</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={field} /></label>
+        <label className="space-y-1"><span className="text-xs text-muted-foreground">Duração (min)</span><input type="number" min={5} step={5} value={minutes} onChange={(e) => setMinutes(e.target.value)} className={field} /></label>
+      </div>
+      <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={5} aria-label="Descrição" className="w-full resize-y bg-transparent py-1 leading-relaxed outline-none" />
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" onClick={onCancel} className="shadow-none">Cancelar</Button>
+        <Button variant="outline" onClick={save} disabled={saving} className="shadow-none">{saving ? <Loader2 className="size-4 animate-spin" /> : <CalendarIcon />} Criar evento</Button>
+      </div>
     </div>
   );
 }
