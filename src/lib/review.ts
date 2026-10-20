@@ -1,6 +1,17 @@
 import { queryOptions } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { enrollVoice } from "@/lib/people.functions";
+
+/** Fire-and-forget voice enrollment that tells the user when the voice could not be saved. */
+export function enrollSpeakerVoiceInBackground(speakerId: string, personId: string) {
+  void enrollSpeakerVoice(speakerId, personId)
+    .then((r) => {
+      if (r === "credits") toast.error("Não consegui guardar a voz: o serviço de voz está sem créditos. A identificação automática volta quando houver créditos.");
+      else if (r) toast.error("Não consegui guardar a voz agora; tento de novo ao abrir a reunião.");
+    })
+    .catch(() => toast.error("Não consegui guardar a voz agora; tento de novo ao abrir a reunião."));
+}
 
 export const transcriptQuery = (transcriptId: string | null) =>
   queryOptions({
@@ -174,7 +185,7 @@ export async function assignSpeakerPerson(speakerId: string, target: { personId:
     if (e2 || !part) throw new Error(e2?.message ?? "participant");
     await mapSpeaker(speakerId, part.id);
   }
-  void enrollSpeakerVoice(speakerId, personId).catch(() => null);
+  enrollSpeakerVoiceInBackground(speakerId, personId);
 }
 
 /** Encode mono 16 kHz PCM WAV from a slice of a decoded buffer. */
@@ -247,7 +258,7 @@ export async function confirmParticipant(participantId: string) {
   if (error) throw new Error(error.message);
   const { data: part } = await supabase.from("participants").select("person_id, speakers(id)").eq("id", participantId).single();
   const spId = (part?.speakers as unknown as { id: string }[] | null)?.[0]?.id;
-  if (part?.person_id && spId) void enrollSpeakerVoice(spId, part.person_id).catch(() => null);
+  if (part?.person_id && spId) enrollSpeakerVoiceInBackground(spId, part.person_id);
 }
 
 export async function renamePerson(id: string, name: string) {
