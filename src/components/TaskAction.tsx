@@ -136,7 +136,9 @@ function emailOf(h: string) { return /<([^>]+)>/.exec(h)?.[1] ?? (h.includes("@"
 function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toName: string | null; people: P[]; onSent: () => void }) {
   const search = useServerFn(searchGmail);
   const forward = useServerFn(forwardGmail);
-  const query = draft.search_query || draft.subject || "";
+  const initial = draft.search_query || draft.subject || "";
+  const [term, setTerm] = useState(initial);
+  const [query, setQuery] = useState(initial);
   const { data, isLoading, error } = useQuery({ queryKey: ["gmail", query], enabled: !!query, staleTime: 60_000, queryFn: () => search({ data: { query } }) });
   const person = toName ? people.find((p) => normalizeName(p.display_name).split(" ")[0] === normalizeName(toName).split(" ")[0]) ?? null : null;
   const guessed = (() => {
@@ -152,12 +154,8 @@ function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toN
   const dest = to ?? person?.email ?? guessed;
   const chosen = pick ?? data?.hits[0]?.id ?? null;
 
-  if (!query) return <p className="text-muted-foreground">Sem termos para procurar o e-mail.</p>;
-  if (isLoading) return <p className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-3.5 animate-spin" /> Procurando no seu Gmail…</p>;
-  if (error || !data?.connected) return <p className="text-muted-foreground">Não foi possível ler o seu Gmail agora.</p>;
-  if (!data.hits.length) return <p className="text-muted-foreground">Nenhum e-mail encontrado para “{query}”.</p>;
   const send = async () => {
-    if (!chosen || !/^[^@\s]+@[^@\s]+$/.test(dest)) { toast.error("Informe um e-mail válido."); return; }
+    if (!chosen || !/^[^@\s]+@[^@\s]+$/.test(dest)) { toast.error("Escolha um e-mail e informe o destinatário."); return; }
     setSending(true);
     try {
       await forward({ data: { messageId: chosen, to: dest, note } });
@@ -165,17 +163,35 @@ function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toN
       toast.success("E-mail encaminhado."); onSent();
     } catch { toast.error("Não foi possível encaminhar."); } finally { setSending(false); }
   };
+  const searchBox = (
+    <form onSubmit={(e) => { e.preventDefault(); setPick(null); setQuery(term.trim()); }} className="flex items-center gap-2 border-b py-1">
+      <Search className="size-4 shrink-0 text-muted-foreground" />
+      <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Procurar pelo assunto, remetente ou palavra" aria-label="Procurar e-mail" className="min-w-0 flex-1 bg-transparent outline-none" />
+      <Button type="submit" variant="ghost" size="sm" className="shadow-none">Buscar</Button>
+    </form>
+  );
+  let results: React.ReactNode;
+  if (!query) results = <p className="text-muted-foreground">Digite o assunto do e-mail que quer encaminhar.</p>;
+  else if (isLoading) results = <p className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-3.5 animate-spin" /> Procurando no seu Gmail…</p>;
+  else if (error || !data?.connected) results = <p className="text-muted-foreground">Não foi possível ler o seu Gmail agora.</p>;
+  else if (!data.hits.length) results = <p className="text-muted-foreground">Nenhum e-mail encontrado para “{query}”. Tente outra palavra.</p>;
+  else results = (
+    <ul className="divide-y border-y">
+      {data.hits.map((h: MailHit) => (
+        <li key={h.id}><label className="flex cursor-pointer gap-3 py-2">
+          <input type="radio" name={`fw-${draft.subject ?? ""}`} checked={chosen === h.id} onChange={() => setPick(h.id)} className="mt-1" />
+          <span className="min-w-0"><span className="block truncate font-medium">{h.subject || "(sem assunto)"}</span>
+            <span className="block truncate text-xs text-muted-foreground">{h.from.replace(/\s*<.*>$/, "")} · {h.date ? new Date(h.date).toLocaleDateString("pt-BR") : ""}</span>
+            {h.snippet && <span className="line-clamp-2 text-xs text-muted-foreground">{h.snippet}</span>}</span>
+        </label></li>
+      ))}
+    </ul>
+  );
   return (
     <div className="space-y-3">
-      <ul className="divide-y border-y">
-        {data.hits.map((h: MailHit) => (
-          <li key={h.id}><label className="flex cursor-pointer gap-3 py-2">
-            <input type="radio" name={`fw-${query}`} checked={chosen === h.id} onChange={() => setPick(h.id)} className="mt-1" />
-            <span className="min-w-0"><span className="block truncate font-medium">{h.subject || "(sem assunto)"}</span>
-              <span className="block truncate text-xs text-muted-foreground">{h.from} · {h.date ? new Date(h.date).toLocaleDateString("pt-BR") : ""}</span></span>
-          </label></li>
-        ))}
-      </ul>
+      {searchBox}
+      {results}
+
       <input value={dest} onChange={(e) => setTo(e.target.value)} placeholder={`E-mail de ${toName ?? "destino"}`} aria-label="Para" className="w-full border-b bg-transparent py-1 outline-none focus:border-accent" />
       <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} aria-label="Mensagem" className="w-full resize-y bg-transparent py-1 outline-none" />
       <Button variant="outline" onClick={send} disabled={sending} className="shadow-none">{sending ? <Loader2 className="size-4 animate-spin" /> : <Forward className="size-4" />} Encaminhar</Button>
