@@ -32,8 +32,8 @@ export const searchGmail = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ connected: boolean; hits: MailHit[] }> => {
     await assertMember(context.supabase, context.userId);
     if (!headers()) return { connected: false, hits: [] };
-    const list = await gm(`/users/me/messages?maxResults=5&q=${encodeURIComponent(data.query)}`);
-    const ids = ((list["messages"] as { id: string }[] | undefined) ?? []).map((m) => m.id).slice(0, 5);
+    const list = await gm(`/users/me/messages?maxResults=8&q=${encodeURIComponent(`${data.query} -category:promotions -category:social`)}`);
+    const ids = ((list["messages"] as { id: string }[] | undefined) ?? []).map((m) => m.id).slice(0, 8);
     const hits = await Promise.all(ids.map(async (id) => {
       const m = await gm(`/users/me/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date`);
       const hs = ((m["payload"] as { headers?: { name: string; value: string }[] } | undefined)?.headers) ?? [];
