@@ -49,7 +49,7 @@ export const Route = createFileRoute("/api/public/extension")({
         if (action === "part") {
           const seq = Number(url.searchParams.get("seq"));
           const startMs = Number(url.searchParams.get("start")), endMs = Number(url.searchParams.get("end"));
-          if (!Number.isInteger(seq) || seq < 0 || seq > 100000 || rec.finalized_at) return json({ error: "part" }, 400);
+          if (!Number.isInteger(seq) || seq < 1 || seq > 100000 || rec.finalized_at) return json({ error: "part" }, 400);
           const blob = await request.arrayBuffer();
           if (!blob.byteLength || blob.byteLength > 20 * 1024 * 1024) return json({ error: "size" }, 400);
           const key = `${tk.workspace_id}/${rec.meeting_id}/${rec.id}/part-${seq}`;

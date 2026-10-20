@@ -1,7 +1,7 @@
 // Runs inside Google Meet: shows "Gravar com Ata" during a call, records the call audio + your mic, uploads every 30 s.
 (() => {
   const PART_MS = 30000;
-  let state = { rec: null, recordingId: null, meetingId: null, seq: 0, startedAt: 0, partStart: 0, streams: [], ctx: null, pending: [] };
+  let state = { rec: null, recordingId: null, meetingId: null, seq: 1, startedAt: 0, partStart: 0, streams: [], ctx: null, pending: [] };
 
   const send = (msg) => new Promise((res, rej) => chrome.runtime.sendMessage(msg, (r) => (r && r.ok ? res(r.data) : rej(new Error((r && r.error) || "erro")))));
 
@@ -66,7 +66,7 @@
     }
 
     const rec = new MediaRecorder(dest.stream, { mimeType: mime, audioBitsPerSecond: 48000 });
-    state = { rec, recordingId: ids.recordingId, meetingId: ids.meetingId, seq: 0, startedAt: Date.now(), partStart: 0, streams: [tab, mic].filter(Boolean), ctx, pending: [] };
+    state = { rec, recordingId: ids.recordingId, meetingId: ids.meetingId, seq: 1, startedAt: Date.now(), partStart: 0, streams: [tab, mic].filter(Boolean), ctx, pending: [] };
     rec.ondataavailable = (ev) => {
       if (!ev.data || !ev.data.size) return;
       const seq = state.seq++, startMs = state.partStart, endMs = Date.now() - state.startedAt;
