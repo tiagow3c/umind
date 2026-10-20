@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
+import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, missingVoicePersons, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
 import { avatarSrc } from "@/lib/people-rules";
@@ -34,16 +34,25 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
 
   const self = people?.find((p) => p.is_self) ?? null;
-  // Voices named automatically from the conversation learn their voiceprint once, so next time they are recognised by voice.
+  // Voices linked to a person learn their voiceprint so next time they are recognised by voice.
+  // Retries on every visit while the person has no saved voice (e.g. after the voice service recovers).
   useEffect(() => {
-    for (const s of speakers ?? []) {
-      if (s.mapping_source !== "ai" || !samples.get(s.id)) continue;
-      const pid = meeting.participants.find((p) => p.id === s.participant_id)?.person_id;
-      const key = `ata:enrolled:${s.id}`;
-      if (!pid || localStorage.getItem(key)) continue;
-      localStorage.setItem(key, "1");
-      void enrollSpeakerVoice(s.id, pid).catch(() => localStorage.removeItem(key));
-    }
+    const targets = (speakers ?? [])
+      .map((s) => ({ speakerId: s.id, personId: meeting.participants.find((p) => p.id === s.participant_id)?.person_id }))
+      .filter((t): t is { speakerId: string; personId: string } => !!t.personId && !!samples.get(t.speakerId));
+    if (!targets.length) return;
+    void (async () => {
+      const missing = await missingVoicePersons(targets.map((t) => t.personId));
+      for (const t of targets) {
+        if (!missing.has(t.personId)) continue;
+        const key = `ata:enrolled:${t.speakerId}`;
+        if (localStorage.getItem(key)) continue;
+        localStorage.setItem(key, "1");
+        void enrollSpeakerVoice(t.speakerId, t.personId)
+          .then((r) => { if (r) localStorage.removeItem(key); })
+          .catch(() => localStorage.removeItem(key));
+      }
+    })();
   }, [speakers, meeting.participants, samples]);
 
   const used = new Set(meeting.participants.map((p) => p.person_id).filter((x): x is string => !!x));
