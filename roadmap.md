@@ -22,3 +22,7 @@
 - [x] Seu nome primeiro na escolha; sem @ do Instagram.
 - [x] Vozes guardadas com melhor qualidade para reconhecer nas próximas reuniões.
 - [x] Agenda por dia com "Adicionar à agenda" nas tarefas.
+
+# Menu e publicação
+- [x] Corrigir o espaço vazio da barra inferior, mantendo Hoje, Reuniões, Gravar, Tarefas e Pessoas.
+- [ ] Verificar a navegação com sessão real e solicitar publicação após conferir a segurança.
