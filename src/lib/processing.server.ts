@@ -406,9 +406,9 @@ async function callModel(instructions: string, prompt: string, name: string, sch
 const TASKS_SCHEMA = { type: "object", additionalProperties: false, required: ["tasks"], properties: { tasks: (ANALYSIS_JSON_SCHEMA.properties as Record<string, object>)["tasks"] } };
 
 /** Short context from earlier meetings with the same confirmed people, so the analysis can spot continuity and pending agreements. */
-async function historyContext(admin: Admin, meetingId: string) {
+async function historyContext(admin: Admin, meetingId: string, workspaceId: string) {
   const { data: mine } = await admin.from("participants").select("person_id").eq("meeting_id", meetingId).eq("person_confirmed", true).not("person_id", "is", null);
-  const { data: selfRows } = await admin.from("people").select("id").eq("is_self", true);
+  const { data: selfRows } = await admin.from("people").select("id").eq("workspace_id", workspaceId).eq("is_self", true);
   const self = new Set((selfRows ?? []).map((r) => r.id));
   const ids = [...new Set((mine ?? []).map((r) => r.person_id!).filter((id) => !self.has(id)))];
   if (!ids.length) return "";
@@ -439,7 +439,7 @@ async function analysisPrompt(admin: Admin, meeting: { id?: string; workspace_id
     return `[${i}] ${sp?.participants?.display_name ?? sp?.provider_label ?? "Desconhecido"}: ${s.text}`;
   });
   const ownerLine = owner?.[0] ? `Dono do app (você escreve para ele): ${owner[0].display_name}.\n` : "";
-  const history = meeting.id ? await historyContext(admin, meeting.id) : "";
+  const history = meeting.id ? await historyContext(admin, meeting.id, meeting.workspace_id) : "";
   return { segs, prompt: `${ownerLine}Data da reunião: ${dateStr} (${weekday}), fuso ${meeting.timezone}.\n\nTRANSCRIÇÃO:\n<<<\n${lines.join("\n").slice(0, 400_000)}\n>>>${history}` };
 }
 
