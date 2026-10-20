@@ -1,4 +1,4 @@
-import { ChevronRight, Forward, ListPlus, Loader2 } from "lucide-react";
+import { ChevronRight, Forward, ListPlus, Loader2, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { forwardGmail, searchGmail, type MailHit } from "@/lib/gmail.functions";
@@ -9,7 +9,7 @@ import { normalizeName } from "@/lib/people-rules";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { addTaskToTodo } from "@/lib/todos";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -170,7 +170,7 @@ function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toN
       <Button type="submit" variant="ghost" size="sm" className="shadow-none">Buscar</Button>
     </form>
   );
-  let results: React.ReactNode;
+  let results: ReactNode;
   if (!query) results = <p className="text-muted-foreground">Digite o assunto do e-mail que quer encaminhar.</p>;
   else if (isLoading) results = <p className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-3.5 animate-spin" /> Procurando no seu Gmail…</p>;
   else if (error || !data?.connected) results = <p className="text-muted-foreground">Não foi possível ler o seu Gmail agora.</p>;
