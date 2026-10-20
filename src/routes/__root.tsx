@@ -108,7 +108,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    // The pre-paint script below may already have put .dark on <html>, so React
+    // must not treat that as a mismatch with what it rendered.
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <HeadContent />
         {/* Applies the stored theme before first paint, so the page never flashes. */}
