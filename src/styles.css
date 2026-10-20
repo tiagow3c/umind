@@ -164,7 +164,7 @@
   inset: var(--frame-margin);
   left: var(--frame-left);
   border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   box-shadow: 0 0 0 100vmax var(--color-sidebar);
   pointer-events: none;
   z-index: 45;
