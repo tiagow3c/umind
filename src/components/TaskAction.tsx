@@ -99,7 +99,7 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
         {done ? <span className="shrink-0 text-sm text-muted-foreground">Feita</span> : (
           <div className="ml-auto flex shrink-0 flex-col items-end gap-2 sm:flex-row">
             <Button variant="outline" onClick={toAgenda} className="w-full px-3 shadow-none" aria-label="Adicionar à agenda"><CalendarPlus className="size-4" /> Tarefa</Button>
-            {d.kind === "forward" ? (
+            {(task.action as { kind?: string } | null)?.kind === "none" ? null : d.kind === "forward" ? (
               <Button variant="outline" onClick={() => setOpen(true)} className="w-full px-3 shadow-none"><GmailIcon /> Encaminhar</Button>
             ) : d.kind === "email" ? (
               <>
