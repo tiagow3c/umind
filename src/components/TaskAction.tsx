@@ -81,7 +81,7 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
   const meta = [follow ? (other ? `Com ${other}` : null) : "Você", when].filter(Boolean).join(" · ");
   const done = task.status === "done";
   const qc = useQueryClient();
-  const toAgenda = async () => {
+  const toTodo = async () => {
     try { const added = await addTaskToTodo(task); qc.invalidateQueries({ queryKey: ["todos"] }); toast.success(added ? "Adicionada às tarefas." : "Já está nas tarefas."); }
     catch { toast.error("Não foi possível adicionar às tarefas."); }
   };
