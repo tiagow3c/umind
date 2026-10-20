@@ -450,6 +450,7 @@ export async function rewriteMeetingTasks(admin: Admin, meetingId: string) {
 }
 
 async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: string; timezone: string; started_at: string | null; created_at: string; current_transcript_id: string | null }, partial: boolean) {
+  if (!meeting.current_transcript_id) throw new StageError("no transcript", "no_transcript", false);
   const { segs, prompt } = await analysisPrompt(admin, meeting);
 
   let parsed: RawAnalysis | null = null;
