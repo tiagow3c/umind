@@ -12,10 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticated/ajustes'
 import { Route as AuthenticatedBuscarRouteImport } from './routes/_authenticated/buscar'
 import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
+import { Route as AuthenticatedSugestoesRouteImport } from './routes/_authenticated/sugestoes'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedPessoasIndexRouteImport } from './routes/_authenticated/pessoas.index'
 import { Route as AuthenticatedPessoasIdRouteImport } from './routes/_authenticated/pessoas.$id'
@@ -39,11 +39,6 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedAjustesRoute = AuthenticatedAjustesRouteImport.update({
   id: '/ajustes',
   path: '/ajustes',
@@ -57,6 +52,11 @@ const AuthenticatedBuscarRoute = AuthenticatedBuscarRouteImport.update({
 const AuthenticatedHojeRoute = AuthenticatedHojeRouteImport.update({
   id: '/hoje',
   path: '/hoje',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSugestoesRoute = AuthenticatedSugestoesRouteImport.update({
+  id: '/sugestoes',
+  path: '/sugestoes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
@@ -108,10 +108,10 @@ const AuthenticatedReunioesIdGravarRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/agenda': typeof AuthenticatedAgendaRoute
   '/ajustes': typeof AuthenticatedAjustesRoute
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
+  '/sugestoes': typeof AuthenticatedSugestoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
@@ -124,10 +124,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/agenda': typeof AuthenticatedAgendaRoute
   '/ajustes': typeof AuthenticatedAjustesRoute
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
+  '/sugestoes': typeof AuthenticatedSugestoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
@@ -142,10 +142,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/ajustes': typeof AuthenticatedAjustesRoute
   '/_authenticated/buscar': typeof AuthenticatedBuscarRoute
   '/_authenticated/hoje': typeof AuthenticatedHojeRoute
+  '/_authenticated/sugestoes': typeof AuthenticatedSugestoesRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/_authenticated/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/_authenticated/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
@@ -160,10 +160,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/agenda'
     | '/ajustes'
     | '/buscar'
     | '/hoje'
+    | '/sugestoes'
     | '/tarefas'
     | '/pessoas/$id'
     | '/reunioes/nova'
@@ -176,10 +176,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/agenda'
     | '/ajustes'
     | '/buscar'
     | '/hoje'
+    | '/sugestoes'
     | '/tarefas'
     | '/pessoas/$id'
     | '/reunioes/nova'
@@ -193,10 +193,10 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/_authenticated/agenda'
     | '/_authenticated/ajustes'
     | '/_authenticated/buscar'
     | '/_authenticated/hoje'
+    | '/_authenticated/sugestoes'
     | '/_authenticated/tarefas'
     | '/_authenticated/pessoas/$id'
     | '/_authenticated/reunioes/nova'
@@ -237,13 +237,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/agenda': {
-      id: '/_authenticated/agenda'
-      path: '/agenda'
-      fullPath: '/agenda'
-      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/ajustes': {
       id: '/_authenticated/ajustes'
       path: '/ajustes'
@@ -263,6 +256,13 @@ declare module '@tanstack/react-router' {
       path: '/hoje'
       fullPath: '/hoje'
       preLoaderRoute: typeof AuthenticatedHojeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sugestoes': {
+      id: '/_authenticated/sugestoes'
+      path: '/sugestoes'
+      fullPath: '/sugestoes'
+      preLoaderRoute: typeof AuthenticatedSugestoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tarefas': {
@@ -325,10 +325,10 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedAjustesRoute: typeof AuthenticatedAjustesRoute
   AuthenticatedBuscarRoute: typeof AuthenticatedBuscarRoute
   AuthenticatedHojeRoute: typeof AuthenticatedHojeRoute
+  AuthenticatedSugestoesRoute: typeof AuthenticatedSugestoesRoute
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
   AuthenticatedPessoasIdRoute: typeof AuthenticatedPessoasIdRoute
   AuthenticatedReunioesNovaRoute: typeof AuthenticatedReunioesNovaRoute
@@ -339,10 +339,10 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedAjustesRoute: AuthenticatedAjustesRoute,
   AuthenticatedBuscarRoute: AuthenticatedBuscarRoute,
   AuthenticatedHojeRoute: AuthenticatedHojeRoute,
+  AuthenticatedSugestoesRoute: AuthenticatedSugestoesRoute,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
   AuthenticatedPessoasIdRoute: AuthenticatedPessoasIdRoute,
   AuthenticatedReunioesNovaRoute: AuthenticatedReunioesNovaRoute,
