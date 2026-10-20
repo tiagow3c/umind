@@ -41,7 +41,7 @@ function AppLayout() {
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
   const displayName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Minha conta";
   return (
-    <div className={`app-shell min-h-dvh${isRecorder ? "" : " md:grid md:grid-cols-[220px_minmax(0,1fr)]"}`} data-keyboard-open={keyboardOpen}>
+    <div className={`app-shell min-h-dvh${isRecorder ? "" : " md:grid md:grid-cols-[220px_minmax(0,1fr)_340px]"}`} data-keyboard-open={keyboardOpen}>
       {!isRecorder && <header className="mobile-app-header sticky top-0 z-30 border-b bg-background md:hidden">
         <div className="grid h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <Link to="/hoje" className="w-fit font-serif text-3xl" aria-label="Ata — Hoje">Ata</Link>
