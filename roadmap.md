@@ -50,3 +50,7 @@
 - [x] Pintar a faixa por baixo/ao redor da moldura com a mesma cor do menu.
 - [x] Deixar esse tom um pouco mais fundo (menos claro): creme #E8E6DE, escuro #262626.
 - [x] Testar no computador em claro e escuro: faixa, menu e conteúdo com as cores certas.
+
+# Círculo da gravação mais vivo
+- [x] Inchar mais com a voz e fazer a borda onduolar devagar.
+- [x] Testar com microfone de teste: medir o raio do círculo quadro a quadro.

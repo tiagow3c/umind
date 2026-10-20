@@ -15,7 +15,8 @@ function toRgb(css: string): [number, number, number] {
 const VERT = `attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
 
 /** A soft, flat disc: the two palette tones drifting slowly into each other.
- *  No drop shadow, no halo, no specular highlight — the level only swells the radius. */
+ *  No drop shadow, no halo, no specular highlight — the level swells the radius
+ *  and the rim breathes with a slow noise, so the disk never looks frozen. */
 const FRAG = `precision highp float;
 uniform vec2 r;uniform float t;uniform float lv;uniform vec3 c1;uniform vec3 c2;
 float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -25,10 +26,11 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*n(p);p*=2.03;a*=.5;}
 void main(){
  vec2 uv=(gl_FragCoord.xy-.5*r)/min(r.x,r.y);
  float d=length(uv);
- float rad=.30+.045*lv;
- float mask=smoothstep(rad+.005,rad-.005,d);
+ float w=fbm(uv*2.2+vec2(t*.16,-t*.13));
+ float rad=.30+.075*lv+.014*(w-.5)*(.6+lv);
+ float mask=smoothstep(rad+.006,rad-.006,d);
  float k=.5+.5*dot(uv/rad,vec2(.62,.78));
- k+=.09*sin(t*.28)+.07*(fbm(uv*1.25+vec2(t*.05,-t*.045))-.5);
+ k+=.11*sin(t*.34)+.10*(fbm(uv*1.25+vec2(t*.08,-t*.07))-.5);
  vec3 col=mix(c1,c2,clamp(k,0.,1.));
  col=mix(col,c1,smoothstep(.62,1.,d/rad)*.14);
  gl_FragColor=vec4(col,mask);
@@ -74,7 +76,7 @@ export function VoiceOrb({ level, active, size = 260 }: { level: number; active:
       last = now;
       lv += (target.current - lv) * (target.current > lv ? 0.12 : 0.05);
       act += ((activeRef.current ? 1 : 0) - act) * 0.04;
-      t += dt * (0.5 + act * 0.25 + lv * 0.45);
+      t += dt * (0.55 + act * 0.3 + lv * 0.7);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform2f(u("r"), cv.width, cv.height);
