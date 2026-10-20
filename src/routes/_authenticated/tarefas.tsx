@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/tarefas")({
   head: () => ({ meta: [{ title: "Tarefas — Ata" }, { name: "description", content: "Sua lista de afazeres por dia." }, { property: "og:title", content: "Tarefas — Ata" }, { property: "og:description", content: "Sua lista de afazeres por dia." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(todosQuery),
-  component: Agenda,
+  component: TodoList,
 });
 
 type Todo = { id: string; title: string; day: string; done_at: string | null; position: number };
@@ -23,7 +23,7 @@ function label(day: string, today: string) {
   return d.toLocaleDateString("pt-BR", { weekday: "long" });
 }
 
-function Agenda() {
+function TodoList() {
   const { data } = useSuspenseQuery(todosQuery);
   const qc = useQueryClient();
   const today = isoDay(new Date());

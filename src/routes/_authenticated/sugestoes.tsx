@@ -11,8 +11,8 @@ export const Route = createFileRoute("/_authenticated/sugestoes")({
 
 function Sugestoes() {
   const { data } = useSuspenseQuery(allTasksQuery);
-  const suggested = data.filter((t) => t.status === "suggested");
-  const open = data.filter((t) => t.status === "accepted" || t.status === "in_progress");
+  const pending = data.filter((t) => t.status === "suggested" || t.status === "accepted" || t.status === "in_progress");
+  const kindOf = (t: (typeof data)[number]) => (t.action as { kind?: string } | null)?.kind ?? "none";
   const done = data.filter((t) => t.status === "done");
   const group = (title: string, list: typeof data, empty: string) => (
     <section>
@@ -32,8 +32,9 @@ function Sugestoes() {
   return (
     <div className="space-y-10">
       <h1 className="text-5xl">Sugestões</h1>
-      {group("Para revisar", suggested, "Nenhuma sugestão pendente.")}
-      {group("Compromissos", open, "Nenhuma tarefa aceita.")}
+      {group("Agenda", pending.filter((t) => kindOf(t) === "calendar"), "Nenhum evento sugerido.")}
+      {group("E-mail", pending.filter((t) => kindOf(t) === "email" || kindOf(t) === "forward"), "Nenhum e-mail sugerido.")}
+      {group("Tarefa", pending.filter((t) => !["calendar", "email", "forward"].includes(kindOf(t))), "Nenhuma tarefa sugerida.")}
       {group("Feitas", done, "Nada concluído ainda.")}
     </div>
   );
