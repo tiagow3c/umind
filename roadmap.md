@@ -72,3 +72,9 @@
 - [x] Substituir botão solto por janela arredondada automática com Gravar, contador e Encerrar.
 - [x] Permitir minimizar e reabrir sem interromper gravação.
 - [x] Verificar os estados da janela e empacotar a versão 1.2 (teste simulado; chamada real depende do Chrome do usuário).
+
+# Encerramento automático e retomada
+- [ ] Encerrar no servidor gravações interrompidas por bateria, falha ou fechamento, preservando áudio recebido.
+- [ ] Encerrar automaticamente ao sair da chamada do Meet, com recuperação de envios pendentes.
+- [ ] Oferecer Gravar nova reunião e Retomar anterior ao voltar ao mesmo link, sem perder conteúdo anterior.
+- [ ] Testar interrupção, retomada e preservação de tarefas; empacotar extensão atualizada.
