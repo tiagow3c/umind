@@ -6,6 +6,9 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { Assistant } from "@/components/Assistant";
 import { CalendarCheck, CalendarDays, Mic, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
+import { recoverLocalCaptures } from "@/lib/meetings";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -27,6 +30,19 @@ const NAV = [
 
 function AppLayout() {
   const { user } = Route.useRouteContext();
+  const qc = useQueryClient();
+  useEffect(() => {
+    let busy = false;
+    const recover = async () => {
+      if (busy) return; busy = true;
+      try { if (await recoverLocalCaptures(user.id)) { toast.success("Áudio interrompido recuperado."); void qc.invalidateQueries(); } }
+      catch { /* pending audio stays local for the next online attempt */ }
+      finally { busy = false; }
+    };
+    void recover(); const t = setInterval(() => void recover(), 60000);
+    window.addEventListener("online", recover);
+    return () => { clearInterval(t); window.removeEventListener("online", recover); };
+  }, [user.id, qc]);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isRecorder = pathname.endsWith("/gravar") || pathname === "/reunioes/nova";
   const [keyboardOpen, setKeyboardOpen] = useState(false);
