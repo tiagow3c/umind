@@ -5,10 +5,55 @@
 
   const send = (msg) => new Promise((res, rej) => chrome.runtime.sendMessage(msg, (r) => (r && r.ok ? res(r.data) : rej(new Error((r && r.error) || "erro")))));
 
+  const panel = document.createElement("aside");
+  panel.className = "ata-meet-window";
+  panel.setAttribute("aria-label", "Gravação com Ata");
+  const header = document.createElement("div");
+  header.className = "ata-meet-header";
+  const brand = document.createElement("strong");
+  brand.textContent = "Ata";
+  const minimize = document.createElement("button");
+  minimize.type = "button";
+  minimize.className = "ata-meet-minimize";
+  minimize.textContent = "−";
+  minimize.title = "Minimizar";
+  minimize.setAttribute("aria-label", "Minimizar Ata");
+  header.append(brand, minimize);
+  const info = document.createElement("div");
+  info.className = "ata-meet-info";
+  const statusText = document.createElement("span");
+  const clock = document.createElement("span");
+  clock.className = "ata-meet-clock";
+  clock.hidden = true;
+  info.append(statusText, clock);
   const btn = document.createElement("button");
-  btn.className = "ata-rec-btn";
+  btn.className = "ata-meet-action";
   btn.type = "button";
-  const label = (t, on) => { btn.textContent = t; btn.classList.toggle("ata-on", !!on); };
+  const icon = document.createElement("span");
+  icon.className = "ata-meet-mic";
+  icon.setAttribute("aria-hidden", "true");
+  const buttonText = document.createElement("span");
+  btn.append(icon, buttonText);
+  panel.append(header, info, btn);
+  const reopen = document.createElement("button");
+  reopen.type = "button";
+  reopen.className = "ata-meet-reopen";
+  reopen.textContent = "Ata";
+  reopen.title = "Abrir Ata";
+  reopen.setAttribute("aria-label", "Abrir Ata");
+  reopen.hidden = true;
+  let minimized = false;
+  const label = (t, on) => {
+    buttonText.textContent = on ? "Encerrar" : t === "Gravar com Ata" ? "Gravar" : t;
+    btn.classList.toggle("ata-on", !!on);
+    icon.className = on ? "ata-meet-stop" : "ata-meet-mic";
+    statusText.textContent = on ? "Gravando" : t === "Gravar com Ata" ? "Chamada aberta" : t;
+    panel.classList.toggle("ata-recording", !!on);
+    reopen.classList.toggle("ata-recording", !!on);
+    clock.hidden = !on;
+  };
+  minimize.addEventListener("click", () => { minimized = true; panel.hidden = true; reopen.hidden = false; });
+  reopen.addEventListener("click", () => { minimized = false; panel.hidden = false; reopen.hidden = true; });
   label("Gravar com Ata");
   btn.addEventListener("click", () => (state.rec ? stop() : start()));
 
@@ -99,12 +144,21 @@
   }
 
   void chrome.storage.local.set({ inCallAt: 0 });
-  // Show the button only during a call; leaving the call ends the recording.
+  // Open the in-tab window during a call; leaving the call ends the recording.
   setInterval(() => {
     const on = inCall();
     void chrome.storage.local.set({ inCallAt: on ? Date.now() : 0 });
-    if (on && !btn.isConnected) document.body.appendChild(btn);
-    if (!on && btn.isConnected && !state.rec) btn.remove();
+    if (on && !panel.isConnected) {
+      minimized = false;
+      panel.hidden = false;
+      reopen.hidden = true;
+      document.body.append(panel, reopen);
+    }
+    if (state.rec) {
+      const seconds = Math.floor((Date.now() - state.startedAt) / 1000);
+      clock.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+    }
+    if (!on && panel.isConnected && !state.rec) { panel.remove(); reopen.remove(); minimized = false; }
     if (!on && state.rec) void stop();
   }, 1500);
   window.addEventListener("beforeunload", () => { if (state.rec) void stop(); });
