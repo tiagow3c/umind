@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import "./call-state.js";
+import "../../extension/call-state.js";
+
+declare global {
+  var AtaMeetCallState: {
+    leaveSelector: string;
+    ended(text: string): boolean;
+    shouldEnd(state: { ended: boolean; hasLeaveControl: boolean; lastSeen: number; now: number }): boolean;
+  };
+}
 
 const rules = globalThis.AtaMeetCallState;
 describe("Meet ends capture without the Ata button", () => {
