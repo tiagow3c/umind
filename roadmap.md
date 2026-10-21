@@ -67,3 +67,8 @@
 
 # Arredondamento da moldura
 - [x] Cantos da moldura do conteúdo de 8px para 12px
+
+# Janela da extensão no Meet
+- [x] Substituir botão solto por janela arredondada automática com Gravar, contador e Encerrar.
+- [x] Permitir minimizar e reabrir sem interromper gravação.
+- [x] Verificar os estados da janela e empacotar a versão 1.2 (teste simulado; chamada real depende do Chrome do usuário).

@@ -1,7 +1,33 @@
-.ata-rec-btn {
-  position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 2147483647;
-  font: 500 13px/1 system-ui, sans-serif; padding: 9px 16px; border-radius: 999px;
-  border: 1px solid #b5603f; background: #f9f7f2; color: #2b2622; cursor: pointer;
+.ata-meet-window, .ata-meet-reopen {
+  --ata-surface: #F7F4ED;
+  --ata-ink: #1B1B1B;
+  --ata-muted: #68675F;
+  --ata-line: #D3D1C8;
+  --ata-accent: #4B73FF;
+  --ata-hover: #E8E6DE;
+  position: fixed; right: 24px; bottom: 104px; z-index: 2147483647;
+  box-sizing: border-box; color: var(--ata-ink); background: var(--ata-surface);
+  font: 400 14px/1.4 system-ui, sans-serif; letter-spacing: 0;
+  border: 1px solid var(--ata-line);
 }
-.ata-rec-btn:hover { background: #efe7dc; }
-.ata-rec-btn.ata-on { background: #b5603f; color: #f9f7f2; }
+.ata-meet-window { width: 280px; max-width: calc(100vw - 32px); padding: 18px; border-radius: 18px; }
+.ata-meet-window[hidden], .ata-meet-reopen[hidden], .ata-meet-clock[hidden] { display: none !important; }
+.ata-meet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.ata-meet-header strong { font: 400 28px/1 Georgia, serif; }
+.ata-meet-window button { font: inherit; letter-spacing: 0; cursor: pointer; box-sizing: border-box; }
+.ata-meet-minimize { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--ata-muted); font-size: 22px !important; }
+.ata-meet-minimize:hover { background: var(--ata-hover); }
+.ata-meet-info { display: flex; align-items: center; justify-content: space-between; color: var(--ata-muted); gap: 8px; margin-bottom: 14px; min-height: 20px; }
+.ata-meet-info > span:first-child { overflow-wrap: anywhere; }
+.ata-meet-clock { font-variant-numeric: tabular-nums; color: var(--ata-ink); }
+.ata-meet-action { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 42px; padding: 10px 14px; border: 1px solid var(--ata-ink); border-radius: 8px; background: var(--ata-ink); color: var(--ata-surface); }
+.ata-meet-action:hover { opacity: .85; }
+.ata-meet-mic { position: relative; display: inline-block; width: 10px; height: 15px; border: 1.5px solid currentColor; border-top: 0; border-radius: 0 0 6px 6px; flex: none; }
+.ata-meet-mic::before { content: ""; position: absolute; width: 4px; height: 10px; border: 1.5px solid currentColor; border-radius: 4px; top: -3px; left: 1.5px; }
+.ata-meet-mic::after { content: ""; position: absolute; height: 3px; width: 1.5px; background: currentColor; bottom: -4px; left: 3px; }
+.ata-meet-stop { width: 11px; height: 11px; border-radius: 2px; background: currentColor; flex: none; }
+.ata-recording .ata-meet-info > span:first-child { color: var(--ata-accent); }
+.ata-meet-reopen { width: 52px; height: 52px; border-radius: 50%; cursor: pointer; font: 400 18px Georgia, serif; }
+.ata-meet-reopen.ata-recording { border: 2px solid var(--ata-accent); }
+.ata-meet-window button:focus-visible, .ata-meet-reopen:focus-visible { outline: 2px solid var(--ata-accent); outline-offset: 3px; }
+@media (max-width: 480px) { .ata-meet-window, .ata-meet-reopen { right: 16px; bottom: 96px; } }
