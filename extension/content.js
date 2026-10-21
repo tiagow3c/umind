@@ -70,7 +70,16 @@
   label("Gravar com Ata");
   btn.addEventListener("click", () => { if (!starting && !stopping) void (state.rec ? stop(false) : start()); });
 
-  const inCall = () => !!document.querySelector('[aria-label*="Sair da chamada" i], [aria-label*="Leave call" i], [aria-label*="Sair da reunião" i]');
+  const callRules = globalThis.AtaMeetCallState;
+  const inCall = () => !!document.querySelector(callRules.leaveSelector);
+  const callEnded = () => callRules.ended(document.body.innerText);
+  // Observe Meet's own leave action; the Ata panel can remain minimized.
+  document.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest(callRules.leaveSelector)) {
+      lastCallSeen = 0;
+      if (state.rec) void stop(true);
+    }
+  }, true);
   const title = () => {
     const t = document.title.replace(/^Meet\s*[-–:]\s*/i, "").trim();
     return t && !/^meet$/i.test(t) && !/^[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(t) ? t : "Chamada do Meet";
@@ -173,10 +182,11 @@
 
   void chrome.storage.local.set({ inCallAt: 0 });
   // Open the in-tab window during a call; leaving the call ends the recording.
-  setInterval(() => {
+  const monitorCall = () => {
+    const ended = callEnded();
     const detected = inCall();
-    if (detected) lastCallSeen = Date.now();
-    const on = detected || (Date.now() - lastCallSeen < 6000);
+    if (detected && !ended) lastCallSeen = Date.now();
+    const on = !ended && (detected || (lastCallSeen > 0 && Date.now() - lastCallSeen < 6000));
     void chrome.storage.local.set({ inCallAt: on ? Date.now() : 0 });
     if (on && !panel.isConnected) {
       minimized = false;
@@ -191,7 +201,13 @@
       clock.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
     }
     if (!on && panel.isConnected && !state.rec) { panel.remove(); reopen.remove(); minimized = false; }
-    if (!on && state.rec) void stop(true);
-  }, 1500);
+    if (state.rec && callRules.shouldEnd({ ended, hasLeaveControl: detected, lastSeen: lastCallSeen, now: Date.now() })) void stop(true);
+  };
+  setInterval(monitorCall, 1500);
+  let checkTimer;
+  new MutationObserver(() => {
+    clearTimeout(checkTimer);
+    checkTimer = setTimeout(monitorCall, 100);
+  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-label", "hidden"] });
   window.addEventListener("beforeunload", () => { if (state.rec) void stop(); });
 })();
