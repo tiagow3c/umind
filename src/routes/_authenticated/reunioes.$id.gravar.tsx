@@ -3,8 +3,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { finalizeRecording, friendlyError, meetingQuery, setMeetingStatus, startRecording, uploadPending } from "@/lib/meetings";
-import { putChunk } from "@/lib/local-store";
+import { captureHeartbeat, finalizeRecording, friendlyError, meetingQuery, setMeetingStatus, startRecording, uploadPending } from "@/lib/meetings";
+import { markCaptureActive, putChunk, removeCapture, saveCapture } from "@/lib/local-store";
+import { supabase } from "@/integrations/supabase/client";
 import { transcribeLive } from "@/lib/processing.functions";
 import { MAX_DURATION_MS, canStartCapture } from "@/lib/meeting-rules";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,9 @@ function Gravar() {
   const [level, setLevel] = useState(0);
   const [starting, setStarting] = useState(false);
   const startingRef = useRef(false);
+  const stopping = useRef(false);
+  const writes = useRef<Promise<void>>(Promise.resolve());
+  const upload = useRef<Promise<unknown>>(Promise.resolve());
   const [progress, setProgress] = useState<[number, number]>([0, 0]);
   const rec = useRef<{ mr: MediaRecorder; stream: MediaStream; recordingId: string; seq: number; lastMs: number; ctx: AudioContext } | null>(null);
   const timer = useRef<{ start: number; acc: number } | null>(null);
@@ -93,6 +97,18 @@ function Gravar() {
 
   useEffect(() => () => { rec.current?.stream.getTracks().forEach((t) => t.stop()); }, []);
 
+  useEffect(() => {
+    if (phase !== "recording" && phase !== "paused") return;
+    const ping = async () => {
+      const r = rec.current;
+      if (!r || stopping.current) return;
+      if (r.mr.state === "inactive" || r.stream.getAudioTracks().every((t) => t.readyState === "ended")) { void stop(); return; }
+      try { if (!(await captureHeartbeat(r.recordingId, phase === "paused"))) void stop(); } catch { /* server expires an unreachable device */ }
+    };
+    void ping(); const t = setInterval(() => void ping(), 15000);
+    return () => clearInterval(t);
+  }, [phase]);
+
   // Keep the screen on while capturing so the phone does not lock and cut the microphone.
   const wake = useRef<{ release: () => Promise<void> } | null>(null);
   useEffect(() => {
@@ -102,8 +118,7 @@ function Gravar() {
     const onVisible = () => {
       if (document.visibilityState !== "visible") { wake.current = null; return; }
       void lock();
-      // If the system cut the microphone while away, pick it up again in the same recording.
-      if (phase === "recording" && rec.current && rec.current.stream.getAudioTracks().every((t) => t.readyState === "ended")) void reacquire();
+      if (phase === "recording" && rec.current && rec.current.stream.getAudioTracks().every((t) => t.readyState === "ended")) void stop();
     };
     void lock();
     document.addEventListener("visibilitychange", onVisible);
@@ -124,6 +139,11 @@ function Gravar() {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "";
       const recordingId = await startRecording(id, "live", mime || "default");
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) throw new Error("Sessão expirada");
+      const userId = auth.user.id;
+      markCaptureActive(recordingId, true);
+      await saveCapture({ ...meta, recordingId, userId, durationMs: 0 });
       const mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : undefined);
       const ctx = new AudioContext();
       const an = ctx.createAnalyser();
@@ -132,15 +152,24 @@ function Gravar() {
       const tick = () => { an.getByteTimeDomainData(buf); let p = 0; for (const v of buf) p = Math.max(p, Math.abs(v - 128)); setLevel(p / 128); if (ctx.state !== "closed") requestAnimationFrame(tick); };
       tick();
       rec.current = { mr, stream, recordingId, seq: 0, lastMs: 0, ctx };
-      mr.ondataavailable = async (ev) => {
+      mr.ondataavailable = (ev) => {
         if (!ev.data.size || !rec.current) return;
         const r = rec.current;
-        r.seq += 1;
+        const sequence = ++r.seq;
         const now = timer.current ? elapsedNow() : r.lastMs;
-        await putChunk({ key: `${recordingId}:${r.seq}`, recordingId, sequence: r.seq, blob: ev.data, startMs: r.lastMs, endMs: Math.max(now, r.lastMs), uploaded: false });
+        const startMs = r.lastMs;
         r.lastMs = Math.max(now, r.lastMs);
-        uploadPending({ ...meta, recordingId }).catch(() => {});
+        const endMs = r.lastMs;
+        writes.current = writes.current.then(async () => {
+          await putChunk({ key: `${recordingId}:${sequence}`, recordingId, sequence, blob: ev.data, startMs, endMs, uploaded: false });
+          await saveCapture({ ...meta, recordingId, userId, durationMs: endMs });
+        });
+        upload.current = upload.current.catch(() => {}).then(() => writes.current).then(() => uploadPending({ ...meta, recordingId }));
+        void upload.current.catch(() => {});
       };
+      mr.addEventListener("stop", () => { if (!stopping.current) void stop(); });
+      mr.addEventListener("error", () => void stop());
+      stream.getAudioTracks().forEach((track) => track.addEventListener("ended", () => void stop()));
       mr.start(CHUNK_MS);
       timer.current = { start: Date.now(), acc: 0 };
       startLiveLoop(stream, recordingId, mime);
@@ -154,23 +183,6 @@ function Gravar() {
       startingRef.current = false;
       setStarting(false);
     }
-  }
-
-  /** Restarts capture on the same recording after the phone stopped the microphone; already saved parts are kept. */
-  async function reacquire() {
-    const r = rec.current; if (!r) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
-      stopLiveLoop();
-      if (r.mr.state !== "inactive") r.mr.stop();
-      const mime = r.mr.mimeType;
-      const mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : undefined);
-      mr.ondataavailable = r.mr.ondataavailable;
-      r.mr = mr; r.stream = stream;
-      mr.start(CHUNK_MS);
-      startLiveLoop(stream, r.recordingId, mime);
-      toast("Gravação retomada.");
-    } catch { toast.error("O celular interrompeu o microfone. Toque em Encerrar para salvar o que foi gravado."); }
   }
 
   async function pause() {
@@ -193,15 +205,19 @@ function Gravar() {
 
   async function stop() {
     const r = rec.current; if (!r) return;
-    if (r.mr.state === "inactive") return;
+    if (stopping.current) return;
+    stopping.current = true;
     const finalMs = elapsedNow();
     if (timer.current) timer.current = { start: 0, acc: finalMs };
     setElapsed(finalMs);
     setPhase("uploading");
     stopLiveLoop();
-    await new Promise<void>((res) => { r.mr.addEventListener("stop", () => setTimeout(res, 300), { once: true }); r.mr.stop(); });
+    if (r.mr.state !== "inactive") await new Promise<void>((res) => { r.mr.addEventListener("stop", () => res(), { once: true }); r.mr.stop(); });
+    await writes.current;
     r.stream.getTracks().forEach((t) => t.stop());
     void r.ctx.close();
+    await upload.current.catch(() => {});
+    markCaptureActive(r.recordingId, false);
     await Promise.race([Promise.all([...live.current.pending]), new Promise((res) => setTimeout(res, 20_000))]);
     await finishUpload(r.recordingId, finalMs);
   }
@@ -212,6 +228,7 @@ function Gravar() {
       await setMeetingStatus(id, "uploading").catch(() => {});
       await uploadPending({ ...meta, recordingId }, (d, t) => setProgress([d, t]));
       await finalizeRecording(recordingId, Math.min(durationMs, MAX_DURATION_MS));
+      await removeCapture(recordingId);
       setPhase("done");
       toast.success("Áudio enviado. A reunião está na fila de processamento.");
       qc.invalidateQueries();

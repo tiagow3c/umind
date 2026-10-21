@@ -74,12 +74,14 @@ export const correctSegment = createServerFn({ method: "POST" })
       speaker_id: s.speaker_id, start_ms: s.start_ms, end_ms: s.end_ms, alignment_score: s.alignment_score, overlap: s.overlap,
       text: s.id === data.segmentId ? data.text : s.text,
       review_state: s.id === data.segmentId ? "corrected" : s.review_state,
+      recording_id: s.recording_id,
     }));
     for (let i = 0; i < rows.length; i += 500) {
       const r = await sb.from("transcript_segments").insert(rows.slice(i, i + 500));
       if (r.error) throw new Error(r.error.message);
     }
-    await sb.from("meetings").update({ current_transcript_id: tr.id }).eq("id", m.id);
+    const publication = await sb.from("meetings").update({ current_transcript_id: tr.id }).eq("id", m.id).eq("current_transcript_id", cur.id).select("id");
+    if (!publication.data?.length) throw new Error("transcript_changed");
     await sb.from("analyses").update({ stale: true }).eq("meeting_id", m.id);
     return { transcriptId: tr.id };
   });
