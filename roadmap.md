@@ -74,7 +74,8 @@
 - [x] Verificar os estados da janela e empacotar a versão 1.2 (teste simulado; chamada real depende do Chrome do usuário).
 
 # Encerramento automático e retomada
-- [ ] Encerrar no servidor gravações interrompidas por bateria, falha ou fechamento, preservando áudio recebido.
-- [ ] Encerrar automaticamente ao sair da chamada do Meet, com recuperação de envios pendentes.
-- [ ] Oferecer Gravar nova reunião e Retomar anterior ao voltar ao mesmo link, sem perder conteúdo anterior.
-- [ ] Testar interrupção, retomada e preservação de tarefas; empacotar extensão atualizada.
+- [x] Encerrar no servidor gravações interrompidas por bateria, falha ou fechamento, preservando áudio recebido.
+- [x] Encerrar automaticamente ao sair da chamada do Meet, com recuperação de envios pendentes.
+- [x] Oferecer Gravar nova reunião e Retomar anterior ao voltar ao mesmo link, sem perder conteúdo anterior.
+- [x] Testar interrupção, retomada e preservação de tarefas; empacotar extensão atualizada.
+- [ ] Ativar no site publicado e atualizar a extensão no Chrome — depende de publicação solicitada pelo usuário e reinstalação local; Meet validado em simulação.

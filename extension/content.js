@@ -123,7 +123,7 @@
     try { ids = await send({ type: "start", body: { title: title(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, codec: mime, meetUrl: location.href, resumeMeetingId, requestId: crypto.randomUUID() } }); }
     catch (e) {
       [tab, mic].forEach((s) => s && s.getTracks().forEach((t) => t.stop())); void ctx.close();
-      alert(e.message === "unauthorized" ? "Código inválido. Gere um novo em Ajustes no Ata." : "Não foi possível falar com o Ata. Verifique sua conexão.");
+      alert(e.message === "unauthorized" ? "Código inválido. Gere um novo em Ajustes no Ata." : e.message === "capture_active" ? "A reunião anterior ainda está gravando. Aguarde o encerramento para retomar." : e.message === "duration_limit" ? "Esta reunião atingiu o limite de 120 minutos." : e.message === "processing_busy" ? "A reunião está sendo processada. Tente retomar em instantes." : "Não foi possível falar com o Ata. Verifique sua conexão.");
       label("Gravar com Ata");
       return;
     }
