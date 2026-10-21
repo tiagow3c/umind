@@ -3,23 +3,34 @@
 <head>
 <meta charset="utf-8" />
 <style>
-  body { width: 280px; margin: 0; padding: 16px; font: 13px/1.45 system-ui, sans-serif; background: #f9f7f2; color: #2b2622; }
-  h1 { font: 400 22px Georgia, serif; margin: 0 0 8px; }
-  p { margin: 0 0 10px; color: #6b625a; }
-  input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #d8cfc3; background: #fff; font: 12px monospace; }
-  button { margin-top: 8px; padding: 7px 14px; border-radius: 999px; border: 1px solid #b5603f; background: #b5603f; color: #f9f7f2; cursor: pointer; }
-  #status { margin-top: 10px; }
+  body { width: 280px; margin: 0; padding: 16px; font: 13px/1.45 system-ui, sans-serif; background: #F7F4ED; color: #1B1B1B; }
+  h1 { font: 400 22px Georgia, serif; margin: 0 0 10px; }
+  p { margin: 0 0 10px; color: #5f5b54; }
+  input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #d9d5cb; background: #fff; font: 12px monospace; }
+  button { margin-top: 8px; padding: 7px 14px; border-radius: 999px; border: 1px solid #1B1B1B; background: #1B1B1B; color: #F7F4ED; cursor: pointer; }
+  button.ghost { background: transparent; color: #1B1B1B; border-color: #d9d5cb; }
+  .state { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid #d9d5cb; border-radius: 10px; background: #fff; margin-bottom: 10px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #2F9E6B; flex: none; }
+  .dot.pulse { animation: p 1.6s ease-in-out infinite; }
+  .dot.rec { background: #E5484D; animation: p 1s ease-in-out infinite; }
+  @keyframes p { 50% { opacity: .3; transform: scale(.8); } }
+  .small { font-size: 12px; color: #5f5b54; }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
   <h1>Ata</h1>
-  <p>Em uma chamada do Meet, toque em “Gravar com Ata” no topo da tela.</p>
-  <div id="form">
+  <div id="connected" hidden>
+    <div class="state"><span id="dot" class="dot pulse"></span><div><strong id="stTitle">Monitorando o Meet</strong><div id="stSub" class="small"></div></div></div>
+    <button id="reconnect" class="ghost">Reconectar</button>
+  </div>
+  <div id="form" hidden>
     <p>Cole o código gerado em Ajustes, no Ata:</p>
     <input id="token" placeholder="ata_…" autocomplete="off" />
     <button id="save">Conectar</button>
+    <button id="cancel" class="ghost" hidden>Cancelar</button>
   </div>
-  <div id="status"></div>
+  <div id="status" class="small"></div>
   <script src="popup.js"></script>
 </body>
 </html>

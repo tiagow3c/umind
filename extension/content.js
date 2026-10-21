@@ -77,6 +77,7 @@
     tab.getAudioTracks()[0].addEventListener("ended", () => stop());
     rec.start(PART_MS);
     label("● Gravando — parar", true);
+    void chrome.storage.local.set({ recording: { title: title(), startedAt: state.startedAt } });
   }
 
   async function stop() {
@@ -84,6 +85,7 @@
     if (!s.rec) return;
     state = { ...state, rec: null };
     label("Enviando…");
+    void chrome.storage.local.remove("recording");
     await new Promise((r) => { s.rec.onstop = r; try { s.rec.stop(); } catch { r(); } });
     s.streams.forEach((st) => st.getTracks().forEach((t) => t.stop()));
     void s.ctx.close();
@@ -96,9 +98,11 @@
     setTimeout(() => label("Gravar com Ata"), 4000);
   }
 
+  void chrome.storage.local.set({ inCallAt: 0 });
   // Show the button only during a call; leaving the call ends the recording.
   setInterval(() => {
     const on = inCall();
+    void chrome.storage.local.set({ inCallAt: on ? Date.now() : 0 });
     if (on && !btn.isConnected) document.body.appendChild(btn);
     if (!on && btn.isConnected && !state.rec) btn.remove();
     if (!on && state.rec) void stop();

@@ -40,3 +40,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   })().then((r) => reply({ ok: true, data: r }), (e) => reply({ ok: false, error: String(e.message || e) }));
   return true;
 });
+
+// Toolbar badge: red "REC" while recording, green dot when connected.
+async function badge() {
+  const { token, recording } = await chrome.storage.local.get(["token", "recording"]);
+  if (recording) { chrome.action.setBadgeText({ text: "REC" }); chrome.action.setBadgeBackgroundColor({ color: "#E5484D" }); }
+  else if (token) { chrome.action.setBadgeText({ text: "●" }); chrome.action.setBadgeBackgroundColor({ color: "#2F9E6B" }); }
+  else chrome.action.setBadgeText({ text: "" });
+}
+chrome.storage.onChanged.addListener(badge);
+chrome.runtime.onStartup.addListener(badge);
+chrome.runtime.onInstalled.addListener(badge);
