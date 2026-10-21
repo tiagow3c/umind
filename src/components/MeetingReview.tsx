@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { locateRecording } from "@/lib/capture-rules";
 import { addTaskToTodo } from "@/lib/todos";
 
 type Meeting = {
   id: string;
   current_transcript_id: string | null;
   participants: { id: string; display_name: string }[];
-  recordings: { id: string; codec: string | null; status: string; recording_parts: { object_key: string; sequence: number }[] }[];
+  recordings: { id: string; codec: string | null; status: string; timeline_offset_ms?: number; duration_ms?: number | null; recording_parts: { object_key: string; sequence: number }[] }[];
 };
 
 export function MeetingReview({ meeting }: { meeting: Meeting }) {
@@ -106,7 +107,7 @@ function Transcript({ meeting, focus }: { meeting: Meeting; focus: string | null
   const [draft, setDraft] = useState("");
   const audio = useRef<HTMLAudioElement>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const rec = meeting.recordings[0];
+
 
   useEffect(() => {
     if (focus) document.getElementById(`seg-${focus}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -120,11 +121,13 @@ function Transcript({ meeting, focus }: { meeting: Meeting; focus: string | null
   };
 
   async function play(ms: number) {
-    if (!rec) return;
+    const located = locateRecording(meeting.recordings, ms);
+    if (!located) return;
+    const { rec, localMs } = located;
     try {
-      const url = audioUrl ?? (await loadPlayableAudio(rec.id, rec.recording_parts, (rec.codec ?? "audio/webm").split(";")[0]!));
+      const url = await loadPlayableAudio(rec.id, rec.recording_parts, (rec.codec ?? "audio/webm").split(";")[0] ?? "audio/webm");
       setAudioUrl(url);
-      requestAnimationFrame(() => { if (audio.current) { audio.current.currentTime = ms / 1000; void audio.current.play(); } });
+      requestAnimationFrame(() => { if (audio.current) { audio.current.currentTime = localMs / 1000; void audio.current.play(); } });
     } catch { toast.error("O áudio não está disponível para reprodução."); }
   }
 

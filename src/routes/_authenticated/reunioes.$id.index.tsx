@@ -32,7 +32,9 @@ function Detalhe() {
   const qc = useQueryClient();
   const [full, setFull] = useState(false);
   if (!m) return <div><h1 className="text-4xl">Reunião indisponível</h1><p className="mt-2 text-muted-foreground">Ela não existe ou foi excluída.</p></div>;
-  const rec = m.recordings[0];
+  const rec = [...m.recordings].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+  const interrupted = m.recordings.some((r) => r.interruption_reason);
+  const interruptionNotice = interrupted ? <p className="border-l-2 border-warning pl-4 text-sm text-muted-foreground">A gravação foi interrompida. O áudio recebido foi preservado.</p> : null;
   const parts = rec?.recording_parts ?? [];
   const confirmed = parts.filter((p) => p.status === "confirmed").length;
 
@@ -50,6 +52,7 @@ function Detalhe() {
     return (
       <div className="space-y-6 py-4">
         <h1 className="text-5xl">{m.title}</h1>
+        {interruptionNotice}
         {processingLive && <ProcessingPanel meetingId={m.id} status={m.status} compact />}
         <MeetingOverview meeting={m} processing={processingLive} onFull={() => setFull(true)} />
       </div>
@@ -66,6 +69,7 @@ function Detalhe() {
         </div>
         <StatusBadge status={m.status} />
       </header>
+      {interruptionNotice}
 
       {(m.status === "processing" || m.status === "failed") && rec?.finalized_at && <ProcessingPanel meetingId={m.id} status={m.status} />}
 

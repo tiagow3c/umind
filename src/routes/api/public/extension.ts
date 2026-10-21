@@ -35,7 +35,7 @@ export const Route = createFileRoute("/api/public/extension")({
             return json({ meeting });
           }
           if (!body.requestId) return json({ error: "request" }, 400);
-          const result = await db.rpc("meet_start_capture", { _user: tk.user_id, _workspace: tk.workspace_id, _url: room, _resume: body.resumeMeetingId ?? null, _request: body.requestId, _title: body.title, _timezone: body.timezone, _codec: body.codec });
+          const result = await db.rpc("meet_start_capture", { _user: tk.user_id, _workspace: tk.workspace_id, _url: room, ...(body.resumeMeetingId ? { _resume: body.resumeMeetingId } : {}), _request: body.requestId, _title: body.title, _timezone: body.timezone, _codec: body.codec });
           if (result.error) return json({ error: result.error.message.includes("capture_active") ? "capture_active" : result.error.message.includes("duration_limit") ? "duration_limit" : "processing_busy" }, 409);
           return json(result.data);
         }
@@ -78,7 +78,7 @@ export const Route = createFileRoute("/api/public/extension")({
         if (action === "finish") {
           const parsed = z.object({ durationMs: z.number().min(0).max(7200000).optional(), participants: z.array(z.string().max(120)).max(30).optional() }).safeParse(await request.json().catch(() => ({})));
           if (!parsed.success) return json({ error: "input" }, 400);
-          const result = await db.rpc("finish_capture_internal", { _recording: rec.id, _reason: null });
+          const result = await db.rpc("finish_capture_internal", { _recording: rec.id });
           if (result.error) return json({ error: "finish" }, 500);
           return json({ ok: true, meetingId: rec.meeting_id });
         }

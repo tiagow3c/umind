@@ -1210,11 +1210,11 @@ export type Database = {
       is_workspace_member: { Args: { _ws: string }; Returns: boolean }
       meet_start_capture: {
         Args: {
-          _codec: string
-          _request: string
-          _resume: string
-          _timezone: string
-          _title: string
+          _codec?: string
+          _request?: string
+          _resume?: string
+          _timezone?: string
+          _title?: string
           _url: string
           _user: string
           _workspace: string
@@ -1239,9 +1239,9 @@ export type Database = {
       }
       publish_capture_transcript: {
         Args: {
-          _expected: string
+          _expected?: string
           _recording: string
-          _rows: Json
+          _rows?: Json
           _run: string
         }
         Returns: string
