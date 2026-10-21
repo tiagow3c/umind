@@ -148,6 +148,13 @@
       "when": 1792514643199,
       "tag": "0020_extension_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792591229308,
+      "tag": "0021_capture_recovery_and_resume",
+      "breakpoints": true
     }
   ]
 }
