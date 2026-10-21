@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
+import { normalizeMeetUrl } from "@/lib/capture-rules";
 import { sha256 } from "@/lib/extension.functions";
 
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
@@ -23,37 +25,45 @@ export const Route = createFileRoute("/api/public/extension")({
           return json({ ok: true });
         }
 
-        if (action === "start") {
-          const body = (await request.json().catch(() => ({}))) as { title?: string; timezone?: string; codec?: string };
-          const title = (body.title || "Chamada do Meet").slice(0, 200);
-          const now = new Date().toISOString();
-          const { data: m, error } = await db.from("meetings").insert({
-            workspace_id: tk.workspace_id, owner_id: tk.user_id, title, timezone: (body.timezone || "America/Sao_Paulo").slice(0, 60),
-            source_type: "live", status: "recording", started_at: now,
-          }).select("id").single();
-          if (error || !m) return json({ error: "meeting" }, 500);
-          const { data: r, error: e2 } = await db.from("recordings").insert({
-            workspace_id: tk.workspace_id, meeting_id: m.id, source_type: "live", status: "uploading", channels: 1,
-            codec: (body.codec || "audio/webm;codecs=opus").slice(0, 60), device_id: "google-meet-extension",
-          }).select("id").single();
-          if (e2 || !r) return json({ error: "recording" }, 500);
-          return json({ meetingId: m.id, recordingId: r.id });
+        if (action === "lookup" || action === "start") {
+          const parsed = z.object({ meetUrl: z.string().max(500), resumeMeetingId: z.string().uuid().nullable().optional(), requestId: z.string().uuid().optional(), title: z.string().min(1).max(200).default("Chamada do Meet"), timezone: z.string().max(60).default("America/Sao_Paulo"), codec: z.string().max(60).default("audio/webm;codecs=opus") }).safeParse(await request.json().catch(() => null));
+          if (!parsed.success) return json({ error: "input" }, 400);
+          const body = parsed.data, room = normalizeMeetUrl(body.meetUrl);
+          if (!room) return json({ error: "room" }, 400);
+          if (action === "lookup") {
+            const { data: meeting } = await db.from("meetings").select("id,title,status,created_at").eq("owner_id", tk.user_id).eq("workspace_id", tk.workspace_id).eq("meet_url", room).not("status", "in", "(deleting,deleted)").order("created_at", { ascending: false }).limit(1).maybeSingle();
+            return json({ meeting });
+          }
+          if (!body.requestId) return json({ error: "request" }, 400);
+          const result = await db.rpc("meet_start_capture", { _user: tk.user_id, _workspace: tk.workspace_id, _url: room, _resume: body.resumeMeetingId ?? null, _request: body.requestId, _title: body.title, _timezone: body.timezone, _codec: body.codec });
+          if (result.error) return json({ error: result.error.message.includes("capture_active") ? "capture_active" : result.error.message.includes("duration_limit") ? "duration_limit" : "processing_busy" }, 409);
+          return json(result.data);
         }
 
         const recordingId = url.searchParams.get("recording") ?? "";
         if (!/^[0-9a-f-]{36}$/.test(recordingId)) return json({ error: "recording" }, 400);
-        const { data: rec } = await db.from("recordings").select("id, meeting_id, finalized_at, meetings!inner(workspace_id, owner_id)").eq("id", recordingId).maybeSingle();
-        const owner = rec?.meetings as unknown as { workspace_id: string; owner_id: string } | undefined;
-        if (!rec || owner?.owner_id !== tk.user_id) return json({ error: "not_found" }, 404);
+        const { data: rec } = await db.from("recordings").select("id, meeting_id, finalized_at, interruption_reason, timeline_offset_ms, meetings!inner(workspace_id, owner_id, status)").eq("id", recordingId).maybeSingle();
+        const owner = rec?.meetings as unknown as { workspace_id: string; owner_id: string; status: string } | undefined;
+        if (!rec || owner?.owner_id !== tk.user_id || owner.workspace_id !== tk.workspace_id || ["deleting", "deleted"].includes(owner.status)) return json({ error: "not_found" }, 404);
 
+        if (action === "heartbeat") {
+          if (rec.finalized_at) return json({ active: false });
+          const { error } = await db.from("recordings").update({ capture_last_seen_at: new Date().toISOString() }).eq("id", rec.id).is("finalized_at", null);
+          return error ? json({ error: "heartbeat" }, 500) : json({ active: true });
+        }
         if (action === "part") {
           const seq = Number(url.searchParams.get("seq"));
           const startMs = Number(url.searchParams.get("start")), endMs = Number(url.searchParams.get("end"));
-          if (!Number.isInteger(seq) || seq < 1 || seq > 100000 || rec.finalized_at) return json({ error: "part" }, 400);
+          if (!Number.isInteger(seq) || seq < 1 || seq > 100000 || (rec.finalized_at && !rec.interruption_reason)) return json({ error: "part" }, 400);
+          if (!Number.isInteger(startMs) || !Number.isInteger(endMs) || startMs < 0 || endMs < startMs || endMs > 7200000 - rec.timeline_offset_ms) return json({ error: "timing" }, 400);
           const blob = await request.arrayBuffer();
           if (!blob.byteLength || blob.byteLength > 20 * 1024 * 1024) return json({ error: "size" }, 400);
+          const digest = await crypto.subtle.digest("SHA-256", blob);
+          const incomingHash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+          const { data: existing } = await db.from("recording_parts").select("sha256").eq("recording_id", rec.id).eq("sequence", seq).maybeSingle();
+          if (existing) return existing.sha256 === incomingHash ? json({ ok: true }) : json({ error: "part_conflict" }, 409);
           const key = `${tk.workspace_id}/${rec.meeting_id}/${rec.id}/part-${seq}`;
-          const up = await db.storage.from("recordings").upload(key, blob, { upsert: true, contentType: "audio/webm" });
+          const up = await db.storage.from("recordings").upload(key, blob, { upsert: false, contentType: "audio/webm" });
           if (up.error) return json({ error: "upload" }, 500);
           const hash = await crypto.subtle.digest("SHA-256", blob);
           const sha = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -66,18 +76,10 @@ export const Route = createFileRoute("/api/public/extension")({
         }
 
         if (action === "finish") {
-          const body = (await request.json().catch(() => ({}))) as { durationMs?: number; participants?: string[] };
-          if (rec.finalized_at) return json({ ok: true, meetingId: rec.meeting_id });
-          const { data: parts } = await db.from("recording_parts").select("sequence, bytes").eq("recording_id", rec.id).order("sequence");
-          if (!parts?.length) {
-            await db.from("meetings").update({ status: "deleted", deleted_at: new Date().toISOString() }).eq("id", rec.meeting_id);
-            return json({ ok: true, empty: true });
-          }
-          const names = [...new Set((body.participants ?? []).map((n) => String(n).replace(/\s+/g, " ").trim().slice(0, 120)).filter(Boolean))].slice(0, 30);
-          if (names.length) await db.from("participants").insert(names.map((display_name) => ({ workspace_id: tk.workspace_id, meeting_id: rec.meeting_id, display_name, source: "meet" })));
-          await db.from("recordings").update({ status: "uploaded", duration_ms: Math.max(0, Math.round(body.durationMs ?? 0)), manifest_hash: await sha256(parts.map((p) => `${p.sequence}:${p.bytes}`).join("|")), finalized_at: new Date().toISOString() }).eq("id", rec.id);
-          await db.from("meetings").update({ status: "processing", ended_at: new Date().toISOString() }).eq("id", rec.meeting_id);
-          await db.from("outbox_events").insert({ type: "recording.finalized", workspace_id: tk.workspace_id, entity_id: rec.id, version: 1, payload: { meeting_id: rec.meeting_id } });
+          const parsed = z.object({ durationMs: z.number().min(0).max(7200000).optional(), participants: z.array(z.string().max(120)).max(30).optional() }).safeParse(await request.json().catch(() => ({})));
+          if (!parsed.success) return json({ error: "input" }, 400);
+          const result = await db.rpc("finish_capture_internal", { _recording: rec.id, _reason: null });
+          if (result.error) return json({ error: "finish" }, 500);
           return json({ ok: true, meetingId: rec.meeting_id });
         }
         return json({ error: "action" }, 400);
