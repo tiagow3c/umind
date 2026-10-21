@@ -299,6 +299,7 @@ export type Database = {
           deleted_at: string | null
           ended_at: string | null
           id: string
+          meet_url: string | null
           owner_id: string
           people_version: number
           scheduled_at: string | null
@@ -318,6 +319,7 @@ export type Database = {
           deleted_at?: string | null
           ended_at?: string | null
           id?: string
+          meet_url?: string | null
           owner_id: string
           people_version?: number
           scheduled_at?: string | null
@@ -337,6 +339,7 @@ export type Database = {
           deleted_at?: string | null
           ended_at?: string | null
           id?: string
+          meet_url?: string | null
           owner_id?: string
           people_version?: number
           scheduled_at?: string | null
@@ -701,6 +704,8 @@ export type Database = {
       }
       recordings: {
         Row: {
+          capture_last_seen_at: string | null
+          capture_state: string | null
           channels: number
           codec: string | null
           created_at: string
@@ -708,15 +713,19 @@ export type Database = {
           duration_ms: number | null
           finalized_at: string | null
           id: string
+          interruption_reason: string | null
           manifest_hash: string | null
           meeting_id: string
           sample_rate: number | null
           source_type: string
           status: Database["public"]["Enums"]["recording_status"]
+          timeline_offset_ms: number
           updated_at: string
           workspace_id: string
         }
         Insert: {
+          capture_last_seen_at?: string | null
+          capture_state?: string | null
           channels?: number
           codec?: string | null
           created_at?: string
@@ -724,15 +733,19 @@ export type Database = {
           duration_ms?: number | null
           finalized_at?: string | null
           id?: string
+          interruption_reason?: string | null
           manifest_hash?: string | null
           meeting_id: string
           sample_rate?: number | null
           source_type: string
           status?: Database["public"]["Enums"]["recording_status"]
+          timeline_offset_ms?: number
           updated_at?: string
           workspace_id: string
         }
         Update: {
+          capture_last_seen_at?: string | null
+          capture_state?: string | null
           channels?: number
           codec?: string | null
           created_at?: string
@@ -740,11 +753,13 @@ export type Database = {
           duration_ms?: number | null
           finalized_at?: string | null
           id?: string
+          interruption_reason?: string | null
           manifest_hash?: string | null
           meeting_id?: string
           sample_rate?: number | null
           source_type?: string
           status?: Database["public"]["Enums"]["recording_status"]
+          timeline_offset_ms?: number
           updated_at?: string
           workspace_id?: string
         }
@@ -767,6 +782,7 @@ export type Database = {
           meeting_id: string
           participant_id: string | null
           provider_label: string
+          recording_id: string | null
           run_id: string | null
           sample_end_ms: number | null
           sample_start_ms: number | null
@@ -781,6 +797,7 @@ export type Database = {
           meeting_id: string
           participant_id?: string | null
           provider_label: string
+          recording_id?: string | null
           run_id?: string | null
           sample_end_ms?: number | null
           sample_start_ms?: number | null
@@ -795,6 +812,7 @@ export type Database = {
           meeting_id?: string
           participant_id?: string | null
           provider_label?: string
+          recording_id?: string | null
           run_id?: string | null
           sample_end_ms?: number | null
           sample_start_ms?: number | null
@@ -814,6 +832,13 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "speakers_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "recordings"
             referencedColumns: ["id"]
           },
         ]
@@ -958,6 +983,7 @@ export type Database = {
           meeting_id: string
           overlap: boolean
           position: number
+          recording_id: string | null
           review_state: string
           speaker_id: string | null
           start_ms: number
@@ -976,6 +1002,7 @@ export type Database = {
           meeting_id: string
           overlap?: boolean
           position: number
+          recording_id?: string | null
           review_state?: string
           speaker_id?: string | null
           start_ms: number
@@ -994,6 +1021,7 @@ export type Database = {
           meeting_id?: string
           overlap?: boolean
           position?: number
+          recording_id?: string | null
           review_state?: string
           speaker_id?: string | null
           start_ms?: number
@@ -1003,6 +1031,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transcript_segments_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "recordings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transcript_segments_speaker_id_fkey"
             columns: ["speaker_id"]
@@ -1147,13 +1182,22 @@ export type Database = {
     Functions: {
       bump_people_version: { Args: { _meeting: string }; Returns: undefined }
       cancel_processing: { Args: { _meeting: string }; Returns: undefined }
+      capture_heartbeat: {
+        Args: { _paused?: boolean; _recording: string }
+        Returns: boolean
+      }
       delete_meeting: { Args: { _meeting: string }; Returns: undefined }
+      expire_captures: { Args: never; Returns: number }
       finalize_recording: {
         Args: {
           _duration_ms: number
           _manifest_hash: string
           _recording: string
         }
+        Returns: Database["public"]["Enums"]["meeting_status"]
+      }
+      finish_capture_internal: {
+        Args: { _reason?: string; _recording: string }
         Returns: Database["public"]["Enums"]["meeting_status"]
       }
       has_role: {
@@ -1164,10 +1208,43 @@ export type Database = {
         Returns: boolean
       }
       is_workspace_member: { Args: { _ws: string }; Returns: boolean }
+      meet_start_capture: {
+        Args: {
+          _codec: string
+          _request: string
+          _resume: string
+          _timezone: string
+          _title: string
+          _url: string
+          _user: string
+          _workspace: string
+        }
+        Returns: Json
+      }
       meeting_visible: { Args: { _meeting: string }; Returns: boolean }
       merge_people: {
         Args: { _from: string; _into: string }
         Returns: undefined
+      }
+      publish_capture_analysis: {
+        Args: {
+          _items: Json
+          _meeting: string
+          _partial: boolean
+          _summary: string
+          _tasks: Json
+          _transcript: string
+        }
+        Returns: string
+      }
+      publish_capture_transcript: {
+        Args: {
+          _expected: string
+          _recording: string
+          _rows: Json
+          _run: string
+        }
+        Returns: string
       }
       recording_visible: { Args: { _rec: string }; Returns: boolean }
       search_items: {

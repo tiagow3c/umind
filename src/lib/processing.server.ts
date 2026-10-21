@@ -230,11 +230,13 @@ async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: 
 }
 
 async function stageAlign(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string, inputVersion: string) {
-  const { data: runs } = await admin.from("processing_runs").select("stage, output")
+  const { data: runs } = await admin.from("processing_runs").select("id, stage, output")
     .eq("recording_id", recordingId).eq("input_version", inputVersion).eq("config_version", CONFIG_VERSION).in("stage", ["transcribe", "diarize"]);
   const diar = runs?.find((r) => r.stage === "diarize")?.output as { utterances?: Utterance[]; matches?: Record<string, string>; samples?: Record<string, { start_ms: number; end_ms: number }> } | null;
-  const { data: raw } = await admin.from("transcripts").select("raw_text").eq("meeting_id", meeting.id).eq("kind", "raw_openai").order("created_at", { ascending: false }).limit(1);
-  const { data: rec } = await admin.from("recordings").select("duration_ms").eq("id", recordingId).single();
+  const transcribeRun = runs?.find((r) => r.stage === "transcribe");
+  const { data: raw } = await admin.from("transcripts").select("raw_text").eq("run_id", transcribeRun?.id ?? runId).eq("kind", "raw_openai").order("created_at", { ascending: false }).limit(1);
+  const { data: rec } = await admin.from("recordings").select("duration_ms, timeline_offset_ms").eq("id", recordingId).single();
+  const { data: before } = await admin.from("meetings").select("current_transcript_id").eq("id", meeting.id).single();
   const turns = diar?.utterances ?? [];
   const hasText = turns.some((u) => u.text);
   let segments = alignTranscripts({ utterances: hasText ? turns : null, openaiText: raw?.[0]?.raw_text ?? null, durationMs: Number(rec?.duration_ms ?? 0) });
@@ -242,12 +244,9 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
   if (!segments.length) throw new StageError("empty transcript", "no_speech", false);
   if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
 
-  const { data: tr, error } = await admin.from("transcripts").insert({
-    workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: turns.length ? "diarized+openai" : "openai", kind: "canonical", version: 1,
-  }).select("id").single();
-  if (error || !tr) throw new StageError("insert failed", "db", true);
+  const { count: earlierVoices } = await admin.from("speakers").select("id", { count: "exact", head: true }).eq("meeting_id", meeting.id);
   const labels = [...new Set(segments.map((s) => s.speaker).filter((s): s is number => s !== null))].sort((a, b) => a - b);
-  const labelOf = (l: number) => `Falante ${labels.indexOf(l) + 1}`;
+  const labelOf = (l: number) => `Falante ${(earlierVoices ?? 0) + labels.indexOf(l) + 1}`;
 
   // 1) Voices + transcript first, so the user can start naming them right away.
   const speakerIds = new Map<number, string>();
@@ -255,20 +254,17 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
     const sample = diar?.samples?.[String(l)];
     const { data: sp } = await admin.from("speakers").insert({
       workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider_label: labelOf(l),
-      sample_start_ms: sample?.start_ms ?? null, sample_end_ms: sample?.end_ms ?? null,
+      recording_id: recordingId,
+      sample_start_ms: sample ? sample.start_ms + (rec?.timeline_offset_ms ?? 0) : null, sample_end_ms: sample ? sample.end_ms + (rec?.timeline_offset_ms ?? 0) : null,
     }).select("id").single();
     if (sp) speakerIds.set(l, sp.id);
   }
   const rows = segments.map((s) => ({
-    workspace_id: meeting.workspace_id, meeting_id: meeting.id, transcript_id: tr.id, position: s.position,
     speaker_id: s.speaker === null ? null : speakerIds.get(s.speaker) ?? null,
     start_ms: s.start_ms, end_ms: s.end_ms, text: s.text, alignment_score: s.alignment_score, review_state: s.review_state,
   }));
-  for (let i = 0; i < rows.length; i += 500) {
-    const r = await admin.from("transcript_segments").insert(rows.slice(i, i + 500));
-    if (r.error) throw new StageError("segments insert failed", "db", true);
-  }
-  await admin.from("meetings").update({ current_transcript_id: tr.id }).eq("id", meeting.id);
+  const published = await admin.rpc("publish_capture_transcript", { _recording: recordingId, _run: runId, _expected: before?.current_transcript_id ?? null, _rows: rows });
+  if (published.error || !published.data) throw new StageError("transcript changed", "stale_capture", true);
 
   // 2) Automatic naming. Never overwrites a voice the user already named meanwhile.
   const matches = diar?.matches ?? {};
@@ -321,7 +317,7 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
   if (labels.length && labels.every((l) => known.has(l) || aiNames.has(l) || userNamed.has(speakerIds.get(l) ?? ""))) {
     await admin.from("meetings").update({ analysis_requested_at: new Date().toISOString() }).eq("id", meeting.id).is("analysis_requested_at", null);
   }
-  return { transcript_id: tr.id, segments: rows.length, uncertain: segments.filter((s) => s.review_state === "uncertain").length };
+  return { transcript_id: published.data, segments: rows.length, uncertain: segments.filter((s) => s.review_state === "uncertain").length };
 }
 
 const evidence = { type: "array", items: { type: "integer" } };
@@ -463,7 +459,7 @@ export async function rewriteMeetingTasks(admin: Admin, meetingId: string) {
   const v = validateAnalysis({ summary: "", topics: [], decisions: [], proposals: [], questions: [], tasks: out.tasks ?? [] }, segs.length);
   const { data: existing } = await admin.from("tasks").select("id, status, manual, source_analysis_id, source_version").eq("meeting_id", meetingId);
   const replace = tasksToReplace(existing ?? []).map((t) => t.id);
-  if (replace.length) await admin.from("tasks").update({ status: "dismissed" }).in("id", replace);
+  if (replace.length) await admin.from("tasks").update({ status: "dismissed" }).in("id", replace).eq("status", "suggested").eq("manual", false);
   const { data: an } = await admin.from("analyses").select("id").eq("meeting_id", meetingId).order("created_at", { ascending: false }).limit(1).single();
   if (!an) throw new Error("no_analysis");
   const ref = existing?.[0];
@@ -485,27 +481,15 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
   const idOf = (ev: number[]) => ev.map((n) => segs[n]!.id);
   if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
 
-  await admin.from("analyses").update({ stale: true }).eq("meeting_id", meeting.id);
-  const { data: an, error } = await admin.from("analyses").insert({
-    workspace_id: meeting.workspace_id, meeting_id: meeting.id, transcript_id: meeting.current_transcript_id,
-    schema_version: ANALYSIS_SCHEMA_VERSION, model_id: ANALYSIS_MODEL, summary: v.summary, partial,
-  }).select("id").single();
-  if (error || !an) throw new StageError("insert failed", "db", true);
   const items = [
     ...v.topics.map((x, i) => ({ kind: "topic", ...x, i })),
     ...v.decisions.map((x, i) => ({ kind: "decision", ...x, i })),
     ...v.proposals.map((x, i) => ({ kind: "proposal", ...x, i })),
     ...v.questions.map((x, i) => ({ kind: "question", ...x, i })),
-  ].map((x) => ({ workspace_id: meeting.workspace_id, analysis_id: an.id, meeting_id: meeting.id, kind: x.kind, text: x.text, evidence_segment_ids: idOf(x.evidence), position: x.i }));
-  if (items.length) await admin.from("analysis_items").insert(items);
-
-  const { data: existing } = await admin.from("tasks").select("id, status, manual").eq("meeting_id", meeting.id);
-  const replace = tasksToReplace(existing ?? []).map((t) => t.id);
-  if (replace.length) await admin.from("tasks").update({ status: "dismissed" }).in("id", replace);
-  const { data: ver } = await admin.from("transcripts").select("version").eq("id", meeting.current_transcript_id).single();
-  if (v.tasks.length) {
-    await admin.from("tasks").insert(taskRows(meeting, v.tasks, idOf, an.id, ver?.version ?? 1));
-  }
+  ].map((x) => ({ kind: x.kind, text: x.text, evidence_segment_ids: idOf(x.evidence), position: x.i }));
+  const published = await admin.rpc("publish_capture_analysis", { _meeting: meeting.id, _transcript: meeting.current_transcript_id,
+    _summary: v.summary, _partial: partial, _items: items, _tasks: taskRows(meeting, v.tasks, idOf, "", 1) });
+  if (published.error || !published.data) throw new StageError("analysis changed", "stale_capture", true);
   const p2 = parsed as RawAnalysis & { title?: string; speakers?: { label: string; name: string | null }[] };
   const aiTitle = p2.title?.trim().slice(0, 200);
   if (aiTitle) await admin.from("meetings").update({ title: aiTitle }).eq("id", meeting.id).eq("title", AUTO_TITLE);
@@ -525,7 +509,7 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
     if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: "ai" }).eq("id", sp.id).is("participant_id", null);
   }
   await admin.from("meetings").update({ status: "completed" }).eq("id", meeting.id).eq("status", "processing");
-  return { analysis_id: an.id, tasks: v.tasks.length, decisions: v.decisions.length };
+  return { analysis_id: published.data, tasks: v.tasks.length, decisions: v.decisions.length };
 }
 
 async function embedTexts(texts: string[]): Promise<number[][]> {
@@ -608,7 +592,10 @@ export type StageState = { stage: Stage; status: string; error_code: string | nu
 export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { probe?: boolean }): Promise<{ stages: StageState[]; meetingStatus: string; paused: boolean; pauseReason: string | null }> {
   const { data: m } = await admin.from("meetings").select("*").eq("id", meetingId).single();
   if (!m) throw new Error("not_found");
-  const { data: rec } = await admin.from("recordings").select("id, manifest_hash, status").eq("meeting_id", meetingId).not("finalized_at", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const { data: recordings } = await admin.from("recordings").select("id, manifest_hash, status").eq("meeting_id", meetingId).in("status", ["uploaded", "partial"]).not("finalized_at", "is", null).order("created_at");
+  const { data: aligned } = await admin.from("processing_runs").select("recording_id, input_version").eq("meeting_id", meetingId).eq("stage", "align").eq("status", "succeeded");
+  const rec = recordings?.find((r) => !aligned?.some((a) => a.recording_id === r.id && a.input_version === r.manifest_hash)) ?? recordings?.at(-1);
+  const pendingRecordings = recordings?.some((r) => r.id !== rec?.id && !aligned?.some((a) => a.recording_id === r.id && a.input_version === r.manifest_hash));
   const summarize = async () => {
     const { data: runs } = await admin.from("processing_runs").select("stage, status, error_code, attempt, input_version").eq("meeting_id", meetingId).order("created_at");
     const { data: fresh } = await admin.from("meetings").select("status").eq("id", meetingId).single();
@@ -622,6 +609,7 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
   if (job?.paused && !opts?.probe) return summarize();
 
   for (const stage of STAGES) {
+    if (pendingRecordings && (stage === "analyze" || stage === "embed")) return summarize();
     if (m.status !== "processing" && stage !== "embed") continue;
     const inputVersion = stage === "analyze" || stage === "embed" ? `${m.current_transcript_id ?? "none"}:${m.people_version ?? 0}` : rec.manifest_hash ?? rec.id;
     const key = { recording_id: rec.id, stage, input_version: inputVersion, config_version: CONFIG_VERSION };
@@ -666,7 +654,7 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
         lease_until: terminal ? null : new Date(Date.now() + backoff).toISOString(),
       }).eq("id", run.id);
       if (err.code === "credits" || err.code === "forbidden") await setJobPaused(admin, true, err.code);
-      if (terminal && err.code !== "cancelled") await admin.from("meetings").update({ status: "failed" }).eq("id", m.id).eq("status", "processing");
+      if (terminal && err.code !== "cancelled" && err.code !== "stale_capture") await admin.from("meetings").update({ status: "failed" }).eq("id", m.id).eq("status", "processing");
     }
     return summarize();
   }

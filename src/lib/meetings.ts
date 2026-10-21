@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { listChunks, putChunk, sha256Hex, type LocalChunk } from "./local-store";
+import { isCaptureActive, listCaptures, listChunks, putChunk, removeCapture, sha256Hex, type LocalChunk } from "./local-store";
 
 function ok<R extends { data: unknown; error: { message: string } | null }>(r: R): NonNullable<R["data"]> {
   if (r.error) throw new Error(r.error.message);
@@ -71,7 +71,26 @@ export async function startRecording(meetingId: string, source: "live" | "import
 }
 
 export async function setMeetingStatus(meetingId: string, status: "recording" | "paused" | "uploading") {
-  ok(await supabase.from("meetings").update({ status }).eq("id", meetingId));
+  ok(await supabase.from("meetings").update({ status }).eq("id", meetingId).in("status", ["recording", "paused", "uploading"]));
+}
+
+export async function captureHeartbeat(recordingId: string, paused = false) {
+  return ok(await supabase.rpc("capture_heartbeat", { _recording: recordingId, _paused: paused }));
+}
+
+export async function recoverLocalCaptures(userId: string) {
+  let recovered = 0;
+  for (const s of await listCaptures()) {
+    if (s.userId !== userId || isCaptureActive(s.recordingId)) continue;
+    const { data: r } = await supabase.from("recordings").select("capture_last_seen_at, finalized_at, meetings!inner(status)").eq("id", s.recordingId).maybeSingle();
+    if (!r || ["deleting", "deleted"].includes(r.meetings.status)) { await removeCapture(s.recordingId); continue; }
+    // Another tab may still be capturing. Do not close a fresh session.
+    if (!r.finalized_at && r.capture_last_seen_at && Date.now() - Date.parse(r.capture_last_seen_at) < 180000) continue;
+    const chunks = await uploadPending(s);
+    await finalizeRecording(s.recordingId, Math.max(s.durationMs, ...chunks.map((c) => c.endMs)));
+    await removeCapture(s.recordingId); recovered++;
+  }
+  return recovered;
 }
 
 /** Upload every local chunk not yet confirmed; safe to call repeatedly. */

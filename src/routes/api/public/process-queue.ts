@@ -13,6 +13,9 @@ export const Route = createFileRoute("/api/public/process-queue")({
         const authFailure = await authenticateCronRequest(request);
         if (authFailure) return authFailure;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        // Capture recovery is independent of AI credits and processing leases.
+        const expired = await supabaseAdmin.rpc("expire_captures");
+        if (expired.error) throw new Error("capture_recovery_failed");
         if (!(await tryAcquireLease(supabaseAdmin, LEASE_TTL_MS))) {
           return Response.json({ ok: true, skipped: "locked" });
         }
