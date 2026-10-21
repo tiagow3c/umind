@@ -71,4 +71,4 @@
 # Janela da extensão no Meet
 - [x] Substituir botão solto por janela arredondada automática com Gravar, contador e Encerrar.
 - [x] Permitir minimizar e reabrir sem interromper gravação.
-- [ ] Verificar os estados da janela e empacotar a versão 1.2.
+- [x] Verificar os estados da janela e empacotar a versão 1.2 (teste simulado; chamada real depende do Chrome do usuário).
