@@ -6,6 +6,7 @@ import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignS
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
 import { avatarSrc } from "@/lib/people-rules";
+import { locateRecording } from "@/lib/capture-rules";
 import { fmtTime } from "@/lib/review";
 import { VoiceAvatar, speakerSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
 
@@ -14,7 +15,7 @@ type Meeting = {
   current_transcript_id: string | null;
   analysis_requested_at?: string | null;
   participants: { id: string; display_name: string; person_confirmed: boolean; person_id?: string | null }[];
-  recordings: { id: string; codec: string | null; recording_parts: { object_key: string; sequence: number }[] }[];
+  recordings: { id: string; codec: string | null; timeline_offset_ms?: number; duration_ms?: number | null; recording_parts: { object_key: string; sequence: number }[] }[];
 };
 
 function firstSentences(text: string, n = 4) {
@@ -138,6 +139,9 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
           <h2 className="text-3xl">Participantes</h2>
           <ul className="mt-6 grid grid-cols-2 justify-items-center gap-x-6 gap-y-8 sm:mt-8 sm:flex sm:flex-wrap sm:gap-8">
             {speakers.map((s, i) => {
+              const sample = samples.get(s.id) ?? null;
+              const located = sample ? locateRecording(meeting.recordings, sample.start) : null;
+              const localSample = sample && located ? { start: located.localMs, end: located.localMs + sample.end - sample.start } : null;
               const part = meeting.participants.find((p) => p.id === s.participant_id);
               const name = part?.display_name ?? "";
               const suggested = !!part && !part.person_confirmed && (s.mapping_source === "ai" || s.mapping_source === "voice");
@@ -146,7 +150,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                 <li key={s.id + name} className="relative flex w-28 flex-col items-center gap-2">
                   <VoiceAvatar
                     ref={(h) => { if (h) avatarRefs.current.set(s.id, h); else avatarRefs.current.delete(s.id); }}
-                    id={s.id} name={name} rec={meeting.recordings[0]} sample={samples.get(s.id) ?? null}
+                    id={s.id} name={name} rec={located?.rec} sample={localSample}
                     tone={i === 0 ? "accent" : "neutral"} suggested={suggested} src={person ? avatarSrc(person) : null}
                     onPlay={() => { if (!name) inputRefs.current.get(s.id)?.focus(); }}
                   />

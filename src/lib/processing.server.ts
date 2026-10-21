@@ -263,7 +263,7 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
     speaker_id: s.speaker === null ? null : speakerIds.get(s.speaker) ?? null,
     start_ms: s.start_ms, end_ms: s.end_ms, text: s.text, alignment_score: s.alignment_score, review_state: s.review_state,
   }));
-  const published = await admin.rpc("publish_capture_transcript", { _recording: recordingId, _run: runId, _expected: before?.current_transcript_id ?? null, _rows: rows });
+  const published = await admin.rpc("publish_capture_transcript", { _recording: recordingId, _run: runId, ...(before?.current_transcript_id ? { _expected: before.current_transcript_id } : {}), _rows: rows });
   if (published.error || !published.data) throw new StageError("transcript changed", "stale_capture", true);
 
   // 2) Automatic naming. Never overwrites a voice the user already named meanwhile.

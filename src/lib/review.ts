@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { locateRecording } from "./capture-rules";
 import { enrollVoice } from "@/lib/people.functions";
 
 /** Fire-and-forget voice enrollment that tells the user when the voice could not be saved. */
@@ -229,13 +230,15 @@ export async function enrollSpeakerVoice(speakerId: string, personId: string): P
   const { speakerSamples } = await import("@/components/VoiceAvatar");
   const sample = speakerSamples(sps ?? [], (segs ?? []).map((x) => ({ ...x, start_ms: Number(x.start_ms), end_ms: Number(x.end_ms) }))).get(speakerId);
   if (!sample || sample.end - sample.start < 2000) return fail("trecho de voz curto demais");
-  const { data: rec } = await supabase.from("recordings").select("id, codec, recording_parts(object_key, sequence)").eq("meeting_id", sp.meeting_id).not("finalized_at", "is", null).order("created_at", { ascending: false }).limit(1).single();
-  if (!rec) return fail("gravação não finalizada");
+  const { data: recordings } = await supabase.from("recordings").select("id, codec, timeline_offset_ms, duration_ms, recording_parts(object_key, sequence)").eq("meeting_id", sp.meeting_id).not("finalized_at", "is", null);
+  const located = locateRecording(recordings ?? [], sample.start);
+  if (!located) return fail("gravação não finalizada");
+  const rec = located.rec;
   const url = await loadPlayableAudio(rec.id, rec.recording_parts, (rec.codec ?? "audio/webm").split(";")[0]!);
   const ctx = new AudioContext();
   try {
     const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
-    const wav = toWav(buf, sample.start / 1000, sample.end / 1000);
+    const wav = toWav(buf, located.localMs / 1000, (located.localMs + sample.end - sample.start) / 1000);
     if (!wav) return fail("trecho quase silencioso");
     const r = await enrollVoice({ data: { speakerId, personId, wavBase64: wav } });
     if (!r?.ok) return fail(r?.reason ?? "erro");
