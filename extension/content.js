@@ -42,7 +42,20 @@
   reopen.title = "Abrir Ata";
   reopen.setAttribute("aria-label", "Abrir Ata");
   reopen.hidden = true;
-  let minimized = false;
+  let minimized = false, starting = false, stopping = false, previous = null, lastCallSeen = 0;
+  const resumeBtn = document.createElement("button");
+  resumeBtn.type = "button"; resumeBtn.className = "ata-meet-action ata-meet-resume"; resumeBtn.textContent = "Retomar anterior"; resumeBtn.hidden = true;
+  panel.append(resumeBtn);
+  resumeBtn.addEventListener("click", () => void start(previous?.id));
+  async function lookup() {
+    try {
+      const result = await send({ type: "lookup", body: { meetUrl: location.href } });
+      previous = result.meeting;
+      resumeBtn.hidden = !previous || !!state.rec || stopping;
+      resumeBtn.title = previous ? `Retomar: ${previous.title}` : "";
+      if (previous && !state.rec && !stopping) { buttonText.textContent = "Gravar nova reunião"; statusText.textContent = previous.title; }
+    } catch { resumeBtn.hidden = true; }
+  }
   const label = (t, on) => {
     buttonText.textContent = on ? "Encerrar" : t === "Gravar com Ata" ? "Gravar" : t;
     btn.classList.toggle("ata-on", !!on);
@@ -55,7 +68,7 @@
   minimize.addEventListener("click", () => { minimized = true; panel.hidden = true; reopen.hidden = false; });
   reopen.addEventListener("click", () => { minimized = false; panel.hidden = false; reopen.hidden = true; });
   label("Gravar com Ata");
-  btn.addEventListener("click", () => (state.rec ? stop() : start()));
+  btn.addEventListener("click", () => { if (!starting && !stopping) void (state.rec ? stop(false) : start()); });
 
   const inCall = () => !!document.querySelector('[aria-label*="Sair da chamada" i], [aria-label*="Leave call" i], [aria-label*="Sair da reunião" i]');
   const title = () => {
@@ -78,7 +91,12 @@
     return btoa(bin);
   };
 
-  async function start() {
+  async function start(resumeMeetingId = null) {
+    if (starting || stopping || state.rec) return;
+    starting = true; btn.disabled = true; resumeBtn.hidden = true;
+    try { await begin(resumeMeetingId); } finally { starting = false; btn.disabled = false; if (!state.rec) void lookup(); }
+  }
+  async function begin(resumeMeetingId) {
     const { token } = await chrome.storage.local.get("token");
     if (!token) { alert("Conecte a extensão ao Ata: clique no ícone do Ata na barra do Chrome e cole o código gerado em Ajustes."); return; }
     label("Escolha esta aba e marque “Compartilhar áudio”…");
@@ -102,7 +120,7 @@
 
     const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
     let ids;
-    try { ids = await send({ type: "start", body: { title: title(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, codec: mime } }); }
+    try { ids = await send({ type: "start", body: { title: title(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, codec: mime, meetUrl: location.href, resumeMeetingId, requestId: crypto.randomUUID() } }); }
     catch (e) {
       [tab, mic].forEach((s) => s && s.getTracks().forEach((t) => t.stop())); void ctx.close();
       alert(e.message === "unauthorized" ? "Código inválido. Gere um novo em Ajustes no Ata." : "Não foi possível falar com o Ata. Verifique sua conexão.");
@@ -112,54 +130,68 @@
 
     const rec = new MediaRecorder(dest.stream, { mimeType: mime, audioBitsPerSecond: 48000 });
     state = { rec, recordingId: ids.recordingId, meetingId: ids.meetingId, seq: 1, startedAt: Date.now(), partStart: 0, streams: [tab, mic].filter(Boolean), ctx, pending: [] };
+    const session = state;
+    session.remainingMs = ids.remainingMs || 7200000;
     rec.ondataavailable = (ev) => {
       if (!ev.data || !ev.data.size) return;
-      const seq = state.seq++, startMs = state.partStart, endMs = Date.now() - state.startedAt;
-      state.partStart = endMs;
-      const p = toB64(ev.data).then((data) => send({ type: "part", params: { recording: state.recordingId, seq: String(seq), start: String(startMs), end: String(endMs) }, data }));
-      state.pending.push(p.catch(() => null));
+      const seq = session.seq++, startMs = session.partStart, endMs = Math.min(Date.now() - session.startedAt, session.remainingMs);
+      session.partStart = endMs;
+      const p = toB64(ev.data).then((data) => send({ type: "part", params: { recording: session.recordingId, seq: String(seq), start: String(startMs), end: String(endMs) }, data }));
+      session.pending.push(p); void p.catch(() => {});
     };
-    tab.getAudioTracks()[0].addEventListener("ended", () => stop());
+    tab.getAudioTracks()[0].addEventListener("ended", () => void stop(true));
+    rec.addEventListener("stop", () => { if (!stopping) void stop(true); });
+    rec.addEventListener("error", () => void stop(true));
+    session.heartbeat = setInterval(() => {
+      if (rec.state === "inactive") { void stop(true); return; }
+      void send({ type: "heartbeat", params: { recording: session.recordingId } }).then((r) => { if (!r.active) void stop(true); }).catch(() => {});
+    }, 15000);
     rec.start(PART_MS);
     label("● Gravando — parar", true);
     void chrome.storage.local.set({ recording: { title: title(), startedAt: state.startedAt } });
   }
 
-  async function stop() {
+  async function stop(automatic = true) {
     const s = state;
-    if (!s.rec) return;
+    if (!s.rec || stopping) return;
+    stopping = true; btn.disabled = true; resumeBtn.hidden = true; clearInterval(s.heartbeat);
     state = { ...state, rec: null };
     label("Enviando…");
     void chrome.storage.local.remove("recording");
-    await new Promise((r) => { s.rec.onstop = r; try { s.rec.stop(); } catch { r(); } });
+    if (s.rec.state !== "inactive") await new Promise((r) => { s.rec.addEventListener("stop", r, { once: true }); try { s.rec.stop(); } catch { r(); } });
     s.streams.forEach((st) => st.getTracks().forEach((t) => t.stop()));
     void s.ctx.close();
-    await Promise.all(s.pending);
+    await Promise.allSettled(s.pending);
     try {
-      const r = await send({ type: "finish", params: { recording: s.recordingId }, body: { durationMs: Date.now() - s.startedAt, participants: participantNames() } });
+      const r = await send({ type: "finish", params: { recording: s.recordingId }, meetingId: s.meetingId, body: { durationMs: Math.min(Date.now() - s.startedAt, s.remainingMs), participants: participantNames() } });
       label("Enviada ao Ata ✓");
-      if (r && r.meetingId && confirm("Gravação enviada ao Ata. Abrir a reunião?")) void send({ type: "open", meetingId: r.meetingId });
+      if (!automatic && r && r.meetingId && confirm("Gravação enviada ao Ata. Abrir a reunião?")) void send({ type: "open", meetingId: r.meetingId });
     } catch { label("Falha ao enviar"); }
-    setTimeout(() => label("Gravar com Ata"), 4000);
+    stopping = false; btn.disabled = false;
+    setTimeout(() => { label("Gravar com Ata"); void lookup(); }, 1500);
   }
 
   void chrome.storage.local.set({ inCallAt: 0 });
   // Open the in-tab window during a call; leaving the call ends the recording.
   setInterval(() => {
-    const on = inCall();
+    const detected = inCall();
+    if (detected) lastCallSeen = Date.now();
+    const on = detected || (Date.now() - lastCallSeen < 6000);
     void chrome.storage.local.set({ inCallAt: on ? Date.now() : 0 });
     if (on && !panel.isConnected) {
       minimized = false;
       panel.hidden = false;
       reopen.hidden = true;
       document.body.append(panel, reopen);
+      void lookup();
     }
     if (state.rec) {
       const seconds = Math.floor((Date.now() - state.startedAt) / 1000);
+      if (Date.now() - state.startedAt >= state.remainingMs) void stop(true);
       clock.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
     }
     if (!on && panel.isConnected && !state.rec) { panel.remove(); reopen.remove(); minimized = false; }
-    if (!on && state.rec) void stop();
+    if (!on && state.rec) void stop(true);
   }, 1500);
   window.addEventListener("beforeunload", () => { if (state.rec) void stop(); });
 })();

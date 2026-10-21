@@ -31,3 +31,7 @@
 .ata-meet-reopen.ata-recording { border: 2px solid var(--ata-accent); }
 .ata-meet-window button:focus-visible, .ata-meet-reopen:focus-visible { outline: 2px solid var(--ata-accent); outline-offset: 3px; }
 @media (max-width: 480px) { .ata-meet-window, .ata-meet-reopen { right: 16px; bottom: 96px; } }
+
+.ata-meet-resume { margin-top: 10px; background: var(--ata-surface); color: var(--ata-ink); }
+.ata-meet-action[hidden] { display: none !important; }
+.ata-meet-action:disabled { opacity: .6; cursor: wait; }
