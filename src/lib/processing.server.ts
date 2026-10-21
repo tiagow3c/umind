@@ -280,7 +280,7 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
     const owner = registry.find((p) => p.is_self);
     const lines = segments.map((s) => {
       const pid = s.speaker === null ? null : known.get(s.speaker);
-      const who = pid ? registry.find((p) => p.id === pid)!.display_name : s.speaker === null ? "Desconhecido" : labelOf(s.speaker);
+      const who = pid ? registry.find((p) => p.id === pid)?.display_name ?? "Desconhecido" : s.speaker === null ? "Desconhecido" : labelOf(s.speaker);
       return `${who}: ${s.text}`;
     }).join("\n").slice(0, 120_000);
     try {
@@ -634,7 +634,7 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
       else if (stage === "align") output = await stageAlign(admin, rec.id, m, run.id, rec.manifest_hash ?? rec.id);
       else {
         const { data: fresh } = await admin.from("meetings").select("*").eq("id", m.id).single();
-        output = stage === "embed" ? await stageEmbed(admin, fresh ?? m) : await stageAnalyze(admin, fresh ?? m, rec.status === "partial");
+        output = stage === "embed" ? await stageEmbed(admin, fresh ?? m) : await stageAnalyze(admin, fresh ?? m, recordings?.some((r) => r.status === "partial") ?? false);
       }
       await admin.from("processing_runs").update({ status: "succeeded", output: output as Json, lease_until: null }).eq("id", run.id);
       if (job?.paused) await setJobPaused(admin, false, null);
