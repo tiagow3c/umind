@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, missingVoicePersons, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, updateTask } from "@/lib/review";
+import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, missingVoicePersons, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery } from "@/lib/review";
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
 import { avatarSrc } from "@/lib/people-rules";
@@ -61,11 +61,6 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   const pick = async (speakerId: string, personId: string) => {
     try { await assignSpeakerPerson(speakerId, { personId }); qc.invalidateQueries(); named(); advance(speakerId); }
     catch { toast.error("Não foi possível salvar."); }
-  };
-
-  const act = async (id: string, status: "accepted" | "done") => {
-    try { await updateTask(id, { status }); qc.invalidateQueries({ queryKey: ["tasks"] }); }
-    catch { toast.error("Não foi possível atualizar."); }
   };
 
   const nameOf = (speakerId: string) =>
@@ -198,7 +193,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
         <h2 className="text-3xl">Tarefas</h2>
         {!tasks?.length ? (processing ? <div className="mt-6 space-y-3"><div className="h-5 w-2/3 animate-pulse rounded bg-muted" /><div className="h-5 w-1/2 animate-pulse rounded bg-muted [animation-delay:300ms]" /></div> : <p className="mt-6 text-sm text-muted-foreground">Nenhuma tarefa identificada.</p>) : (
           <ul className="mt-6 divide-y">
-            {tasks.map((t) => <TaskAction key={t.id} task={t} onDone={() => act(t.id, "done")} />)}
+            {tasks.map((t) => <TaskAction key={t.id} task={t} />)}
           </ul>
         )}
       </section>

@@ -1,16 +1,16 @@
-import { ChevronRight, Forward, ListPlus, Loader2, Search } from "lucide-react";
+import { Check, Forward, ListPlus, Loader2, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { forwardGmail, searchGmail, type MailHit } from "@/lib/gmail.functions";
 import { createCalendarEvent } from "@/lib/calendar.functions";
 import { peopleQuery } from "@/lib/review";
 import { supabase } from "@/integrations/supabase/client";
-import { counterpartOf, isFollowUp } from "@/lib/task-rules";
+import { completedTaskActions, counterpartOf, isFollowUp, taskActionState, type CompletedAction } from "@/lib/task-rules";
 import { normalizeName } from "@/lib/people-rules";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { addTaskToTodo } from "@/lib/todos";
-import { useState, type ReactNode } from "react";
+import { addTaskToTodo, todosQuery } from "@/lib/todos";
+import { useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -69,13 +69,16 @@ export function calendarUrl(d: TaskDraft, due: string | null) {
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${gcal(s)}/${gcal(e)}&details=${encodeURIComponent(details)}`;
 }
 
-export function TaskAction({ task, onDone }: { task: Task; onDone: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [scheduling, setScheduling] = useState(false);
+export function TaskAction({ task }: { task: Task }) {
+  const [panel, setPanel] = useState<"email" | "calendar" | null>(null);
+  const [pending, setPending] = useState(false);
+  const busy = useRef(false);
+  const [added, setAdded] = useState(false);
+  const [completed, setCompleted] = useState<CompletedAction[]>([]);
   const [d, setD] = useState<TaskDraft>(() => draftFor(task));
   const set = (k: keyof TaskDraft) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value });
-  const go = (url: string) => { window.open(url, "_blank", "noopener"); onDone(); };
   const { data: people } = useQuery(peopleQuery);
+  const { data: todos } = useQuery(todosQuery);
   const self = people?.find((p) => p.is_self) ?? null;
   const follow = isFollowUp(task, self?.display_name ?? null);
   const other = counterpartOf(task, self?.display_name ?? null);
@@ -83,49 +86,61 @@ export function TaskAction({ task, onDone }: { task: Task; onDone: () => void })
   const meta = [follow ? (other ? `Com ${other}` : null) : "Você", when].filter(Boolean).join(" · ");
   const done = task.status === "done";
   const qc = useQueryClient();
+  const inTodo = added || !!todos?.some((todo) => todo.task_id === task.id);
+  const action = { completed_actions: [...completedTaskActions(task.action), ...completed] };
+  const email = taskActionState(task.status, action, "email", pending);
+  const calendar = taskActionState(task.status, action, "calendar", pending);
   const toTodo = async () => {
-    try { const added = await addTaskToTodo(task); qc.invalidateQueries({ queryKey: ["todos"] }); toast.success(added ? "Adicionada às tarefas." : "Já está nas tarefas."); }
-    catch { toast.error("Não foi possível adicionar às tarefas."); }
+    if (busy.current || inTodo || done) return;
+    busy.current = true; setPending(true);
+    try {
+      const result = await addTaskToTodo(task);
+      setAdded(true);
+      void qc.invalidateQueries({ queryKey: ["todos"] });
+      toast.success(result ? "Adicionada às tarefas." : "Já está nas tarefas.");
+    } catch { toast.error("Não foi possível adicionar às tarefas."); }
+    finally { busy.current = false; setPending(false); }
   };
+  const finish = async (kind: CompletedAction) => {
+    setCompleted((previous) => [...previous, kind]);
+    setPanel(null);
+    const previous = task.action && typeof task.action === "object" ? task.action : {};
+    const { error } = await supabase.from("tasks").update({
+      status: "done", action: { ...previous, completed_actions: [...new Set([...action.completed_actions, kind])] },
+    }).eq("id", task.id);
+    if (error) toast.error("A ação foi concluída, mas não foi possível guardar a confirmação.");
+    void qc.invalidateQueries({ queryKey: ["tasks"] });
+  };
+  const badge = (checked: boolean) => checked ? <Check aria-label="Ação concluída" className="absolute -right-1 -top-1 size-4 rounded-full bg-primary p-0.5 text-primary-foreground" /> : null;
+  const toggle = (next: "email" | "calendar") => setPanel((current) => current === next ? null : next);
 
   return (
     <li className="py-6">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:items-center sm:gap-4">
-        <Button variant="ghost" onClick={() => setOpen(!open)} className="group h-auto min-w-0 items-start justify-start gap-2 whitespace-normal p-0 text-left hover:bg-transparent" aria-expanded={open}>
-          <ChevronRight className={cn("mt-1.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground", open && "rotate-90")} />
-          <span className="min-w-0">
-            <span className={cn("block text-lg font-medium", done && "text-muted-foreground line-through")}>{task.title}</span>
-            <span className="mt-1 block text-sm text-muted-foreground">{meta}</span>
-          </span>
-        </Button>
-        {done ? <span className="shrink-0 text-sm text-muted-foreground">Feita</span> : (
-          <div className="ml-auto flex shrink-0 flex-col items-end gap-2 sm:flex-row">
-            <Button variant="outline" onClick={toTodo} className="w-full px-3 shadow-none" aria-label="Adicionar às tarefas"><ListPlus className="size-4" /> Tarefa</Button>
-            {(task.action as { kind?: string } | null)?.kind === "none" ? null : d.kind === "forward" ? (
-              <Button variant="outline" onClick={() => setOpen(true)} className="w-full px-3 shadow-none"><GmailIcon /> Encaminhar</Button>
-            ) : d.kind === "email" ? (
-              <>
-                <Button variant="outline" onClick={() => go(gmailUrl(d))} className="w-full px-3 shadow-none"><GmailIcon /> Enviar</Button>
-                <Button variant="outline" onClick={() => setScheduling(true)} className="w-full px-3 shadow-none"><CalendarIcon /> Agendar</Button>
-              </>
-            ) : (
-              <Button variant="outline" onClick={() => setScheduling(true)} className="px-3 shadow-none"><CalendarIcon /> Agendar</Button>
-            )}
-          </div>
-        )}
+        <div className="min-w-0">
+          <p className={cn("text-lg font-medium", done && "text-muted-foreground line-through")}>{task.title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{meta}</p>
+        </div>
+        <div className="ml-auto flex shrink-0 flex-col items-end gap-2 sm:flex-row">
+          <Button variant="outline" disabled={pending || inTodo || done || !todos} onClick={toTodo} className="relative w-full px-3 shadow-none" aria-label="Adicionar às tarefas"><ListPlus className="size-4" /> Tarefa{badge(inTodo)}</Button>
+          {(task.action as { kind?: string } | null)?.kind !== "none" && <>
+            {d.kind !== "calendar" && <Button variant="outline" disabled={email.disabled} aria-expanded={panel === "email"} onClick={() => toggle("email")} className="relative w-full px-3 shadow-none"><GmailIcon />{d.kind === "forward" ? "Encaminhar" : "Enviar"}{badge(email.completed)}</Button>}
+            {d.kind !== "forward" && <Button variant="outline" disabled={calendar.disabled} aria-expanded={panel === "calendar"} onClick={() => toggle("calendar")} className="relative w-full px-3 shadow-none"><CalendarIcon /> Agendar{badge(calendar.completed)}</Button>}
+          </>}
+        </div>
       </div>
-      {scheduling && <SchedulePanel draft={d} due={task.due_date} onCancel={() => setScheduling(false)} onDone={() => { setScheduling(false); onDone(); }} />}
-      {open && !scheduling && (
-        <div className="ml-6 mt-4 space-y-2 rounded-lg border bg-background p-4 text-sm">
-          {d.kind === "forward" ? <ForwardPanel draft={d} toName={d.to_name ?? other} people={people ?? []} onSent={onDone} /> : d.kind === "email" ? (
-            <>
-              {d.to_name && <p className="text-muted-foreground">Para: {d.to_name}</p>}
-              <input value={d.subject ?? ""} onChange={set("subject")} aria-label="Assunto" className="w-full border-b bg-transparent py-1 font-medium outline-none focus:border-accent" />
-            </>
-          ) : (
-            <input value={d.event_title ?? ""} onChange={set("event_title")} aria-label="Título do evento" className="w-full border-b bg-transparent py-1 font-medium outline-none focus:border-accent" />
-          )}
-          {d.kind !== "forward" && <textarea value={d.body ?? ""} onChange={set("body")} rows={8} aria-label="Conteúdo" className="w-full resize-y bg-transparent py-1 leading-relaxed outline-none" />}
+      {panel === "calendar" && !done && !calendar.completed && <SchedulePanel draft={d} due={task.due_date} onBusy={setPending} onCancel={() => setPanel(null)} onDone={() => finish("calendar")} />}
+      {panel === "email" && !done && !email.completed && (
+        <div className="mt-4 space-y-3 rounded-lg border bg-background p-4 text-sm">
+          {d.kind === "forward" ? <ForwardPanel draft={d} toName={d.to_name ?? other} people={people ?? []} onBusy={setPending} onSent={() => finish("email")} /> : <>
+            {d.to_name && <p className="text-muted-foreground">Para: {d.to_name}</p>}
+            <input value={d.subject ?? ""} onChange={set("subject")} aria-label="Assunto" className="w-full border-b bg-transparent py-1 font-medium outline-none focus:border-accent" />
+            <textarea value={d.body ?? ""} onChange={set("body")} rows={8} aria-label="Conteúdo" className="w-full resize-y bg-transparent py-1 leading-relaxed outline-none" />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setPanel(null)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => { window.open(gmailUrl(d), "_blank", "noopener"); setPanel(null); }} className="shadow-none"><GmailIcon /> Abrir no Gmail</Button>
+            </div>
+          </>}
         </div>
       )}
     </li>
@@ -136,7 +151,7 @@ type P = { id: string; display_name: string; email?: string | null };
 function emailOf(h: string) { return /<([^>]+)>/.exec(h)?.[1] ?? (h.includes("@") ? h.trim() : ""); }
 
 /** Finds the e-mail in the connected Gmail, lets you pick one and forwards it with the original attached. */
-function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toName: string | null; people: P[]; onSent: () => void }) {
+function ForwardPanel({ draft, toName, people, onSent, onBusy }: { draft: TaskDraft; toName: string | null; people: P[]; onSent: () => Promise<void>; onBusy: (value: boolean) => void }) {
   const search = useServerFn(searchGmail);
   const forward = useServerFn(forwardGmail);
   const initial = draft.search_query || draft.subject || "";
@@ -158,13 +173,14 @@ function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toN
   const chosen = pick ?? data?.hits[0]?.id ?? null;
 
   const send = async () => {
+    if (sending) return;
     if (!chosen || !/^[^@\s]+@[^@\s]+$/.test(dest)) { toast.error("Escolha um e-mail e informe o destinatário."); return; }
-    setSending(true);
+    setSending(true); onBusy(true);
     try {
       await forward({ data: { messageId: chosen, to: dest, note } });
       if (person && person.email !== dest) await supabase.from("people").update({ email: dest }).eq("id", person.id);
-      toast.success("E-mail encaminhado."); onSent();
-    } catch { toast.error("Não foi possível encaminhar."); } finally { setSending(false); }
+      toast.success("E-mail encaminhado."); await onSent();
+    } catch { toast.error("Não foi possível encaminhar."); } finally { setSending(false); onBusy(false); }
   };
   const searchBox = (
     <form onSubmit={(e) => { e.preventDefault(); setPick(null); setQuery(term.trim()); }} className="flex items-center gap-2 border-b py-1">
@@ -206,7 +222,7 @@ const toLocalInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-$
 const offsetOf = (d: Date) => { const m = -d.getTimezoneOffset(); const s = m >= 0 ? "+" : "-"; return `${s}${pad(Math.floor(Math.abs(m) / 60))}:${pad(Math.abs(m) % 60)}`; };
 
 /** Inline card with the event data; creates it in Google Calendar without leaving the screen. */
-function SchedulePanel({ draft, due, onCancel, onDone }: { draft: TaskDraft; due: string | null; onCancel: () => void; onDone: () => void }) {
+function SchedulePanel({ draft, due, onCancel, onDone, onBusy }: { draft: TaskDraft; due: string | null; onCancel: () => void; onDone: () => Promise<void>; onBusy: (value: boolean) => void }) {
   const create = useServerFn(createCalendarEvent);
   const s0 = startOf(draft, due);
   const [title, setTitle] = useState(draft.kind === "email" ? `Enviar e-mail: ${draft.subject ?? ""}` : draft.event_title ?? "");
@@ -216,17 +232,18 @@ function SchedulePanel({ draft, due, onCancel, onDone }: { draft: TaskDraft; due
   const [desc, setDesc] = useState(draft.kind === "email" ? `Assunto: ${draft.subject ?? ""}\n\n${draft.body ?? ""}` : draft.body ?? "");
   const [saving, setSaving] = useState(false);
   const save = async () => {
+    if (saving) return;
     const start = new Date(`${day}T${time}:00`);
     const mins = Math.max(5, Number(minutes) || 30);
     if (!title.trim() || Number.isNaN(start.getTime())) { toast.error("Preencha título, dia e horário."); return; }
     const end = new Date(start.getTime() + mins * 60_000);
     const iso = (d: Date) => `${toLocalInput(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${offsetOf(d)}`;
-    setSaving(true);
+    setSaving(true); onBusy(true);
     try {
       await create({ data: { title: title.trim(), description: desc, start: iso(start), end: iso(end), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone } });
       toast.success(`Evento criado na sua agenda para ${start.toLocaleDateString("pt-BR")} às ${time}.`);
-      onDone();
-    } catch { toast.error("Não foi possível criar o evento."); } finally { setSaving(false); }
+      await onDone();
+    } catch { toast.error("Não foi possível criar o evento."); } finally { setSaving(false); onBusy(false); }
   };
   const field = "w-full border-b bg-transparent py-1 outline-none focus:border-accent";
   return (
@@ -240,7 +257,7 @@ function SchedulePanel({ draft, due, onCancel, onDone }: { draft: TaskDraft; due
       </div>
       <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={5} aria-label="Descrição" className="w-full resize-y bg-transparent py-1 leading-relaxed outline-none" />
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onCancel} className="shadow-none">Cancelar</Button>
+        <Button variant="ghost" disabled={saving} onClick={onCancel} className="shadow-none">Cancelar</Button>
         <Button variant="outline" onClick={save} disabled={saving} className="shadow-none">{saving ? <Loader2 className="size-4 animate-spin" /> : <CalendarIcon />} Criar evento</Button>
       </div>
     </div>
