@@ -24,6 +24,7 @@ import { Route as AuthenticatedPessoasIdRouteImport } from './routes/_authentica
 import { Route as AuthenticatedReunioesIndexRouteImport } from './routes/_authenticated/reunioes.index'
 import { Route as AuthenticatedReunioesNovaRouteImport } from './routes/_authenticated/reunioes.nova'
 import { Route as ApiPublicExtensionRouteImport } from './routes/api/public/extension'
+import { Route as ApiPublicMobileRouteImport } from './routes/api/public/mobile'
 import { Route as ApiPublicProcessQueueRouteImport } from './routes/api/public/process-queue'
 import { Route as AuthenticatedReunioesIdIndexRouteImport } from './routes/_authenticated/reunioes.$id.index'
 import { Route as AuthenticatedReunioesIdGravarRouteImport } from './routes/_authenticated/reunioes.$id.gravar'
@@ -106,6 +107,11 @@ const ApiPublicExtensionRoute = ApiPublicExtensionRouteImport.update({
   path: '/api/public/extension',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMobileRoute = ApiPublicMobileRouteImport.update({
+  id: '/api/public/mobile',
+  path: '/api/public/mobile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicProcessQueueRoute = ApiPublicProcessQueueRouteImport.update({
   id: '/api/public/process-queue',
   path: '/api/public/process-queue',
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
   '/api/public/extension': typeof ApiPublicExtensionRoute
+  '/api/public/mobile': typeof ApiPublicMobileRoute
   '/api/public/process-queue': typeof ApiPublicProcessQueueRoute
   '/pessoas/': typeof AuthenticatedPessoasIndexRoute
   '/reunioes/': typeof AuthenticatedReunioesIndexRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
   '/api/public/extension': typeof ApiPublicExtensionRoute
+  '/api/public/mobile': typeof ApiPublicMobileRoute
   '/api/public/process-queue': typeof ApiPublicProcessQueueRoute
   '/pessoas': typeof AuthenticatedPessoasIndexRoute
   '/reunioes': typeof AuthenticatedReunioesIndexRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/_authenticated/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/_authenticated/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
   '/api/public/extension': typeof ApiPublicExtensionRoute
+  '/api/public/mobile': typeof ApiPublicMobileRoute
   '/api/public/process-queue': typeof ApiPublicProcessQueueRoute
   '/_authenticated/pessoas/': typeof AuthenticatedPessoasIndexRoute
   '/_authenticated/reunioes/': typeof AuthenticatedReunioesIndexRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/pessoas/$id'
     | '/reunioes/nova'
     | '/api/public/extension'
+    | '/api/public/mobile'
     | '/api/public/process-queue'
     | '/pessoas/'
     | '/reunioes/'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/pessoas/$id'
     | '/reunioes/nova'
     | '/api/public/extension'
+    | '/api/public/mobile'
     | '/api/public/process-queue'
     | '/pessoas'
     | '/reunioes'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pessoas/$id'
     | '/_authenticated/reunioes/nova'
     | '/api/public/extension'
+    | '/api/public/mobile'
     | '/api/public/process-queue'
     | '/_authenticated/pessoas/'
     | '/_authenticated/reunioes/'
@@ -252,6 +264,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicExtensionRoute: typeof ApiPublicExtensionRoute
+  ApiPublicMobileRoute: typeof ApiPublicMobileRoute
   ApiPublicProcessQueueRoute: typeof ApiPublicProcessQueueRoute
 }
 
@@ -362,6 +375,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mobile': {
+      id: '/api/public/mobile'
+      path: '/api/public/mobile'
+      fullPath: '/api/public/mobile'
+      preLoaderRoute: typeof ApiPublicMobileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/process-queue': {
       id: '/api/public/process-queue'
       path: '/api/public/process-queue'
@@ -424,6 +444,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicExtensionRoute: ApiPublicExtensionRoute,
+  ApiPublicMobileRoute: ApiPublicMobileRoute,
   ApiPublicProcessQueueRoute: ApiPublicProcessQueueRoute,
 }
 export const routeTree = rootRouteImport

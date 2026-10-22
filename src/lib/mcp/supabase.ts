@@ -63,3 +63,11 @@ export function supabaseForUser(ctx: ToolContext) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/** Same caller-scoped client for plain bearer tokens (native app API). */
+export function supabaseForToken(token: string) {
+  return createClient(supabaseProjectUrl(), supabasePublishableKey(), {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
