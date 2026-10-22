@@ -3,6 +3,17 @@ import { normalizeName } from "@/lib/people-rules";
 type TaskLike = { owner_text: string | null; action?: unknown };
 type Action = { assignee?: "mine" | "follow_up"; counterpart?: string | null };
 
+export type CompletedAction = "email" | "calendar";
+export function completedTaskActions(action: unknown): CompletedAction[] {
+  if (!action || typeof action !== "object" || !("completed_actions" in action) || !Array.isArray(action.completed_actions)) return [];
+  return action.completed_actions.filter((kind): kind is CompletedAction => kind === "email" || kind === "calendar");
+}
+
+export function taskActionState(status: string, action: unknown, kind: CompletedAction, pending: boolean) {
+  const completed = completedTaskActions(action).includes(kind);
+  return { completed, disabled: pending || completed || status === "done" };
+}
+
 /** A task is a follow-up (someone else does it, the owner only tracks it) when the AI said so,
  *  or when the stated owner is someone other than the app owner. Never assigned to the owner. */
 export function isFollowUp(t: TaskLike, selfName: string | null): boolean {

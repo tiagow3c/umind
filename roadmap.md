@@ -1,4 +1,8 @@
 # Correção da pyannote
+# Botões de ações e sugestões do chat
+- [ ] Desabilitar ações concluídas com check e detalhes somente após clicar, sem seta.
+- [ ] Alternar sugestões na conversa vazia e verificar com sessão real.
+
 - [x] Corrigir os parâmetros de transcrição e identificação de vozes conforme a API.
 - [x] Cobrir a chamada e a leitura do resultado com testes.
 - [x] Validar o processamento autenticado com o áudio salvo.
