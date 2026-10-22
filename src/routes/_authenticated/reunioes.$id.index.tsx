@@ -3,7 +3,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { deleteMeeting, friendlyError, meetingQuery } from "@/lib/meetings";
 import { canStartCapture } from "@/lib/meeting-rules";
-import { StatusBadge, formatDuration } from "@/components/StatusBadge";
+import { StatusBadge, SourceTag, formatDuration } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
 import { MeetingSkeleton } from "@/components/MeetingSkeleton";
@@ -51,7 +51,7 @@ function Detalhe() {
   if ((m.current_transcript_id || processingLive) && !full && m.status !== "failed") {
     return (
       <div className="space-y-6 py-4">
-        <h1 className="text-5xl">{m.title}</h1>
+        <div className="space-y-2"><SourceTag meeting={m} /><h1 className="text-5xl">{m.title}</h1></div>
         {interruptionNotice}
         {processingLive && <ProcessingPanel meetingId={m.id} status={m.status} compact />}
         <MeetingOverview meeting={m} processing={processingLive} onFull={() => setFull(true)} />
@@ -67,7 +67,7 @@ function Detalhe() {
           <p className="text-sm text-muted-foreground">{new Date(m.created_at).toLocaleString("pt-BR")} · {m.timezone}</p>
           <h1 className="mt-1 text-5xl">{m.title}</h1>
         </div>
-        <StatusBadge status={m.status} />
+        <div className="flex items-center gap-2"><SourceTag meeting={m} /><StatusBadge status={m.status} /></div>
       </header>
       {interruptionNotice}
 

@@ -89,6 +89,11 @@ export const VoiceAvatar = forwardRef<VoiceAvatarHandle, {
         )}
         {!known && !sample && "?"}
       </span>
+      {known && sample && !active && (
+        <span aria-hidden className="absolute left-0 top-[60px] flex size-10 items-center justify-center rounded-full border bg-background text-muted-foreground group-hover:text-foreground sm:left-1 sm:top-[68px] sm:size-7">
+          <Play className="ml-0.5 size-3 fill-current" />
+        </span>
+      )}
     </button>
   );
 });
