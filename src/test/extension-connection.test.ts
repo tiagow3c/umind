@@ -8,7 +8,7 @@ const popup = readFileSync("extension/popup.js", "utf8");
 describe("extension connection", () => {
   it("uses the live app origin allowed by the manifest", async () => {
     const manifest = JSON.parse(readFileSync("extension/manifest.json", "utf8"));
-    const fetch = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true }) }));
+    const fetch = vi.fn(async (_url: string, _options: unknown) => ({ ok: true, json: async () => ({ ok: true }) }));
     const listener = { addListener: vi.fn() };
     const context = {
       fetch, URLSearchParams,
