@@ -133,7 +133,14 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
         <section>
           <h2 className="text-3xl">Participantes</h2>
           <ul className="mt-6 grid grid-cols-2 justify-items-center gap-x-6 gap-y-8 sm:mt-8 sm:flex sm:flex-wrap sm:gap-8">
-            {speakers.map((s, i) => {
+            {speakers.filter((s) => {
+              // One card per person: several voices linked to the same person show once (confirmed voice first).
+              const pid = meeting.participants.find((p) => p.id === s.participant_id)?.person_id;
+              if (!pid) return true;
+              const same = speakers.filter((o) => meeting.participants.find((p) => p.id === o.participant_id)?.person_id === pid);
+              const best = same.find((o) => meeting.participants.find((p) => p.id === o.participant_id)?.person_confirmed) ?? same[0];
+              return best.id === s.id;
+            }).map((s, i) => {
               const sample = samples.get(s.id) ?? null;
               const located = sample ? locateRecording(meeting.recordings, sample.start) : null;
               const localSample = sample && located ? { start: located.localMs, end: located.localMs + sample.end - sample.start } : null;
