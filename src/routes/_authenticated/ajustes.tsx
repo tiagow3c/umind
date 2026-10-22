@@ -11,9 +11,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { createExtensionToken } from "@/lib/extension.functions";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
+import { CompanyContext, Members, WorkspaceSwitcher } from "@/components/WorkspaceSettings";
+import { isAdminRole } from "@/lib/workspace-rules";
 
 export const Route = createFileRoute("/_authenticated/ajustes")({
-  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Ajustes — Ata" }, { name: "description", content: "Perfil, workspace e privacidade." }, { property: "og:title", content: "Ajustes — Ata" }, { property: "og:description", content: "Perfil, workspace e privacidade." }] }),
+  head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Ajustes — Ata" }, { name: "description", content: "Conta, empresa, membros e privacidade." }, { property: "og:title", content: "Ajustes — Ata" }, { property: "og:description", content: "Conta, empresa, membros e privacidade." }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(workspaceQuery),
   component: Ajustes,
 });
@@ -29,7 +31,7 @@ function Ajustes() {
     const n = name.trim();
     if (!n || n.length > 120) { toast.error("Nome inválido."); return; }
     const { error } = await supabase.from("workspaces").update({ name: n }).eq("id", ws.id);
-    if (error) toast.error("Não foi possível salvar."); else { toast.success("Salvo."); qc.invalidateQueries({ queryKey: ["workspace"] }); }
+    if (error) toast.error("Não foi possível salvar."); else { toast.success("Salvo."); qc.invalidateQueries({ queryKey: ["workspace"] }); qc.invalidateQueries({ queryKey: ["workspaces"] }); }
   }
 
   return (
@@ -41,13 +43,16 @@ function Ajustes() {
         <Button variant="outline" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); }}>Sair</Button>
       </section>
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-2xl">Workspace</h2>
-        <div className="max-w-sm space-y-2">
-          <Label htmlFor="ws">Nome</Label>
-          <Input id="ws" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
-        </div>
-        <Button onClick={save}>Salvar</Button>
+        <h2 className="border-b pb-2 text-2xl">Empresa</h2>
+        {isAdminRole(ws.role) && <div className="flex max-w-sm items-end gap-2">
+          <div className="flex-1 space-y-2"><Label htmlFor="ws">Nome</Label><Input id="ws" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></div>
+          <Button onClick={save}>Salvar</Button>
+        </div>}
+        {!isAdminRole(ws.role) && <p className="text-sm">{ws.name}</p>}
+        <WorkspaceSwitcher active={ws} />
       </section>
+      <Members ws={ws} userId={user.id} />
+      <CompanyContext ws={ws} />
       <Appearance />
       <MeetExtension />
       <section className="space-y-2">
