@@ -57,6 +57,9 @@ export function ProcessingPanel({ meetingId, status, compact = false, waiting = 
     return () => { alive = false; clearTimeout(timer); };
   }, [meetingId, status, advance, qc, compact]);
 
+  const stageStart = useRef<{ stage: string | null; at: number }>({ stage: null, at: Date.now() });
+  const runningStage = stages?.find((s) => s.status === "running" || s.status === "queued" || s.status === "retry_wait")?.stage ?? null;
+  if (stageStart.current.stage !== runningStage) stageStart.current = { stage: runningStage, at: Date.now() };
   const failed = stages?.find((s) => s.status === "failed");
   const cancelled = status === "failed" && !failed && stages?.some((s) => s.error_code === "user_cancelled");
   const navigate = useNavigate();
@@ -74,7 +77,11 @@ export function ProcessingPanel({ meetingId, status, compact = false, waiting = 
     const label: Record<string, string> = { transcribe: "Transcrevendo", diarize: "Identificando vozes", align: "Separando participantes", analyze: "Analisando a conversa", embed: "Preparando a busca" };
     const total = stages?.length || 5;
     const done = stages?.filter((s) => s.status === "succeeded").length ?? 0;
-    const pct = Math.min(99, Math.round(((done + (current?.status === "running" ? 0.5 : 0)) / total) * 100));
+    // Estimated progress inside the running stage: eases toward 95% of the stage over its typical duration.
+    const typical: Record<string, number> = { transcribe: 90, diarize: 120, align: 20, analyze: 45, embed: 20 };
+    const stageSec = stageStart.current.stage === current?.stage ? (Date.now() - stageStart.current.at) / 1000 : 0;
+    const within = current ? 0.95 * (1 - Math.exp(-stageSec / (typical[current.stage] ?? 60))) : 0;
+    const pct = Math.min(99, Math.round(((done + within) / total) * 100));
     const mm = Math.floor(elapsed / 60), ss = String(elapsed % 60).padStart(2, "0");
     return (
       <div className="space-y-2 text-sm text-muted-foreground" aria-live="polite">
