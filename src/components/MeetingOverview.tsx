@@ -139,7 +139,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
               if (!pid) return true;
               const same = speakers.filter((o) => meeting.participants.find((p) => p.id === o.participant_id)?.person_id === pid);
               const best = same.find((o) => meeting.participants.find((p) => p.id === o.participant_id)?.person_confirmed) ?? same[0];
-              return best.id === s.id;
+              return best?.id === s.id;
             }).map((s, i) => {
               const sample = samples.get(s.id) ?? null;
               const located = sample ? locateRecording(meeting.recordings, sample.start) : null;
