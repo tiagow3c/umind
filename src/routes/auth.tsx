@@ -7,6 +7,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { oauthReturnPath } from "@/lib/oauth-return-path";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: z.object({ next: z.string().optional() }),
@@ -55,7 +56,7 @@ function AuthPage() {
         if (error) throw error;
         navigate({ to: safeNext(next) });
       } else {
-        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + "/hoje" } });
+        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: new URL(safeNext(next), window.location.origin).href } });
         if (error) throw error;
         toast.success("Conta criada. Confirme pelo link enviado ao seu e-mail.");
       }
