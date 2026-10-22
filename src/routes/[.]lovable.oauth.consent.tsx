@@ -7,7 +7,7 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   // SSR has no localStorage session and would redirect signed-in users.
   ssr: false,
   validateSearch: (s: Record<string, unknown>) => ({
-    authorization_id: typeof s.authorization_id === "string" ? s.authorization_id : "",
+    authorization_id: typeof s["authorization_id"] === "string" ? s["authorization_id"] : "",
   }),
   head: () => ({
     meta: [
@@ -64,7 +64,7 @@ function Consent() {
     void supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   });
 
-  const clientName = details && "client" in details ? (details.client?.name ?? "este aplicativo") : "este aplicativo";
+  const clientName = details && "client" in details ? ((details.client as { name?: string } | undefined)?.name ?? "este aplicativo") : "este aplicativo";
   const scopes = (details && "scope" in details ? details.scope : "").split(" ").filter(Boolean);
 
   async function decide(approve: boolean) {
