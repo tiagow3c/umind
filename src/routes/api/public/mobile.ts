@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseForToken } from "@/lib/mcp/supabase";
 import { z } from "zod";
 
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" };
@@ -20,10 +20,7 @@ export const Route = createFileRoute("/api/public/mobile")({
 async function handle(request: Request) {
   const token = /^Bearer (\S+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
   if (!token) return json({ error: "unauthorized" }, 401);
-  const db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const db = supabaseForToken(token);
   const { data: claims, error: authErr } = await db.auth.getClaims(token);
   const userId = claims?.claims?.sub;
   if (authErr || !userId) return json({ error: "unauthorized" }, 401);
