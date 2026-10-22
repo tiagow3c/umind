@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { assignSpeakerPerson, confirmParticipant, peopleQuery } from "@/lib/review";
+import { assignSpeakerPerson, confirmParticipant, mapSpeaker, peopleQuery } from "@/lib/review";
 import { normalizeName } from "@/lib/people-rules";
 
 export function PersonPicker({ speakerId, participantId, suggested, children }: { speakerId: string; participantId: string | null; suggested: boolean; children: ReactNode }) {
@@ -30,6 +30,9 @@ export function PersonPicker({ speakerId, participantId, suggested, children }: 
               {p.display_name}{p.is_self && <span className="ml-1 text-xs text-muted-foreground">(você)</span>}
             </button></li>
           ))}
+          {participantId && !q.trim() && (
+            <li className="mt-1 border-t pt-1"><button onClick={() => run(() => mapSpeaker(speakerId, null))} className="w-full rounded px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground">Desassociar desta voz</button></li>
+          )}
           {q.trim() && !list.some((p) => normalizeName(p.display_name) === normalizeName(q)) && (
             <li><button onClick={() => run(() => assignSpeakerPerson(speakerId, { newName: q }))} className="w-full rounded px-2 py-1.5 text-left text-sm text-accent hover:bg-secondary">+ Criar “{q.trim()}”</button></li>
           )}

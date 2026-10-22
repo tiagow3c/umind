@@ -24,3 +24,9 @@ export function formatDuration(ms: number | null | undefined) {
   const s = Math.round(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+
+/** Where the conversation came from: Google Meet extension, imported file or the Ata recorder. */
+export function SourceTag({ meeting }: { meeting: { source_type: string; meet_url?: string | null } }) {
+  const label = meeting.meet_url ? "Meet" : meeting.source_type === "import" ? "Arquivo" : "Gravador";
+  return <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">{label}</span>;
+}

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Mic, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { deleteMeeting, meetingsQuery } from "@/lib/meetings";
-import { StatusBadge, formatDuration } from "@/components/StatusBadge";
+import { StatusBadge, SourceTag, formatDuration } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { STATUS_LABEL, type MeetingStatus } from "@/lib/meeting-rules";
 
@@ -51,7 +51,7 @@ function Lista() {
           {rows.map((m) => (
             <li key={m.id} className="flex items-center gap-2 pr-2 hover:bg-secondary/50">
               <Link to="/reunioes/$id" params={{ id: m.id }} className="grid min-w-0 flex-1 grid-cols-1 justify-items-start gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center md:grid-cols-[minmax(0,1fr)_120px_80px_auto] md:gap-4">
-                <span className="min-w-0 break-words font-medium">{m.title}</span>
+                <span className="flex min-w-0 items-center gap-2 break-words font-medium">{m.title}<SourceTag meeting={m} /></span>
                 <span className="hidden text-sm text-muted-foreground md:block">{new Date(m.created_at).toLocaleDateString("pt-BR")}</span>
                 <span className="hidden text-sm tabular-nums text-muted-foreground md:block">{formatDuration(m.recordings?.[0]?.duration_ms)}</span>
                 <StatusBadge status={m.status} />
