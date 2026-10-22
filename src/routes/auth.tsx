@@ -24,7 +24,8 @@ export const Route = createFileRoute("/auth")({
 });
 
 function safeNext(n?: string) {
-  return n && n.startsWith("/") && !n.startsWith("//") ? n : "/hoje";
+  const path = oauthReturnPath(n);
+  return path === "/" ? "/hoje" : path;
 }
 
 function AuthPage() {
