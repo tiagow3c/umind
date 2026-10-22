@@ -1,7 +1,7 @@
 # Correção da pyannote
 # Botões de ações e sugestões do chat
-- [ ] Desabilitar ações concluídas com check e detalhes somente após clicar, sem seta.
-- [ ] Alternar sugestões na conversa vazia e verificar com sessão real.
+- [x] Desabilitar ações concluídas com check e detalhes somente após clicar, sem seta; 21 testes passaram. Agenda/envio confirmados testados sem operações externas reais.
+- [x] Alternar sugestões na conversa vazia e verificar com sessão real; tarefa criada, check restaurado após recarregar, inclusão de teste removida.
 
 - [x] Corrigir os parâmetros de transcrição e identificação de vozes conforme a API.
 - [x] Cobrir a chamada e a leitura do resultado com testes.
