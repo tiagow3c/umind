@@ -12,7 +12,6 @@ import { createExtensionToken } from "@/lib/extension.functions";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { CompanyContext, Members, WorkspaceSwitcher } from "@/components/WorkspaceSettings";
-import { isAdminRole } from "@/lib/workspace-rules";
 
 export const Route = createFileRoute("/_authenticated/ajustes")({
   head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Ajustes — Ata" }, { name: "description", content: "Conta, empresa, membros e privacidade." }, { property: "og:title", content: "Ajustes — Ata" }, { property: "og:description", content: "Conta, empresa, membros e privacidade." }] }),
@@ -44,11 +43,11 @@ function Ajustes() {
       </section>
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-2xl">Empresa</h2>
-        {isAdminRole(ws.role) && <div className="flex max-w-sm items-end gap-2">
+        {ws.owner_user_id === user.id && <div className="flex max-w-sm items-end gap-2">
           <div className="flex-1 space-y-2"><Label htmlFor="ws">Nome</Label><Input id="ws" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></div>
           <Button onClick={save}>Salvar</Button>
         </div>}
-        {!isAdminRole(ws.role) && <p className="text-sm">{ws.name}</p>}
+        {ws.owner_user_id !== user.id && <p className="text-sm">{ws.name}</p>}
         <WorkspaceSwitcher active={ws} />
       </section>
       <Members ws={ws} userId={user.id} />
