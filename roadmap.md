@@ -84,3 +84,7 @@
 - [x] Oferecer Gravar nova reunião e Retomar anterior ao voltar ao mesmo link, sem perder conteúdo anterior.
 - [x] Testar interrupção, retomada e preservação de tarefas; empacotar extensão atualizada.
 - [ ] Ativar no site publicado e atualizar a extensão no Chrome — depende de publicação solicitada pelo usuário e reinstalação local; Meet validado em simulação.
+
+# Workspaces da empresa (etapa 1)
+- [x] Criar/alternar empresa, membros e convites, contexto da empresa, compartilhar reunião.
+- [ ] Etapa 2: Insights e convite por e-mail.
