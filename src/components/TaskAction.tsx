@@ -129,10 +129,10 @@ export function TaskAction({ task }: { task: Task }) {
           </>}
         </div>
       </div>
-      {panel === "calendar" && !calendar.disabled && <SchedulePanel draft={d} due={task.due_date} onCancel={() => setPanel(null)} onDone={() => finish("calendar")} />}
-      {panel === "email" && !email.disabled && (
+      {panel === "calendar" && !done && !calendar.completed && <SchedulePanel draft={d} due={task.due_date} onBusy={setPending} onCancel={() => setPanel(null)} onDone={() => finish("calendar")} />}
+      {panel === "email" && !done && !email.completed && (
         <div className="mt-4 space-y-3 rounded-lg border bg-background p-4 text-sm">
-          {d.kind === "forward" ? <ForwardPanel draft={d} toName={d.to_name ?? other} people={people ?? []} onSent={() => finish("email")} /> : <>
+          {d.kind === "forward" ? <ForwardPanel draft={d} toName={d.to_name ?? other} people={people ?? []} onBusy={setPending} onSent={() => finish("email")} /> : <>
             {d.to_name && <p className="text-muted-foreground">Para: {d.to_name}</p>}
             <input value={d.subject ?? ""} onChange={set("subject")} aria-label="Assunto" className="w-full border-b bg-transparent py-1 font-medium outline-none focus:border-accent" />
             <textarea value={d.body ?? ""} onChange={set("body")} rows={8} aria-label="Conteúdo" className="w-full resize-y bg-transparent py-1 leading-relaxed outline-none" />
@@ -151,7 +151,7 @@ type P = { id: string; display_name: string; email?: string | null };
 function emailOf(h: string) { return /<([^>]+)>/.exec(h)?.[1] ?? (h.includes("@") ? h.trim() : ""); }
 
 /** Finds the e-mail in the connected Gmail, lets you pick one and forwards it with the original attached. */
-function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toName: string | null; people: P[]; onSent: () => Promise<void> }) {
+function ForwardPanel({ draft, toName, people, onSent, onBusy }: { draft: TaskDraft; toName: string | null; people: P[]; onSent: () => Promise<void>; onBusy: (value: boolean) => void }) {
   const search = useServerFn(searchGmail);
   const forward = useServerFn(forwardGmail);
   const initial = draft.search_query || draft.subject || "";
@@ -175,12 +175,12 @@ function ForwardPanel({ draft, toName, people, onSent }: { draft: TaskDraft; toN
   const send = async () => {
     if (sending) return;
     if (!chosen || !/^[^@\s]+@[^@\s]+$/.test(dest)) { toast.error("Escolha um e-mail e informe o destinatário."); return; }
-    setSending(true);
+    setSending(true); onBusy(true);
     try {
       await forward({ data: { messageId: chosen, to: dest, note } });
       if (person && person.email !== dest) await supabase.from("people").update({ email: dest }).eq("id", person.id);
       toast.success("E-mail encaminhado."); await onSent();
-    } catch { toast.error("Não foi possível encaminhar."); } finally { setSending(false); }
+    } catch { toast.error("Não foi possível encaminhar."); } finally { setSending(false); onBusy(false); }
   };
   const searchBox = (
     <form onSubmit={(e) => { e.preventDefault(); setPick(null); setQuery(term.trim()); }} className="flex items-center gap-2 border-b py-1">
@@ -222,7 +222,7 @@ const toLocalInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-$
 const offsetOf = (d: Date) => { const m = -d.getTimezoneOffset(); const s = m >= 0 ? "+" : "-"; return `${s}${pad(Math.floor(Math.abs(m) / 60))}:${pad(Math.abs(m) % 60)}`; };
 
 /** Inline card with the event data; creates it in Google Calendar without leaving the screen. */
-function SchedulePanel({ draft, due, onCancel, onDone }: { draft: TaskDraft; due: string | null; onCancel: () => void; onDone: () => Promise<void> }) {
+function SchedulePanel({ draft, due, onCancel, onDone, onBusy }: { draft: TaskDraft; due: string | null; onCancel: () => void; onDone: () => Promise<void>; onBusy: (value: boolean) => void }) {
   const create = useServerFn(createCalendarEvent);
   const s0 = startOf(draft, due);
   const [title, setTitle] = useState(draft.kind === "email" ? `Enviar e-mail: ${draft.subject ?? ""}` : draft.event_title ?? "");
@@ -238,12 +238,12 @@ function SchedulePanel({ draft, due, onCancel, onDone }: { draft: TaskDraft; due
     if (!title.trim() || Number.isNaN(start.getTime())) { toast.error("Preencha título, dia e horário."); return; }
     const end = new Date(start.getTime() + mins * 60_000);
     const iso = (d: Date) => `${toLocalInput(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${offsetOf(d)}`;
-    setSaving(true);
+    setSaving(true); onBusy(true);
     try {
       await create({ data: { title: title.trim(), description: desc, start: iso(start), end: iso(end), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone } });
       toast.success(`Evento criado na sua agenda para ${start.toLocaleDateString("pt-BR")} às ${time}.`);
       await onDone();
-    } catch { toast.error("Não foi possível criar o evento."); } finally { setSaving(false); }
+    } catch { toast.error("Não foi possível criar o evento."); } finally { setSaving(false); onBusy(false); }
   };
   const field = "w-full border-b bg-transparent py-1 outline-none focus:border-accent";
   return (
@@ -257,7 +257,7 @@ function SchedulePanel({ draft, due, onCancel, onDone }: { draft: TaskDraft; due
       </div>
       <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={5} aria-label="Descrição" className="w-full resize-y bg-transparent py-1 leading-relaxed outline-none" />
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onCancel} className="shadow-none">Cancelar</Button>
+        <Button variant="ghost" disabled={saving} onClick={onCancel} className="shadow-none">Cancelar</Button>
         <Button variant="outline" onClick={save} disabled={saving} className="shadow-none">{saving ? <Loader2 className="size-4 animate-spin" /> : <CalendarIcon />} Criar evento</Button>
       </div>
     </div>
