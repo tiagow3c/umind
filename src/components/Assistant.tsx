@@ -9,6 +9,9 @@ import { askAssistant } from "@/lib/assistant.functions";
 import { historyForContext, meetingContextFromPath, type AssistantMessage } from "@/lib/assistant-rules";
 import { meetingQuery } from "@/lib/meetings";
 
+const MEETING_PROMPTS = ["O que você quer saber sobre esta reunião?", "Quais decisões foram tomadas?", "O que ficou pendente nesta conversa?", "Quais são os próximos passos?", "O que cada pessoa ficou de fazer?"];
+const GENERAL_PROMPTS = ["O que você tem em mente?", "O que ficou pendente nas minhas reuniões?", "Quais foram as decisões mais recentes?", "Que tarefas precisam da minha atenção?", "O que conversamos na última reunião?"];
+
 type Message = AssistantMessage & { sources?: { id: string; title: string }[] };
 
 export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggle: () => void }) {
@@ -21,6 +24,7 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [pending, setPending] = useState(false);
+  const [suggestion, setSuggestion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const ask = useServerFn(askAssistant);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -28,6 +32,13 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
   useEffect(() => { setRemovedFor(null); setError(null); }, [pathname]);
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
   useEffect(() => { logs.current.forEach((log) => { if (log) log.scrollTop = log.scrollHeight; }); }, [messages, pending, open]);
+
+  useEffect(() => {
+    setSuggestion(0);
+    if (messages.length) return;
+    const timer = window.setInterval(() => setSuggestion((previous) => (previous + 1) % 5), 6000);
+    return () => window.clearInterval(timer);
+  }, [meetingId, messages.length]);
 
   async function submit() {
     const text = question.trim();
@@ -62,7 +73,7 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
 
       </header>
       <div ref={(node) => { logs.current[variant === "rail" ? 0 : 1] = node; }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" role="log" aria-live="polite" aria-label="Conversa com o Ata AI">
-        {messages.length === 0 && <p className="py-8 font-serif text-2xl text-muted-foreground">{meetingId ? "O que você quer saber sobre esta reunião?" : "O que você tem em mente?"}</p>}
+        {messages.length === 0 && <p className="py-8 font-serif text-2xl text-muted-foreground">{(meetingId ? MEETING_PROMPTS : GENERAL_PROMPTS)[suggestion]}</p>}
         {messages.map((message, i) => <div key={i} className={`mb-4 flex min-w-0 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
           <div className={`min-w-0 max-w-[90%] rounded-lg px-3 py-2.5 ${message.role === "user" ? "rounded-br-none bg-primary text-primary-foreground" : "rounded-bl-none border bg-muted text-foreground"}`}>
           <p className={`mb-1 text-xs ${message.role === "user" ? "text-primary-foreground" : "text-muted-foreground"}`}>{message.role === "user" ? "Você" : "Ata AI"}</p>
