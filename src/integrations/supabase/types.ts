@@ -310,6 +310,7 @@ export type Database = {
           title: string
           updated_at: string
           version: number
+          visibility: string
           workspace_id: string
         }
         Insert: {
@@ -330,6 +331,7 @@ export type Database = {
           title: string
           updated_at?: string
           version?: number
+          visibility?: string
           workspace_id: string
         }
         Update: {
@@ -350,6 +352,7 @@ export type Database = {
           title?: string
           updated_at?: string
           version?: number
+          visibility?: string
           workspace_id?: string
         }
         Relationships: [
@@ -1148,6 +1151,70 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_context: {
+        Row: {
+          content: string
+          updated_at: string
+          updated_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          content?: string
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          content?: string
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_context_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_invites: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["member_role"]
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invited_by: string
+          role?: Database["public"]["Enums"]["member_role"]
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["member_role"]
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_invites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspaces: {
         Row: {
           created_at: string
@@ -1180,12 +1247,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_pending_invites: { Args: never; Returns: number }
       bump_people_version: { Args: { _meeting: string }; Returns: undefined }
+      cancel_invite: { Args: { _invite: string }; Returns: undefined }
       cancel_processing: { Args: { _meeting: string }; Returns: undefined }
       capture_heartbeat: {
         Args: { _paused?: boolean; _recording: string }
         Returns: boolean
       }
+      create_workspace: { Args: { _name: string }; Returns: string }
       delete_meeting: { Args: { _meeting: string }; Returns: undefined }
       expire_captures: { Args: never; Returns: number }
       finalize_recording: {
@@ -1207,7 +1277,25 @@ export type Database = {
         }
         Returns: boolean
       }
+      invite_member: {
+        Args: {
+          _email: string
+          _role: Database["public"]["Enums"]["member_role"]
+          _ws: string
+        }
+        Returns: string
+      }
+      is_workspace_admin: { Args: { _ws: string }; Returns: boolean }
       is_workspace_member: { Args: { _ws: string }; Returns: boolean }
+      list_workspace_members: {
+        Args: { _ws: string }
+        Returns: {
+          email: string
+          name: string
+          role: Database["public"]["Enums"]["member_role"]
+          user_id: string
+        }[]
+      }
       meet_start_capture: {
         Args: {
           _codec?: string
@@ -1247,6 +1335,10 @@ export type Database = {
         Returns: string
       }
       recording_visible: { Args: { _rec: string }; Returns: boolean }
+      remove_member: {
+        Args: { _user: string; _ws: string }
+        Returns: undefined
+      }
       search_items: {
         Args: { _limit?: number; _query: unknown; _ws: string }
         Returns: {
@@ -1269,6 +1361,18 @@ export type Database = {
           start_ms: number
           text: string
         }[]
+      }
+      set_meeting_visibility: {
+        Args: { _meeting: string; _visibility: string }
+        Returns: undefined
+      }
+      set_member_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["member_role"]
+          _user: string
+          _ws: string
+        }
+        Returns: undefined
       }
       start_recording: {
         Args: {
