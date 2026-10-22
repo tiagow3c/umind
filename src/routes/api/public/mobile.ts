@@ -28,7 +28,7 @@ async function handle(request: Request) {
   const action = url.searchParams.get("action");
 
   if (action === "workspaces") {
-    const { data, error } = await db.from("workspace_members").select("role, workspaces(id, name)").eq("user_id", userId);
+    const { data, error } = await db.from("memberships").select("role, workspaces(id, name)").eq("user_id", userId);
     return error ? json({ error: "workspaces" }, 500) : json({ workspaces: (data ?? []).map((m) => ({ ...(m.workspaces as object), role: m.role })) });
   }
 
