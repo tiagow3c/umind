@@ -1,5 +1,5 @@
 // All calls to the Ata app go through here (no CORS limits for the extension).
-const APP = "https://idea-structurizer.lovable.app";
+const APP = "https://umind.lovable.app";
 
 async function call(action, params, body, isBinary) {
   const { token } = await chrome.storage.local.get("token");
