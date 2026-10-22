@@ -9,6 +9,7 @@ import { ProcessingPanel } from "@/components/ProcessingPanel";
 import { MeetingSkeleton } from "@/components/MeetingSkeleton";
 import { MeetingReview } from "@/components/MeetingReview";
 import { MeetingOverview } from "@/components/MeetingOverview";
+import { ShareToggle } from "@/components/ShareToggle";
 import { useState } from "react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -28,6 +29,7 @@ const METHOD: Record<string, string> = { verbal: "Verbal", written: "Escrito", f
 function Detalhe() {
   const { id } = Route.useParams();
   const { data: m } = useSuspenseQuery(meetingQuery(id));
+  const { user } = Route.useRouteContext();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [full, setFull] = useState(false);
@@ -51,7 +53,7 @@ function Detalhe() {
   if ((m.current_transcript_id || processingLive) && !full && m.status !== "failed") {
     return (
       <div className="space-y-6 py-4">
-        <div className="space-y-2"><SourceTag meeting={m} /><h1 className="text-5xl">{m.title}</h1></div>
+        <div className="space-y-2"><div className="flex flex-wrap items-center gap-2"><SourceTag meeting={m} /><ShareToggle meeting={m} userId={user.id} /></div><h1 className="text-5xl">{m.title}</h1></div>
         {interruptionNotice}
         {processingLive && <ProcessingPanel meetingId={m.id} status={m.status} compact />}
         <MeetingOverview meeting={m} processing={processingLive} onFull={() => setFull(true)} />
@@ -67,7 +69,7 @@ function Detalhe() {
           <p className="text-sm text-muted-foreground">{new Date(m.created_at).toLocaleString("pt-BR")} · {m.timezone}</p>
           <h1 className="mt-1 text-5xl">{m.title}</h1>
         </div>
-        <div className="flex items-center gap-2"><SourceTag meeting={m} /><StatusBadge status={m.status} /></div>
+        <div className="flex flex-wrap items-center gap-2"><SourceTag meeting={m} /><ShareToggle meeting={m} userId={user.id} /><StatusBadge status={m.status} /></div>
       </header>
       {interruptionNotice}
 

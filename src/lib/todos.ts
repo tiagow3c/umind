@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { dayForTask, isoDay } from "@/lib/todo-rules";
+import { activeWorkspaceId } from "@/lib/workspaces";
 
 export const todosQuery = queryOptions({
   queryKey: ["todos"],
@@ -11,11 +12,7 @@ export const todosQuery = queryOptions({
   },
 });
 
-async function workspaceId() {
-  const { data, error } = await supabase.from("workspaces").select("id").order("created_at").limit(1).single();
-  if (error || !data) throw new Error("workspace");
-  return data.id;
-}
+const workspaceId = activeWorkspaceId;
 
 export async function addTodo(title: string, day: string, taskId: string | null = null) {
   const t = title.trim().slice(0, 500);

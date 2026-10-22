@@ -169,6 +169,13 @@
       "when": 1792681756453,
       "tag": "0023_workspaces_members_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792681937956,
+      "tag": "0024_search_respects_visibility",
+      "breakpoints": true
     }
   ]
 }

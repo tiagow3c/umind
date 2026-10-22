@@ -7,7 +7,9 @@ import { Assistant } from "@/components/Assistant";
 import { CalendarCheck, CalendarDays, Mic, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { recoverLocalCaptures } from "@/lib/meetings";
-import { useQueryClient } from "@tanstack/react-query";
+import { acceptPendingInvites, storedWorkspaceId, switchWorkspace, workspacesQuery } from "@/lib/workspaces";
+import { pickActiveWorkspace } from "@/lib/workspace-rules";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -43,6 +45,9 @@ function AppLayout() {
     window.addEventListener("online", recover);
     return () => { clearInterval(t); window.removeEventListener("online", recover); };
   }, [user.id, qc]);
+  useEffect(() => { void acceptPendingInvites().then((n) => { if (n) { toast.success("Você entrou em uma nova empresa."); void qc.invalidateQueries({ queryKey: ["workspaces"] }); } }).catch(() => {}); }, [qc]);
+  const { data: workspaces } = useQuery(workspacesQuery);
+  const activeWs = workspaces ? pickActiveWorkspace(workspaces, storedWorkspaceId()) : null;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isRecorder = pathname.endsWith("/gravar") || pathname === "/reunioes/nova";
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -77,6 +82,11 @@ function AppLayout() {
       {!isRecorder && <aside className="app-side app-side--menu z-50 hidden bg-sidebar md:flex md:flex-col">
         <div className="flex items-center justify-between p-5 md:block">
           <Link to="/hoje" className="font-serif text-3xl">Ata</Link>
+          {workspaces && workspaces.length > 1 && activeWs ? (
+            <select aria-label="Empresa" value={activeWs.id} onChange={(e) => switchWorkspace(e.target.value)} className="mt-3 w-full truncate rounded-md border bg-sidebar px-2 py-1.5 text-sm text-sidebar-foreground">
+              {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+          ) : activeWs ? <p className="mt-2 truncate text-xs text-muted-foreground">{activeWs.name}</p> : null}
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:pb-0">
           {NAV.map((n) => (
