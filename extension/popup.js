@@ -19,7 +19,7 @@ async function paint() {
   } else if (inCallAt && Date.now() - inCallAt < 5000) {
     dot.className = "dot pulse";
     $("stTitle").textContent = "Chamada aberta";
-    $("stSub").textContent = "Toque em “Gravar com Ata” no topo do Meet.";
+    $("stSub").textContent = "Toque em “Gravar” na janela do Ata no Meet.";
   } else {
     dot.className = "dot pulse";
     $("stTitle").textContent = "Monitorando o Meet";
@@ -34,7 +34,13 @@ async function refresh() {
   await paint();
   clearInterval(timer); timer = setInterval(paint, 1000);
   const r = await send({ type: "check" });
-  if (!(r && r.ok)) { clearInterval(timer); showForm(false); status("A conexão expirou. Cole um novo código."); }
+  if (!(r && r.ok)) {
+    if (r?.error === "unauthorized" || r?.error === "no_token" || r?.error === "http_401") {
+      clearInterval(timer); showForm(false); status("Código recusado. Cole um novo código.");
+    } else {
+      status("Não foi possível conectar ao Ata agora. Seu código foi mantido; tente novamente.");
+    }
+  }
 }
 
 $("reconnect").addEventListener("click", () => { clearInterval(timer); showForm(true); status(""); });

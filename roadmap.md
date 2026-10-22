@@ -1,4 +1,6 @@
 # Correção da pyannote
+# Conexão e janela da extensão
+- [ ] Corrigir endereço antigo, preservar códigos em falhas temporárias, arredondar popup e verificar nova versão.
 # Botões de ações e sugestões do chat
 - [x] Desabilitar ações concluídas com check e detalhes somente após clicar, sem seta; 21 testes passaram. Agenda/envio confirmados testados sem operações externas reais.
 - [x] Alternar sugestões na conversa vazia e verificar com sessão real; tarefa criada, check restaurado após recarregar, inclusão de teste removida.
