@@ -1,0 +1,20 @@
+function hasUnsafeChars(value: string): boolean {
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code === 0x5c || code <= 0x1f || code === 0x7f) return true; // backslash or control char
+  }
+  return false;
+}
+
+export function oauthReturnPath(value: unknown): string {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || hasUnsafeChars(value)) return "/";
+  // A fixed parsing origin keeps route search validation safe during SSR.
+  const origin = "https://app.invalid";
+  try {
+    const target = new URL(value, origin);
+    if (target.origin !== origin || target.pathname.startsWith("//")) return "/";
+    return target.pathname + target.search + target.hash;
+  } catch {
+    return "/";
+  }
+}

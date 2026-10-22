@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticated/ajustes'
 import { Route as AuthenticatedBuscarRouteImport } from './routes/_authenticated/buscar'
 import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedPessoasIndexRouteImport } from './routes/_authenticated/pessoas.index'
 import { Route as AuthenticatedPessoasIdRouteImport } from './routes/_authenticated/pessoas.$id'
 import { Route as AuthenticatedReunioesIndexRouteImport } from './routes/_authenticated/reunioes.index'
@@ -39,6 +42,17 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAjustesRoute = AuthenticatedAjustesRouteImport.update({
   id: '/ajustes',
   path: '/ajustes',
@@ -58,6 +72,11 @@ const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
   id: '/tarefas',
   path: '/tarefas',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedPessoasIndexRoute =
   AuthenticatedPessoasIndexRouteImport.update({
@@ -108,10 +127,13 @@ const AuthenticatedReunioesIdGravarRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ajustes': typeof AuthenticatedAjustesRoute
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
   '/api/public/extension': typeof ApiPublicExtensionRoute
@@ -124,10 +146,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ajustes': typeof AuthenticatedAjustesRoute
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
   '/api/public/extension': typeof ApiPublicExtensionRoute
@@ -142,10 +167,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/ajustes': typeof AuthenticatedAjustesRoute
   '/_authenticated/buscar': typeof AuthenticatedBuscarRoute
   '/_authenticated/hoje': typeof AuthenticatedHojeRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/_authenticated/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
   '/api/public/extension': typeof ApiPublicExtensionRoute
@@ -160,10 +188,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/mcp'
+    | '/.well-known/oauth-protected-resource'
     | '/ajustes'
     | '/buscar'
     | '/hoje'
     | '/tarefas'
+    | '/.lovable/oauth/consent'
     | '/pessoas/$id'
     | '/reunioes/nova'
     | '/api/public/extension'
@@ -176,10 +207,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/mcp'
+    | '/.well-known/oauth-protected-resource'
     | '/ajustes'
     | '/buscar'
     | '/hoje'
     | '/tarefas'
+    | '/.lovable/oauth/consent'
     | '/pessoas/$id'
     | '/reunioes/nova'
     | '/api/public/extension'
@@ -193,10 +227,13 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/mcp'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/ajustes'
     | '/_authenticated/buscar'
     | '/_authenticated/hoje'
     | '/_authenticated/tarefas'
+    | '/.lovable/oauth/consent'
     | '/_authenticated/pessoas/$id'
     | '/_authenticated/reunioes/nova'
     | '/api/public/extension'
@@ -211,6 +248,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  McpRoute: typeof McpRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicExtensionRoute: typeof ApiPublicExtensionRoute
   ApiPublicProcessQueueRoute: typeof ApiPublicProcessQueueRoute
 }
@@ -236,6 +276,20 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/ajustes': {
@@ -265,6 +319,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tarefas'
       preLoaderRoute: typeof AuthenticatedTarefasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/pessoas/': {
       id: '/_authenticated/pessoas/'
@@ -358,6 +419,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  McpRoute: McpRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicExtensionRoute: ApiPublicExtensionRoute,
   ApiPublicProcessQueueRoute: ApiPublicProcessQueueRoute,
 }
