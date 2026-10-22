@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { activeWorkspaceId } from "./workspaces";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { locateRecording } from "./capture-rules";
@@ -148,7 +149,7 @@ export const ERROR_LABEL: Record<string, string> = {
 export const peopleQuery = queryOptions({
   queryKey: ["people"],
   queryFn: async () => {
-    const { data, error } = await supabase.from("people").select("*, participants(id, meeting_id, meetings(id, title, created_at, status))").order("display_name");
+    const { data, error } = await supabase.from("people").select("*, participants(id, meeting_id, meetings(id, title, created_at, status))").eq("workspace_id", await activeWorkspaceId()).order("display_name");
     if (error) throw new Error(error.message);
     const paths = (data ?? []).map((p) => p.avatar_path).filter((x): x is string => !!x);
     const signed = paths.length ? (await supabase.storage.from("avatars").createSignedUrls(paths, 60 * 60 * 24)).data ?? [] : [];

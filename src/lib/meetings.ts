@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { isCaptureActive, listCaptures, listChunks, putChunk, removeCapture, sha256Hex, type LocalChunk } from "./local-store";
+import { activeWorkspace, activeWorkspaceId } from "./workspaces";
 
 function ok<R extends { data: unknown; error: { message: string } | null }>(r: R): NonNullable<R["data"]> {
   if (r.error) throw new Error(r.error.message);
@@ -9,17 +10,13 @@ function ok<R extends { data: unknown; error: { message: string } | null }>(r: R
 
 export const workspaceQuery = queryOptions({
   queryKey: ["workspace"],
-  queryFn: async () => {
-    const rows = ok(await supabase.from("workspaces").select("*").order("created_at").limit(1));
-    if (!rows[0]) throw new Error("Workspace não encontrado");
-    return rows[0];
-  },
+  queryFn: activeWorkspace,
 });
 
 export const meetingsQuery = queryOptions({
   queryKey: ["meetings"],
   queryFn: async () =>
-    ok(await supabase.from("meetings").select("*, recordings(status, duration_ms)").order("created_at", { ascending: false })),
+    ok(await supabase.from("meetings").select("*, recordings(status, duration_ms)").eq("workspace_id", await activeWorkspaceId()).order("created_at", { ascending: false })),
 });
 
 export const meetingQuery = (id: string) =>
@@ -44,7 +41,7 @@ export async function createMeeting(input: {
 }) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("Sessão expirada");
-  const ws = ok(await supabase.from("workspaces").select("id").limit(1).single());
+  const ws = { id: await activeWorkspaceId() };
   const m = ok(
     await supabase
       .from("meetings")
