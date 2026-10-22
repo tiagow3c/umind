@@ -57,6 +57,9 @@ export function ProcessingPanel({ meetingId, status, compact = false, waiting = 
     return () => { alive = false; clearTimeout(timer); };
   }, [meetingId, status, advance, qc, compact]);
 
+  const stageStart = useRef<{ stage: string | null; at: number }>({ stage: null, at: Date.now() });
+  const runningStage = stages?.find((s) => s.status === "running" || s.status === "queued" || s.status === "retry_wait")?.stage ?? null;
+  if (stageStart.current.stage !== runningStage) stageStart.current = { stage: runningStage, at: Date.now() };
   const failed = stages?.find((s) => s.status === "failed");
   const cancelled = status === "failed" && !failed && stages?.some((s) => s.error_code === "user_cancelled");
   const navigate = useNavigate();
