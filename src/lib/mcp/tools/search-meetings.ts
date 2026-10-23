@@ -40,15 +40,21 @@ export default defineTool({
     if (items.error) return { content: [{ type: "text" as const, text: items.error.message }], isError: true };
     const segments = (segs.data ?? []) as { segment_id: string; meeting_id: string; meeting_title: string; text: string; start_ms: number; speaker_label: string | null; score: number }[];
     const analysisItems = (items.data ?? []) as { item_id: string; meeting_id: string; meeting_title: string; kind: string; text: string; score: number }[];
+    const ids = [...new Set([...segments, ...analysisItems].map(r => r.meeting_id))];
+    const referencesResult = ids.length ? await supabase.from("meetings").select("id, knowledge_ref").in("id", ids) : { data: [], error: null };
+    if (referencesResult.error) return { content: [{ type: "text" as const, text: "Não foi possível consultar as referências." }], isError: true };
+    const references = new Map((referencesResult.data ?? []).map(m => [m.id, m.knowledge_ref ? `#${m.knowledge_ref}` : null]));
+    const visibleSegments = segments.filter(s => references.has(s.meeting_id));
+    const visibleItems = analysisItems.filter(i => references.has(i.meeting_id));
     const lines = [
-      ...segments.map((s) => `[${s.meeting_title}] ${s.speaker_label ?? "Alguém"}: ${s.text}`),
-      ...analysisItems.map((i) => `[${i.meeting_title}] (${i.kind}) ${i.text}`),
+      ...visibleSegments.map((s) => `[${references.get(s.meeting_id) ?? s.meeting_id} — ${s.meeting_title}] ${s.speaker_label ?? "Alguém"}: ${s.text}`),
+      ...visibleItems.map((i) => `[${references.get(i.meeting_id) ?? i.meeting_id} — ${i.meeting_title}] (${i.kind}) ${i.text}`),
     ];
     return {
       content: [{ type: "text" as const, text: lines.length ? lines.join("\n") : "Nada encontrado para essa busca." }],
       structuredContent: {
-        segments: segments.map((s) => ({ meeting_id: s.meeting_id, meeting_title: s.meeting_title, speaker: s.speaker_label, text: s.text, start_ms: s.start_ms })),
-        items: analysisItems.map((i) => ({ meeting_id: i.meeting_id, meeting_title: i.meeting_title, kind: i.kind, text: i.text })),
+        segments: visibleSegments.map((s) => ({ meeting_id: s.meeting_id, reference: references.get(s.meeting_id) ?? null, meeting_title: s.meeting_title, speaker: s.speaker_label, text: s.text, start_ms: s.start_ms })),
+        items: visibleItems.map((i) => ({ meeting_id: i.meeting_id, reference: references.get(i.meeting_id) ?? null, meeting_title: i.meeting_title, kind: i.kind, text: i.text })),
       },
     };
   },
