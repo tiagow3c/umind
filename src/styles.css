@@ -153,6 +153,7 @@
     gap: 0.5rem;
     padding: 0.625rem 0.75rem 0.625rem 0;
     background: var(--color-sidebar);
+    transition: grid-template-columns 340ms cubic-bezier(0.32, 0.72, 0.16, 1);
   }
   .app-shell--columns .app-main,
   .app-shell--columns .assistant-rail {
@@ -162,7 +163,10 @@
     background: var(--color-background);
   }
   .app-shell--columns .app-main { overflow-y: auto; overscroll-behavior-y: contain; }
-  .app-shell--columns .assistant-rail { overflow: hidden; }
+  .app-shell--columns .assistant-rail { overflow: hidden; transition: opacity 220ms ease; }
+  .app-shell--columns .assistant-rail > section { transition: transform 340ms cubic-bezier(0.32, 0.72, 0.16, 1); }
+  .app-shell--columns .assistant-rail--min { opacity: 0; pointer-events: none; }
+  .app-shell--columns .assistant-rail--min > section { transform: translateX(32px); }
   .app-side--menu { min-height: 0; height: 100%; overflow-y: auto; }
 }
 
