@@ -12,6 +12,7 @@ import { createExtensionToken } from "@/lib/extension.functions";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { CompanyContext, Members, WorkspaceSwitcher } from "@/components/WorkspaceSettings";
+import { KnowledgeConnection } from "@/components/KnowledgeConnection";
 
 export const Route = createFileRoute("/_authenticated/ajustes")({
   head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Ajustes — Ata" }, { name: "description", content: "Conta, empresa, membros e privacidade." }, { property: "og:title", content: "Ajustes — Ata" }, { property: "og:description", content: "Conta, empresa, membros e privacidade." }] }),
@@ -54,6 +55,7 @@ function Ajustes() {
       <CompanyContext ws={ws} />
       <Appearance />
       <MeetExtension />
+      <KnowledgeConnection />
       <section className="space-y-2">
         <h2 className="border-b pb-2 text-2xl">Privacidade</h2>
         <p className="max-w-lg text-sm text-muted-foreground">Reuniões são privadas por padrão. O áudio é guardado em armazenamento privado e só você tem acesso. Exportação, retenção e exclusão de conta chegam nas próximas etapas.</p>

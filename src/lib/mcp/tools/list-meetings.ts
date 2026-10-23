@@ -14,12 +14,13 @@ export default defineTool({
     const supabase = supabaseForUser(ctx);
     const { data, error } = await supabase
       .from("meetings")
-      .select("id, title, status, started_at, ended_at, source_type, meet_url, visibility")
+      .select("id, knowledge_ref, title, status, started_at, ended_at, source_type, meet_url, visibility")
       .order("created_at", { ascending: false })
       .limit(limit);
     if (error) return { content: [{ type: "text" as const, text: error.message }], isError: true };
     const meetings = (data ?? []).map((m) => ({
       id: m.id,
+      reference: m.knowledge_ref ? `#${m.knowledge_ref}` : null,
       title: m.title,
       status: m.status,
       started_at: m.started_at,
@@ -28,7 +29,7 @@ export default defineTool({
       visibility: m.visibility,
     }));
     return {
-      content: [{ type: "text" as const, text: meetings.length ? meetings.map((m) => `${m.id} — ${m.title} (${m.status})`).join("\n") : "Nenhuma reunião encontrada." }],
+      content: [{ type: "text" as const, text: meetings.length ? meetings.map((m) => `${m.reference ?? m.id} — ${m.title} (${m.status})`).join("\n") : "Nenhuma reunião encontrada." }],
       structuredContent: { meetings },
     };
   },

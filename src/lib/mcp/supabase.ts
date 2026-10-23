@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import type { ToolContext } from "@lovable.dev/mcp-js";
 
 type RuntimeGlobals = typeof globalThis & {
@@ -49,7 +50,7 @@ function supabasePublishableKey(): string {
 }
 
 export function supabaseAnon() {
-  return createClient(supabaseProjectUrl(), supabasePublishableKey(), {
+  return createClient<Database>(supabaseProjectUrl(), supabasePublishableKey(), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
@@ -58,7 +59,7 @@ export function supabaseAnon() {
 export function supabaseForUser(ctx: ToolContext) {
   const token = ctx.getToken();
   if (!token) throw new Error("supabaseForUser requires a verified OAuth token");
-  return createClient(supabaseProjectUrl(), supabasePublishableKey(), {
+  return createClient<Database>(supabaseProjectUrl(), supabasePublishableKey(), {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -66,7 +67,7 @@ export function supabaseForUser(ctx: ToolContext) {
 
 /** Same caller-scoped client for plain bearer tokens (native app API). */
 export function supabaseForToken(token: string) {
-  return createClient(supabaseProjectUrl(), supabasePublishableKey(), {
+  return createClient<Database>(supabaseProjectUrl(), supabasePublishableKey(), {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
