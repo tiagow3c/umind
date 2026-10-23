@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AccountMenu } from "@/components/AccountMenu";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { Assistant } from "@/components/Assistant";
-import { CalendarCheck, CalendarDays, Mic, Puzzle, UsersRound } from "lucide-react";
+import { CalendarCheck, CalendarDays, Mic, PanelLeftClose, PanelLeftOpen, Puzzle, Settings, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { recoverLocalCaptures } from "@/lib/meetings";
 import { acceptPendingInvites, storedWorkspaceId, switchWorkspace, workspacesQuery } from "@/lib/workspaces";
@@ -27,7 +27,7 @@ const NAV = [
   { to: "/reunioes", label: "Reuniões", icon: Mic },
   { to: "/tarefas", label: "Tarefas", icon: CalendarCheck },
   { to: "/pessoas", label: "Pessoas", icon: UsersRound },
-  { to: "/ajustes", label: "Ajustes" },
+  { to: "/ajustes", label: "Ajustes", icon: Settings },
 ] as const;
 
 function AppLayout() {
@@ -67,6 +67,13 @@ function AppLayout() {
     localStorage.setItem("ata-ai-min", next ? "1" : "0");
     setAssistantMin(next);
   };
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { setMenuOpen(localStorage.getItem("ata-menu-open") === "1"); }, []);
+  const toggleMenu = () => {
+    const next = !menuOpen;
+    localStorage.setItem("ata-menu-open", next ? "1" : "0");
+    setMenuOpen(next);
+  };
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -78,7 +85,9 @@ function AppLayout() {
   }, []);
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
   const displayName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Minha conta";
-  const grid = isRecorder ? "" : ` md:grid md:grid-cols-[220px_minmax(0,1fr)_${assistantMin ? "0px" : "340px"}]`;
+  const grid = isRecorder ? "" : menuOpen
+    ? assistantMin ? " md:grid md:grid-cols-[220px_minmax(0,1fr)]" : " md:grid md:grid-cols-[220px_minmax(0,1fr)_340px]"
+    : assistantMin ? " md:grid md:grid-cols-[64px_minmax(0,1fr)]" : " md:grid md:grid-cols-[64px_minmax(0,1fr)_340px]";
   return (
     <div className={`app-shell${isRecorder ? "" : " app-shell--columns"}${grid}`} data-keyboard-open={keyboardOpen}>
       {!isRecorder && <header className="mobile-app-header sticky top-0 z-30 border-b bg-background md:hidden">
@@ -88,35 +97,45 @@ function AppLayout() {
         </div>
       </header>}
       {!isRecorder && <aside className="app-side app-side--menu z-50 hidden bg-sidebar md:flex md:flex-col">
-        <div className="flex items-center justify-between p-5 md:block">
-          <Link to="/hoje" className="font-serif text-3xl">Ata</Link>
-          {workspaces && workspaces.length > 1 && activeWs ? (
+        <div className={`flex items-center justify-between md:block ${menuOpen ? "p-5" : "p-3"}`}>
+          <div className={`flex items-center justify-between ${menuOpen ? "" : "md:justify-center"}`}>
+            <Link to="/hoje" className={`font-serif text-3xl ${menuOpen ? "" : "md:hidden"}`} aria-label="Ata — Hoje">Ata</Link>
+            <Button variant="ghost" size="icon" className="hidden md:inline-flex" title={menuOpen ? "Recolher menu" : "Expandir menu"} aria-label={menuOpen ? "Recolher menu" : "Expandir menu"} onClick={toggleMenu}>
+              {menuOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+            </Button>
+          </div>
+          {menuOpen && (workspaces && workspaces.length > 1 && activeWs ? (
             <select aria-label="Empresa" value={activeWs.id} onChange={(e) => switchWorkspace(e.target.value)} className="mt-3 w-full truncate rounded-md border bg-sidebar px-2 py-1.5 text-sm text-sidebar-foreground">
               {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
-          ) : activeWs ? <p className="mt-2 truncate text-xs text-muted-foreground">{activeWs.name}</p> : null}
+          ) : activeWs ? <p className="mt-2 truncate text-xs text-muted-foreground">{activeWs.name}</p> : null)}
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:pb-0">
-          {NAV.map((n) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              className="rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
-              activeProps={{ className: "bg-sidebar-accent font-medium" }}
-            >
-              {n.label}
-            </Link>
-          ))}
+          {NAV.map((n) => {
+            const Icon = n.icon;
+            return (
+              <Link
+                key={n.to}
+                to={n.to}
+                title={n.label}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent ${menuOpen ? "" : "md:justify-center"}`}
+                activeProps={{ className: "bg-sidebar-accent font-medium" }}
+              >
+                <Icon className="size-4 shrink-0" strokeWidth={1.8} />
+                <span className={menuOpen ? "" : "md:hidden"}>{n.label}</span>
+              </Link>
+            );
+          })}
         </nav>
-        <div className="hidden p-5 md:mt-8 md:block">
-          {isRecorder ? <Button disabled className="w-full"><Mic className="size-4" />Gravar</Button> : <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-            <Link to="/reunioes/nova"><Mic className="size-4" />Gravar</Link>
+        <div className={`hidden md:mt-8 md:block ${menuOpen ? "p-5" : "p-2"}`}>
+          {isRecorder ? <Button disabled className="w-full" title="Gravar"><Mic className="size-4" /><span className={menuOpen ? "" : "hidden"}>Gravar</span></Button> : <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+            <Link to="/reunioes/nova" title="Gravar"><Mic className="size-4" /><span className={menuOpen ? "" : "hidden"}>Gravar</span></Link>
           </Button>}
           {usesExtension === false && <Button asChild variant="outline" className="mt-2 w-full">
-            <Link to="/ajustes" hash="google-meet"><Puzzle className="size-4" />Extensão do Meet</Link>
+            <Link to="/ajustes" hash="google-meet" title="Extensão do Meet"><Puzzle className="size-4" /><span className={menuOpen ? "" : "hidden"}>Extensão do Meet</span></Link>
           </Button>}
         </div>
-        <div className="mt-auto p-3"><AccountMenu name={displayName} email={user.email} /></div>
+        <div className="mt-auto p-3"><AccountMenu name={displayName} email={user.email} compact={!menuOpen} /></div>
       </aside>}
       <main className="app-main min-w-0 w-full px-5 py-7 md:px-10 md:py-12">
         <div className="mx-auto w-full min-w-0 max-w-4xl"><Outlet /></div>
