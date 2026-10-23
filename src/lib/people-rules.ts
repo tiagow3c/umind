@@ -121,3 +121,8 @@ export function isMeetPersonName(name: string): boolean {
   const n = name.trim();
   return n.length >= 2 && n.length <= 80 && !/^(você|you)$/i.test(n) && !/apresenta|presentation|\(você\)|\(you\)/i.test(n);
 }
+
+/** An unnamed voice with very little speech (<15 s and <2% of the meeting) is usually a diarization fragment, not a real participant. */
+export function isStrayVoice(speechMs: number, totalMs: number, named: boolean): boolean {
+  return !named && speechMs < 15000 && speechMs < totalMs * 0.02;
+}
