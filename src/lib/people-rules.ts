@@ -110,3 +110,14 @@ export function inferSpeakersFromConversation(turns: Turn[], people: Person[], k
   for (const r of ranked) { if (taken.has(r.id)) continue; taken.add(r.id); out.set(r.sp, r.id); }
   return out;
 }
+
+/** Meet profile pictures the server may download: only Google's avatar CDN over https. */
+export function isMeetPhotoUrl(url: string): boolean {
+  try { const u = new URL(url); return u.protocol === "https:" && /(^|\.)googleusercontent\.com$/.test(u.hostname); } catch { return false; }
+}
+
+/** Names shown by Meet that are not real people ("Você", presentation tiles, etc.). */
+export function isMeetPersonName(name: string): boolean {
+  const n = name.trim();
+  return n.length >= 2 && n.length <= 80 && !/^(você|you)$/i.test(n) && !/apresenta|presentation|\(você\)|\(you\)/i.test(n);
+}
