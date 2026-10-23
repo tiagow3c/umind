@@ -92,14 +92,32 @@
     const t = document.title.replace(/^Meet\s*[-–:]\s*/i, "").trim();
     return t && !/^meet$/i.test(t) && !/^[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(t) ? t : "Chamada do Meet";
   };
-  const participantNames = () => {
-    const names = new Set();
-    document.querySelectorAll("[data-participant-id] [data-self-name], [data-participant-id] .notranslate").forEach((el) => {
-      const n = (el.textContent || "").trim();
-      if (n && n.length < 80 && !/^(você|you)$/i.test(n)) names.add(n);
-    });
-    return [...names];
+  // Meet tiles: name + Google profile picture, or a centered snapshot of the live camera.
+  const faces = new Map();
+  const tileName = (tile) => {
+    const el = tile.querySelector("[data-self-name], .notranslate");
+    return (el?.textContent || "").trim();
   };
+  const snapshot = (video) => {
+    if (!video.videoWidth || video.readyState < 2) return null;
+    const side = Math.min(video.videoWidth, video.videoHeight) * 0.7;
+    const c = document.createElement("canvas"); c.width = c.height = 256;
+    c.getContext("2d").drawImage(video, (video.videoWidth - side) / 2, (video.videoHeight - side) / 2.4, side, side, 0, 0, 256, 256);
+    try { return c.toDataURL("image/jpeg", 0.82); } catch { return null; }
+  };
+  const collectFaces = () => {
+    document.querySelectorAll("[data-participant-id]").forEach((tile) => {
+      const name = tileName(tile);
+      if (!name || name.length > 80 || /^(você|you)$/i.test(name)) return;
+      const entry = faces.get(name) || { name };
+      const img = tile.querySelector('img[src*="googleusercontent.com"]');
+      if (img && !entry.photoUrl) entry.photoUrl = img.src.replace(/=s\d+[^/]*$/, "=s256");
+      const video = tile.querySelector("video");
+      if (video && !entry.photo && !entry.photoUrl) { const shot = snapshot(video); if (shot) entry.photo = shot; }
+      faces.set(name, entry);
+    });
+  };
+  const participantNames = () => { collectFaces(); return [...faces.values()].slice(0, 30); };
 
   const toB64 = async (blob) => {
     const buf = new Uint8Array(await blob.arrayBuffer());
@@ -180,6 +198,7 @@
       if (rec.state === "inactive") { void stop(true); return; }
       void send({ type: "heartbeat", params: { recording: session.recordingId } }).then((r) => { if (!r.active) void stop(true); }).catch(() => {});
     }, 15000);
+    faces.clear(); collectFaces();
     rec.start(PART_MS);
     label("● Gravando — parar", true);
     void chrome.storage.local.set({ recording: { title: title(), startedAt: state.startedAt } });
@@ -221,6 +240,7 @@
       document.body.append(panel, reopen);
       void lookup();
     }
+    if (state.rec && Date.now() % 10000 < 1500) collectFaces();
     if (state.rec) {
       const seconds = Math.floor((Date.now() - state.startedAt) / 1000);
       if (Date.now() - state.startedAt >= state.remainingMs) void stop(true);

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { normalizeMeetUrl } from "@/lib/capture-rules";
 import { sha256 } from "@/lib/extension.functions";
+import { isMeetPersonName, isMeetPhotoUrl, matchPerson } from "@/lib/people-rules";
 
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: CORS });
@@ -76,10 +77,12 @@ export const Route = createFileRoute("/api/public/extension")({
         }
 
         if (action === "finish") {
-          const parsed = z.object({ durationMs: z.number().min(0).max(7200000).optional(), participants: z.array(z.string().max(120)).max(30).optional() }).safeParse(await request.json().catch(() => ({})));
+          const parsed = z.object({ durationMs: z.number().min(0).max(7200000).optional(), participants: z.array(z.union([z.string().max(120), z.object({ name: z.string().max(120), photo: z.string().max(400000).optional(), photoUrl: z.string().max(2000).optional() })])).max(30).optional() }).safeParse(await request.json().catch(() => ({})));
           if (!parsed.success) return json({ error: "input" }, 400);
           const result = await db.rpc("finish_capture_internal", { _recording: rec.id });
           if (result.error) return json({ error: "finish" }, 500);
+          // Best-effort: register Meet participants (name + photo) in the people registry; never blocks finishing.
+          try { await registerMeetPeople(db, tk.workspace_id, parsed.data.participants ?? []); } catch (e) { console.error("meet people", e); }
           return json({ ok: true, meetingId: rec.meeting_id });
         }
         return json({ error: "action" }, 400);
@@ -87,3 +90,42 @@ export const Route = createFileRoute("/api/public/extension")({
     },
   },
 });
+
+type MeetPerson = string | { name: string; photo?: string; photoUrl?: string };
+type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
+
+async function photoBytes(p: Exclude<MeetPerson, string>): Promise<{ buf: Uint8Array; type: string } | null> {
+  const m = p.photo && /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(p.photo);
+  if (m) return { buf: Uint8Array.from(atob(m[2]!), (c) => c.charCodeAt(0)), type: m[1]! };
+  if (p.photoUrl && isMeetPhotoUrl(p.photoUrl)) {
+    const r = await fetch(p.photoUrl);
+    const type = r.headers.get("content-type") ?? "";
+    if (!r.ok || !type.startsWith("image/")) return null;
+    return { buf: new Uint8Array(await r.arrayBuffer()), type };
+  }
+  return null;
+}
+
+async function registerMeetPeople(db: Db, workspace: string, list: MeetPerson[]) {
+  const { data } = await db.from("people").select("id, display_name, aliases, avatar_path").eq("workspace_id", workspace);
+  const registry = data ?? [];
+  const seen = new Set<string>();
+  for (const item of list) {
+    const p = typeof item === "string" ? { name: item } : item;
+    const name = p.name.trim();
+    if (!isMeetPersonName(name) || seen.has(name.toLowerCase())) continue;
+    seen.add(name.toLowerCase());
+    let person = matchPerson(name, registry) as (typeof registry)[number] | null;
+    if (!person) {
+      const { data: np } = await db.from("people").insert({ workspace_id: workspace, display_name: name }).select("id, display_name, aliases, avatar_path").single();
+      if (!np) continue;
+      person = np; registry.push(np);
+    }
+    if (person.avatar_path) continue; // never replace a photo the user already has
+    const img = await photoBytes(p).catch(() => null);
+    if (!img || img.buf.byteLength < 500 || img.buf.byteLength > 2 * 1024 * 1024) continue;
+    const path = `${workspace}/${person.id}-meet-${Date.now()}`;
+    const up = await db.storage.from("avatars").upload(path, img.buf, { contentType: img.type });
+    if (!up.error) { await db.from("people").update({ avatar_path: path }).eq("id", person.id); person.avatar_path = path; }
+  }
+}
