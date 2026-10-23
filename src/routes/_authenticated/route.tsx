@@ -47,6 +47,15 @@ function AppLayout() {
   }, [user.id, qc]);
   useEffect(() => { void acceptPendingInvites().then((n) => { if (n) { toast.success("Você entrou em uma nova empresa."); void qc.invalidateQueries({ queryKey: ["workspaces"] }); } }).catch(() => {}); }, [qc]);
   const { data: workspaces } = useQuery(workspacesQuery);
+  // Show the extension shortcut only to people who never connected it.
+  const { data: usesExtension } = useQuery({
+    queryKey: ["uses-extension"],
+    queryFn: async () => {
+      const { count } = await supabase.from("extension_tokens").select("id", { count: "exact", head: true });
+      return (count ?? 0) > 0;
+    },
+    staleTime: 5 * 60_000,
+  });
   const activeWs = workspaces ? pickActiveWorkspace(workspaces, storedWorkspaceId()) : null;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isRecorder = pathname.endsWith("/gravar") || pathname === "/reunioes/nova";
