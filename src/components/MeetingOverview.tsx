@@ -21,7 +21,7 @@ type Meeting = {
   recordings: { id: string; codec: string | null; timeline_offset_ms?: number; duration_ms?: number | null; recording_parts: { object_key: string; sequence: number }[] }[];
 };
 
-export function MeetingOverview({ meeting, onFull, processing = false }: { meeting: Meeting; onFull: () => void; processing?: boolean }) {
+export function MeetingOverview({ meeting, onFull, processing = false }: { meeting: Meeting; onFull?: () => void; processing?: boolean }) {
   const { data: an } = useQuery(analysisQuery(meeting.id));
   const { data: speakers } = useQuery({ ...speakersQuery(meeting.id), refetchInterval: processing ? 3000 : false });
   const { data: tasks } = useQuery(meetingTasksQuery(meeting.id));
@@ -119,7 +119,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
         ) : (
           <p className="text-base leading-relaxed">Resumo sendo preparado.</p>
         )}
-        {!processing && <Button variant="link" onClick={onFull} className="mt-4 h-auto p-0">Transcrição e ações</Button>}
+        {!processing && onFull && <Button variant="link" onClick={onFull} className="mt-4 h-auto p-0">Transcrição e ações</Button>}
       </section>
 
       {processing && !speakers?.length && (
