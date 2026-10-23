@@ -96,7 +96,7 @@ function AppLayout() {
           <AccountMenu name={displayName} email={user.email} compact />
         </div>
       </header>}
-      {!isRecorder && <aside className="app-side app-side--menu z-50 hidden bg-sidebar md:flex md:flex-col">
+      {!isRecorder && <aside className={`app-side app-side--menu z-50 hidden bg-sidebar md:flex md:flex-col${menuOpen ? "" : " app-side--menu-collapsed"}`}>
         <div className={`flex items-center justify-between md:block ${menuOpen ? "p-5" : "p-3"}`}>
           <div className={`flex items-center justify-between ${menuOpen ? "" : "md:justify-center"}`}>
             <Link to="/hoje" className={`font-serif text-3xl ${menuOpen ? "" : "md:hidden"}`} aria-label="Ata — Hoje">Ata</Link>
