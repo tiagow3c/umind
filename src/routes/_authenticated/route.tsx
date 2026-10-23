@@ -86,8 +86,8 @@ function AppLayout() {
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
   const displayName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Minha conta";
   const grid = isRecorder ? "" : menuOpen
-    ? assistantMin ? " md:grid md:grid-cols-[220px_minmax(0,1fr)]" : " md:grid md:grid-cols-[220px_minmax(0,1fr)_340px]"
-    : assistantMin ? " md:grid md:grid-cols-[64px_minmax(0,1fr)]" : " md:grid md:grid-cols-[64px_minmax(0,1fr)_340px]";
+    ? assistantMin ? " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)_0px]" : " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)_340px]"
+    : assistantMin ? " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[64px_minmax(0,1fr)_0px]" : " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[64px_minmax(0,1fr)_340px]";
   return (
     <div className={`app-shell${isRecorder ? "" : " app-shell--columns"}${grid}`} data-keyboard-open={keyboardOpen}>
       {!isRecorder && <header className="mobile-app-header sticky top-0 z-30 border-b bg-background md:hidden">
