@@ -1,3 +1,7 @@
+# Colunas independentes
+- [ ] Aplicar áreas separadas de conteúdo e Ata AI, claro branco/cinza e mesma estrutura no escuro.
+- [ ] Verificar minimizar/reabrir, computador e celular sem cortes ou sobreposição.
+
 # Meet fechado sem parar
 - [x] Plano aprovado: encerramento durável ao fechar/sair da aba, preservar envios pendentes e atualizar automaticamente o estado na tela Hoje.
 - [x] Extensão 1.4.1 persiste sessão e encerra ao fechar/navegar; fila durável e recuperação tardia preservadas. 20 testes passaram; reunião real mostra Processando, download do pacote verificado e build OK.
