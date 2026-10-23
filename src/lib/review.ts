@@ -113,20 +113,23 @@ export async function markCompleted(meetingId: string) {
   if (error) throw new Error(error.message);
 }
 
-const audioCache = new Map<string, string>();
-/** Assemble the private audio parts into a playable local URL (stays in memory). */
-export async function loadPlayableAudio(recordingId: string, parts: { object_key: string; sequence: number }[], type: string) {
+const audioCache = new Map<string, Promise<string>>();
+/** Assemble the private audio parts into a playable local URL (stays in memory). Shared per recording, so preloading and playing reuse one download. */
+export function loadPlayableAudio(recordingId: string, parts: { object_key: string; sequence: number }[], type: string) {
   const hit = audioCache.get(recordingId);
   if (hit) return hit;
-  const blobs: Blob[] = [];
-  for (const p of [...parts].sort((a, b) => a.sequence - b.sequence)) {
-    const { data, error } = await supabase.storage.from("recordings").download(p.object_key);
-    if (error || !data) throw new Error("audio_unavailable");
-    blobs.push(data);
-  }
-  const url = URL.createObjectURL(new Blob(blobs, { type }));
-  audioCache.set(recordingId, url);
-  return url;
+  const job = (async () => {
+    const sorted = [...parts].sort((a, b) => a.sequence - b.sequence);
+    const blobs = await Promise.all(sorted.map(async (p) => {
+      const { data, error } = await supabase.storage.from("recordings").download(p.object_key);
+      if (error || !data) throw new Error("audio_unavailable");
+      return data;
+    }));
+    return URL.createObjectURL(new Blob(blobs, { type }));
+  })();
+  audioCache.set(recordingId, job);
+  job.catch(() => audioCache.delete(recordingId));
+  return job;
 }
 
 export function fmtTime(ms: number) {
