@@ -110,7 +110,7 @@ function AppLayout() {
             </select>
           ) : activeWs ? <p className="mt-2 truncate text-xs text-muted-foreground">{activeWs.name}</p> : null)}
         </div>
-        <nav className={`flex gap-1 overflow-x-auto pb-3 md:flex-col md:pb-0 ${menuOpen ? "px-3" : "md:px-0"}`}>
+        <nav className={`flex gap-1 overflow-x-auto pb-3 md:flex-col md:pb-0 ${menuOpen ? "px-3" : "md:px-0 md:gap-3"}`}>
           {NAV.map((n) => {
             const Icon = n.icon;
             return (
