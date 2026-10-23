@@ -11,11 +11,12 @@ describe("extension connection", () => {
     const fetch = vi.fn(async (_url: string, _options: unknown) => ({ ok: true, json: async () => ({ ok: true }) }));
     const listener = { addListener: vi.fn() };
     const context = {
-      fetch, URLSearchParams,
+      fetch, URLSearchParams, URL,
       chrome: {
         storage: { local: { get: async () => ({ token: "test-code" }) }, onChanged: listener },
         runtime: { onMessage: listener, onStartup: listener, onInstalled: listener },
         alarms: { create: vi.fn(), onAlarm: listener },
+        tabs: { onRemoved: listener, onUpdated: listener },
       },
     };
     await runInNewContext(background + '\ncall("check");', context);

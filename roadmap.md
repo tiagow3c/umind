@@ -1,6 +1,7 @@
 # Meet fechado sem parar
-- [ ] Planejar encerramento durável ao fechar/sair da aba, preservar envios pendentes e atualizar automaticamente o estado na tela Hoje.
-- [ ] Implementar e testar fechamento da aba e leitura do estado atualizado; chamada real depende da extensão atualizada no Chrome.
+- [x] Plano aprovado: encerramento durável ao fechar/sair da aba, preservar envios pendentes e atualizar automaticamente o estado na tela Hoje.
+- [x] Extensão 1.4.1 persiste sessão e encerra ao fechar/navegar; fila durável e recuperação tardia preservadas. 20 testes passaram; reunião real mostra Processando, download do pacote verificado e build OK.
+- [ ] Ativar no endereço público e conferir uma chamada real — depende de publicação e recarregamento da extensão atualizada no Chrome do usuário.
 
 # Conhecimento reutilizável no Claude e ChatGPT
 - [x] Plano de referências e contexto aprovado.
