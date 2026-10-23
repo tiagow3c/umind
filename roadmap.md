@@ -1,6 +1,10 @@
 # Confiabilidade antes de novos recursos
 - [x] Investigar identificação e transcrição nas reuniões reais e preparar plano de correções; auto-documentação adiada.
-- [ ] Implementar e validar as correções — aguarda aprovação do plano.
+- [x] Corrigir envio MP4/WebM pelo SDK; recuperar as duas reuniões recusadas e conferir resumos ao reabrir.
+- [x] Cadastro de voz retomável, apenas com identidade confirmada; exibir falha e nova tentativa. Cadastro real retornou 402 (créditos), salvo e visível.
+- [x] Restringir pistas de conversa e sobreposição, separar falha de identidade, checkpoint de trechos e preservar retomada sem fala; 64 testes passaram. Registros antigos em andamento pertencem a reuniões já excluídas.
+- [ ] Validar cadastro concluído e reconhecimento real — depende de créditos no serviço pyannote; retorno atual 402 confirmado.
+- [ ] Disponibilizar correções no site publicado — depende de publicação solicitada pelo usuário.
 
 # Correção da pyannote
 # Conexão e janela da extensão

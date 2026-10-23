@@ -56,7 +56,7 @@ export function suggestCandidates<P extends Candidate>(
   return [...cited, ...frequent].slice(0, max);
 }
 
-type Turn = { speaker: number | null; text: string };
+type Turn = { speaker: number | null; text: string; start_ms?: number; end_ms?: number };
 
 /**
  * Links unknown voices to registry people from the conversation itself:
@@ -94,7 +94,11 @@ export function inferSpeakersFromConversation(turns: Turn[], people: Person[], k
     }
     const ids = mentioned(a.text).filter((id) => known.get(a.speaker!) !== id);
     if (!ids.length) continue;
-    const next = turns.slice(i + 1).find((u) => u.speaker !== null && u.speaker !== a.speaker);
+    // A name in a report is not a vocative. Only the immediate answering turn counts.
+    if (!/[?？]/.test(a.text) && !/^(oi|ola|bom dia|boa tarde|boa noite)\b/.test(normalizeName(a.text))) continue;
+    const next = turns[i + 1];
+    if (next?.speaker === a.speaker) continue;
+    if (next?.start_ms !== undefined && a.end_ms !== undefined && next.start_ms - a.end_ms > 5000) continue;
     if (next && next.speaker !== null && !known.has(next.speaker)) for (const id of ids) vote(next.speaker, id, 1);
   }
   const taken = new Set(known.values());

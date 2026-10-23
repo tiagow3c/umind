@@ -1151,6 +1151,74 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_enrollments: {
+        Row: {
+          job_id: string | null
+          lease_until: string | null
+          media_url: string | null
+          meeting_id: string
+          person_id: string
+          reason: string | null
+          speaker_id: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          job_id?: string | null
+          lease_until?: string | null
+          media_url?: string | null
+          meeting_id: string
+          person_id: string
+          reason?: string | null
+          speaker_id: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          job_id?: string | null
+          lease_until?: string | null
+          media_url?: string | null
+          meeting_id?: string
+          person_id?: string
+          reason?: string | null
+          speaker_id?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_enrollments_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_enrollments_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_enrollments_speaker_id_fkey"
+            columns: ["speaker_id"]
+            isOneToOne: true
+            referencedRelation: "speakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_enrollments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_context: {
         Row: {
           content: string

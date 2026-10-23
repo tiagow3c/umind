@@ -10,6 +10,8 @@
 <!-- LOVABLE:END -->
 
 ## Architecture rules
+- Transcription uses the typed Gateway SDK with a filename matching the real audio container; completed chunk text is checkpointed on the run to avoid replaying successful chunks.
+- Voice enrollment is resumable in voice_enrollments and requires a currently confirmed speaker/person association; ambiguous external submissions are never silently replayed or used to train identity.
 - Meeting action feedback uses linked todos for task addition and tasks.action.completed_actions for confirmed email/calendar operations; opening external Gmail drafts never records confirmed sending.
 - Home-screen installation uses manifest-only PWA metadata and static icons, without app-shell caching or service workers, so preview updates remain safe.
 - Meeting state transitions that need atomicity (start_recording, finalize_recording, delete_meeting) live in SQL functions; the browser calls them via RPC so rules hold for any future client (mobile).

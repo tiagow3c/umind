@@ -55,6 +55,14 @@ describe("inferSpeakersFromConversation", () => {
     const turns = [{ speaker: 0, text: "Oi Carlos" }, { speaker: 1, text: "Oi" }];
     expect(inferSpeakersFromConversation(turns, people, owner).size).toBe(0);
   });
+  it("does not identify a person merely mentioned in a report", () => {
+    const turns = [{ speaker: 0, text: "Carlos enviou o contrato" }, { speaker: 1, text: "Vamos revisar" }, { speaker: 0, text: "Carlos está viajando" }, { speaker: 1, text: "Está certo" }];
+    expect(inferSpeakersFromConversation(turns, people, owner).size).toBe(0);
+  });
+  it("does not count a delayed voice as the immediate response", () => {
+    const turns = [{ speaker: 0, text: "Carlos?", end_ms: 1000 }, { speaker: 1, text: "Sim", start_ms: 30000 }, { speaker: 0, text: "Carlos?", end_ms: 40000 }, { speaker: 1, text: "Sim", start_ms: 90000 }];
+    expect(inferSpeakersFromConversation(turns, people, owner).size).toBe(0);
+  });
   it("self-introduction links the speaker", () => {
     expect(inferSpeakersFromConversation([{ speaker: 1, text: "Bom dia, aqui é o Carlos" }], people, owner).get(1)).toBe("c");
   });
