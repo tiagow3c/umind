@@ -1,3 +1,4 @@
+import { canUseDiarizationFallback, preserveSilentContinuation } from "./processing-recovery-rules";
 import { transcribeChunk, TranscriptionError } from "./transcription.server";
 import { inferSpeakersFromConversation, matchPerson } from "./people-rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -142,7 +143,7 @@ async function stageDiarize(admin: Admin, recordingId: string, meeting: { id: st
     try { return await stageDiarizePyannote(admin, recordingId, meeting, runId); }
     catch (e) {
       // Only a confirmed failed job may use the configured fallback. Never bypass credits/access or unknown outcomes.
-      if (!(e instanceof StageError) || e.code !== "pyannote_failed" || !process.env["DEEPGRAM_API_KEY"]) throw e;
+      if (!(e instanceof StageError) || !canUseDiarizationFallback(e.code, !!process.env["DEEPGRAM_API_KEY"])) throw e;
       return stageDiarizeDeepgram(admin, recordingId, meeting, runId);
     }
   }
@@ -209,7 +210,7 @@ async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: 
         await save();
       }
       // Poll the second job in a fresh call to keep the stage bounded.
-      const job = await waitJob(state.identifyJobId, 0);
+      const job = await waitJob(state.identifyJobId, 40_000);
       if (!job) identityWarning = "identity_pending";
       if (job && job.status !== "succeeded") {
         identityWarning = "identity_failed";
@@ -242,7 +243,7 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
   let segments = alignTranscripts({ utterances: hasText ? turns : null, openaiText: raw?.[0]?.raw_text ?? null, durationMs: Number(rec?.duration_ms ?? 0) });
   if (!hasText && turns.length) segments = assignSpeakersByTime(segments, turns);
   if (!segments.length) {
-    if (before?.current_transcript_id) return { transcript_id: before.current_transcript_id, segments: 0, warning: "no_speech_continuation" };
+    if (preserveSilentContinuation(segments.length, before?.current_transcript_id ?? null)) return { transcript_id: before?.current_transcript_id ?? "", segments: 0, warning: "no_speech_continuation" };
     throw new StageError("empty transcript", "no_speech", false);
   }
   if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
@@ -311,7 +312,7 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
     }
     if (!person) continue;
     const voice = viaVoice.has(l);
-    // The owner recognised by voice is certain enough to never ask again.
+    // Voice matches are evidence, not user confirmation; only confirmed identities can train voiceprints.
     const confirmed = false;
     const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: person.display_name, person_id: person.id, person_confirmed: confirmed, source: voice ? "voice" : "ai" }).select("id").single();
     if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: confirmed ? "user" : voice ? "voice" : "ai" }).eq("id", spId).is("participant_id", null);
