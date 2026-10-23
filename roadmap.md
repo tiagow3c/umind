@@ -1,3 +1,7 @@
+# Colunas independentes
+- [x] Aplicar áreas separadas de conteúdo e Ata AI, claro branco/cinza e mesma estrutura no escuro.
+- [x] Verificar sessão real a 1280px, 1074px e celular 390px, minimizar/reabrir e reunião no escuro; sem sobreposição/erros, teste de navegação passou e build OK.
+
 # Meet fechado sem parar
 - [x] Plano aprovado: encerramento durável ao fechar/sair da aba, preservar envios pendentes e atualizar automaticamente o estado na tela Hoje.
 - [x] Extensão 1.4.1 persiste sessão e encerra ao fechar/navegar; fila durável e recuperação tardia preservadas. 20 testes passaram; reunião real mostra Processando, download do pacote verificado e build OK.

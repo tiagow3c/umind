@@ -80,8 +80,7 @@ function AppLayout() {
   const displayName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Minha conta";
   const grid = isRecorder ? "" : assistantMin ? " md:grid md:grid-cols-[220px_minmax(0,1fr)]" : " md:grid md:grid-cols-[220px_minmax(0,1fr)_340px]";
   return (
-    <div className={`app-shell app-frame${isRecorder ? "" : " app-frame--framed"}${grid}`} data-keyboard-open={keyboardOpen}>
-      <div aria-hidden className="app-frame-edge hidden md:block" />
+    <div className={`app-shell${isRecorder ? "" : " app-shell--columns"}${grid}`} data-keyboard-open={keyboardOpen}>
       {!isRecorder && <header className="mobile-app-header sticky top-0 z-30 border-b bg-background md:hidden">
         <div className="grid h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <Link to="/hoje" className="w-fit font-serif text-3xl" aria-label="Ata — Hoje">Ata</Link>
@@ -119,8 +118,8 @@ function AppLayout() {
         </div>
         <div className="mt-auto p-3"><AccountMenu name={displayName} email={user.email} /></div>
       </aside>}
-      <main className="app-main mx-auto min-w-0 w-full max-w-4xl px-5 py-7 md:px-10 md:py-12">
-        <Outlet />
+      <main className="app-main min-w-0 w-full px-5 py-7 md:px-10 md:py-12">
+        <div className="mx-auto w-full min-w-0 max-w-4xl"><Outlet /></div>
       </main>
       {!isRecorder && <nav aria-label="Navegação principal no celular" className="mobile-tab-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-background md:hidden">
         {[NAV[0], NAV[1], { to: "/reunioes/nova", label: "Gravar", icon: Mic } as const, NAV[2], NAV[3]].map((n) => {
