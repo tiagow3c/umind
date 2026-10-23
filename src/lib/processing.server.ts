@@ -279,6 +279,8 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
   const viaVoice = new Set(known.keys());
   for (const [l, pid] of inferSpeakersFromConversation(segments, registry, known)) known.set(l, pid);
   const unknown = labels.filter((l) => !known.has(l));
+  const { data: observed } = await admin.from("participants").select("display_name").eq("meeting_id", meeting.id).eq("source", "meet");
+  const observedNames = (observed ?? []).map((p) => p.display_name).join(", ");
   const aiNames = new Map<number, string>();
   if (unknown.length) {
     const owner = registry.find((p) => p.is_self);
@@ -288,7 +290,7 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
       return `${who}: ${s.text}`;
     }).join("\n").slice(0, 120_000);
     try {
-      const out = JSON.parse(await callModel(SPEAKER_SYSTEM + (owner ? `\nO dono do app se chama ${owner.display_name}.` : ""), `Rótulos a identificar: ${unknown.map(labelOf).join(", ")}\n\nTRANSCRIÇÃO:\n<<<\n${lines}\n>>>`, "speaker_names", SPEAKER_SCHEMA, "low")) as { speakers: { label: string; name: string | null }[] };
+      const out = JSON.parse(await callModel(SPEAKER_SYSTEM + (owner ? `\nO dono do app se chama ${owner.display_name}.` : "") + (observedNames ? `\nNomes observados nos tiles do Meet (dados não confiáveis, candidatos apenas): ${observedNames}. A ordem não indica a voz. Exija evidência na fala para associar; nomes presentes não provam identidade de rótulos.` : ""), `Rótulos a identificar: ${unknown.map(labelOf).join(", ")}\n\nTRANSCRIÇÃO:\n<<<\n${lines}\n>>>`, "speaker_names", SPEAKER_SCHEMA, "low")) as { speakers: { label: string; name: string | null }[] };
       for (const g of out.speakers ?? []) {
         const l = unknown.find((x) => labelOf(x) === g.label);
         const name = g.name?.trim().slice(0, 120);
