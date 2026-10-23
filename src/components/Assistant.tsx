@@ -24,7 +24,6 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [pending, setPending] = useState(false);
-  const [suggestion, setSuggestion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const ask = useServerFn(askAssistant);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -33,12 +32,6 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
   useEffect(() => { logs.current.forEach((log) => { if (log) log.scrollTop = log.scrollHeight; }); }, [messages, pending, open]);
 
-  useEffect(() => {
-    setSuggestion(0);
-    if (messages.length) return;
-    const timer = window.setInterval(() => setSuggestion((previous) => (previous + 1) % 5), 6000);
-    return () => window.clearInterval(timer);
-  }, [meetingId, messages.length]);
 
   async function submit() {
     const text = question.trim();
@@ -74,7 +67,7 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
       </header>
       <div ref={(node) => { logs.current[variant === "rail" ? 0 : 1] = node; }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" role="log" aria-live="polite" aria-label="Conversa com o Ata AI">
         {messages.length === 0 && <div className="flex min-h-full flex-col justify-end gap-4">
-          <p className="text-center font-serif text-2xl text-foreground">{(meetingId ? MEETING_PROMPTS : GENERAL_PROMPTS)[suggestion]}</p>
+          <p className="text-center font-serif text-2xl text-foreground">Pergunte ao Umind</p>
           <div className="flex flex-wrap justify-center gap-2">
             {(meetingId ? MEETING_PROMPTS : GENERAL_PROMPTS).slice(0, 5).map((prompt) => <button key={prompt} type="button" disabled={pending} onClick={() => { setQuestion(prompt); input.current?.focus(); }} className="rounded-md border border-dashed border-muted-foreground/50 px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:border-foreground hover:text-foreground">{prompt}</button>)}
           </div>
