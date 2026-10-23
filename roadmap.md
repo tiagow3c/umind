@@ -1,6 +1,7 @@
 # Progresso e participantes do Meet
-- [ ] Aprovar e implementar progresso visual estimado (plano preparado).
-- [ ] Diagnosticar fotos ausentes, voz extra e Gabriel não identificado na reunião informada; preparar correção sem inventar associações.
+- [x] Progresso estimado aprovado e implementado; avance inicial antes da resposta, animação e pausa, 34 testes passaram e navegador confirmou 2% → 4% com resposta lenta simulada no computador/celular.
+- [x] Diagnóstico real: fotos dependiam do finish perdido; quatro vozes (uma possível mídia), Gabriel citado mas sem associação segura. Fila de fotos independente, nomes Meet como candidatos, vozes sem identidade rotuladas e marcação reversível de áudio externo; mesma pessoa selecionável em várias vozes. Sem alteração forçada na reunião real.
+- [ ] Conferir fotos em chamada real — depende de publicar e recarregar a extensão 1.4.2; fotos não recebidas da chamada fechada não são recuperáveis pelo Ata.
 
 # Colunas independentes
 - [x] Aplicar áreas separadas de conteúdo e Ata AI, claro branco/cinza e mesma estrutura no escuro.

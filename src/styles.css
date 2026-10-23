@@ -139,6 +139,8 @@
 .assistant-dock { right: 1.5rem; bottom: 1.5rem; }
 .assistant-panel { width: min(420px, calc(100vw - 3rem)); height: min(600px, calc(100dvh - 3rem)); }
 .assistant-rail { width: 100%; min-width: 0; }
+.processing-progress-active::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 25%, color-mix(in oklch, var(--accent-foreground) 35%, transparent) 50%, transparent 75%); animation: processing-sweep 2s linear infinite; }
+@keyframes processing-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 .app-shell { min-height: 100dvh; }
 
 /* Independent full-height surfaces; the shell itself supplies the gutters. */

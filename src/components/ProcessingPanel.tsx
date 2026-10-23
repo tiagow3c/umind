@@ -8,6 +8,8 @@ import { cancelProcessing, deleteMeeting } from "@/lib/meetings";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Loader2, Pause } from "lucide-react";
+import { estimatedProgress } from "@/lib/progress-rules";
 
 type StageState = { stage: string; status: string; error_code: string | null; attempt: number };
 
@@ -19,6 +21,7 @@ export function ProcessingPanel({ meetingId, status, compact = false, waiting = 
   const [paused, setPaused] = useState<string | null>(null);
   const busy = useRef(false);
   const [elapsed, setElapsed] = useState(0);
+  const [visual, setVisual] = useState(2);
   useEffect(() => {
     if (status !== "processing") return;
     const t0 = Date.now();
@@ -60,6 +63,11 @@ export function ProcessingPanel({ meetingId, status, compact = false, waiting = 
   const stageStart = useRef<{ stage: string | null; at: number }>({ stage: null, at: Date.now() });
   const runningStage = stages?.find((s) => s.status === "running" || s.status === "queued" || s.status === "retry_wait")?.stage ?? null;
   if (stageStart.current.stage !== runningStage) stageStart.current = { stage: runningStage, at: Date.now() };
+  useEffect(() => {
+    if (status !== "processing" || paused || waiting || stages?.some((s) => s.status === "failed")) return;
+    setVisual((previous) => estimatedProgress(runningStage ?? "transcribe", (Date.now() - stageStart.current.at) / 1000, previous));
+  }, [elapsed, runningStage, status, paused, waiting, stages]);
+  useEffect(() => { setVisual(2); setElapsed(0); }, [meetingId]);
   const failed = stages?.find((s) => s.status === "failed");
   const cancelled = status === "failed" && !failed && stages?.some((s) => s.error_code === "user_cancelled");
   const navigate = useNavigate();
@@ -77,24 +85,25 @@ export function ProcessingPanel({ meetingId, status, compact = false, waiting = 
     const label: Record<string, string> = { transcribe: "Transcrevendo", diarize: "Identificando vozes", align: "Separando participantes", analyze: "Analisando a conversa", embed: "Preparando a busca" };
     const total = stages?.length || 5;
     const done = stages?.filter((s) => s.status === "succeeded").length ?? 0;
-    // Estimated progress inside the running stage: eases toward 95% of the stage over its typical duration.
-    const typical: Record<string, number> = { transcribe: 90, diarize: 120, align: 20, analyze: 45, embed: 20 };
-    const stageSec = stageStart.current.stage === current?.stage ? (Date.now() - stageStart.current.at) / 1000 : 0;
-    const within = current ? 0.95 * (1 - Math.exp(-stageSec / (typical[current.stage] ?? 60))) : 0;
-    const pct = Math.min(99, Math.round(((done + within) / total) * 100));
+    const pct = visual;
+    const active = !paused && !waiting && !failed;
     const mm = Math.floor(elapsed / 60), ss = String(elapsed % 60).padStart(2, "0");
     return (
       <div className="space-y-2 text-sm text-muted-foreground" aria-live="polite">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 font-medium text-foreground">
+              {active ? <Loader2 className="size-4 shrink-0 animate-spin" /> : <Pause className="size-4 shrink-0" />}
             {waiting ? "Transcrição pronta — aguardando participantes" : paused ? "Processamento pausado — limite do provedor atingido." : `${label[current?.stage ?? "transcribe"] ?? "Processando"}…`}
-            <span className="ml-2 tabular-nums">Etapa {Math.min(done + 1, total)} de {total} · {pct}% · {mm}:{ss}</span>
-          </span>
-          <button onClick={cancel} className="underline-offset-4 hover:text-foreground hover:underline">Cancelar processamento</button>
+            </div>
+            <p className="mt-1 text-xs tabular-nums">Etapa {Math.min(done + 1, total)} de {total} · {mm}:{ss}</p>
+          </div>
+          <span className="shrink-0 text-2xl font-medium tabular-nums text-foreground">{pct}%</span>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${pct}%` }} />
+        <div className="h-3 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Progresso estimado do processamento" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <div className={cn("relative h-full overflow-hidden rounded-full bg-accent transition-[width] duration-1000", active && "processing-progress-active")} style={{ width: `${pct}%` }} />
         </div>
+        <div className="flex items-center justify-between gap-2"><span className="text-xs">{active ? "Progresso estimado" : "Em espera"}</span><Button variant="link" size="sm" className="h-auto p-0 text-xs text-muted-foreground" onClick={cancel}>Cancelar processamento</Button></div>
       </div>
     );
   }

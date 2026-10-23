@@ -74,4 +74,12 @@ describe("durable Meet tab closure", () => {
     h.offline(false); h.listeners["alarm"]?.(); await h.settle();
     expect(h.calls.find((c) => c.action === "finish")?.body.durationMs).toBe(30000);
   });
+  it("keeps participant photos queued without blocking audio finish", async () => {
+    const h = harness(); await h.start(); h.offline(true);
+    await h.send({ type: "participants", params: { recording: "rec-1" }, body: { participants: [{ name: "Gabriel", photo: "data:image/jpeg;base64,abc" }] } });
+    expect(h.stored["people:rec-1"].body.participants[0].name).toBe("Gabriel");
+    h.offline(false); h.close(); await h.settle();
+    expect(h.calls.map((c) => c.action)).toEqual(["start", "finish", "participants"]);
+    expect(h.stored["people:rec-1"]).toBeUndefined();
+  });
 });

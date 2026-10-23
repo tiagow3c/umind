@@ -118,6 +118,15 @@
     });
   };
   const participantNames = () => { collectFaces(); return [...faces.values()].slice(0, 30); };
+  let peopleSnapshot = "";
+  const savePeople = () => {
+    if (!state.recordingId || !state.rec) return;
+    const participants = participantNames();
+    const snapshot = JSON.stringify(participants);
+    if (!participants.length || snapshot === peopleSnapshot) return;
+    peopleSnapshot = snapshot;
+    void send({ type: "participants", params: { recording: state.recordingId }, body: { participants } }).catch(() => { peopleSnapshot = ""; });
+  };
 
   const toB64 = async (blob) => {
     const buf = new Uint8Array(await blob.arrayBuffer());
@@ -200,6 +209,7 @@
     }, 15000);
     faces.clear(); collectFaces();
     rec.start(PART_MS);
+    peopleSnapshot = ""; savePeople();
     label("● Gravando — parar", true);
     void chrome.storage.local.set({ recording: { title: title(), startedAt: state.startedAt } });
   }
@@ -240,7 +250,7 @@
       document.body.append(panel, reopen);
       void lookup();
     }
-    if (state.rec && Date.now() % 10000 < 1500) collectFaces();
+    if (state.rec && Date.now() % 10000 < 1500) savePeople();
     if (state.rec) {
       const seconds = Math.floor((Date.now() - state.startedAt) / 1000);
       if (Date.now() - state.startedAt >= state.remainingMs) void stop(true);

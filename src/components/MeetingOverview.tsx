@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, voiceEnrollmentQuery, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery } from "@/lib/review";
+import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, voiceEnrollmentQuery, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery, markExternalAudio } from "@/lib/review";
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
 import { avatarSrc } from "@/lib/people-rules";
@@ -124,7 +124,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
 
       {processing && !speakers?.length && (
         <section>
-          <h2 className="text-3xl">Participantes</h2>
+          <h2 className="text-3xl">Vozes em identificação</h2>
           <p className="mt-4 text-sm text-muted-foreground">As vozes aparecem aqui assim que a transcrição separar quem falou.</p>
           <ul className="mt-8 flex gap-8">
             {[0, 1].map((i) => <li key={i} className="size-20 animate-pulse rounded-full bg-muted" style={{ animationDelay: `${i * 250}ms` }} />)}
@@ -134,7 +134,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
 
       {speakers && speakers.length > 0 && (
         <section>
-          <h2 className="text-3xl">Participantes</h2>
+          <h2 className="text-3xl">Participantes e vozes</h2>
           <ul className="mt-6 grid grid-cols-2 justify-items-center gap-x-6 gap-y-8 sm:mt-8 sm:flex sm:flex-wrap sm:gap-8">
             {speakers.filter((s) => {
               const segs = tr?.segments ?? [];
@@ -146,12 +146,12 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
               const same = speakers.filter((o) => meeting.participants.find((p) => p.id === o.participant_id)?.person_id === pid);
               const best = same.find((o) => meeting.participants.find((p) => p.id === o.participant_id)?.person_confirmed) ?? same[0];
               return best?.id === s.id;
-            }).map((s, i) => {
+            }).sort((a, b) => Number(!!b.participant_id) - Number(!!a.participant_id)).map((s, i) => {
               const sample = samples.get(s.id) ?? null;
               const located = sample ? locateRecording(meeting.recordings, sample.start) : null;
               const localSample = sample && located ? { start: located.localMs, end: located.localMs + sample.end - sample.start } : null;
               const part = meeting.participants.find((p) => p.id === s.participant_id);
-              const name = part?.display_name ?? "";
+              const name = s.mapping_source === "external" ? "Áudio externo" : part?.display_name ?? "";
               const suggested = !!part && !part.person_confirmed && (s.mapping_source === "ai" || s.mapping_source === "voice");
               const person = people?.find((p) => p.id === part?.person_id) ?? null;
               return (
@@ -173,7 +173,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                       }} />
                     </label>
                   )}
-                  {name ? (
+                  {s.mapping_source === "external" ? <><span className="text-sm">Áudio externo</span><Button variant="link" size="sm" onClick={async () => { await markExternalAudio(s.id, false); qc.invalidateQueries(); }}>Identificar voz</Button></> : name ? (
                     <PersonPicker speakerId={s.id} participantId={part?.id ?? null} suggested={suggested}>
                       <button className="max-w-28 truncate text-center text-sm underline underline-offset-4 hover:text-accent">{name}</button>
                     </PersonPicker>
@@ -189,11 +189,12 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                         } catch { toast.error("Não foi possível salvar."); }
                       }}
                       onSkip={() => advance(s.id)}
-                      options={(people ?? []).filter((p) => !used.has(p.id) && !p.is_self)}
+                      options={(people ?? []).filter((p) => !p.is_self)}
                       onPick={(pid) => pick(s.id, pid)}
                       self={selfUsed ? null : { label: self ? self.display_name : "Eu", onPick: async () => { try { await assignSelf(s.id); qc.invalidateQueries(); named(); advance(s.id); } catch { toast.error("Não foi possível salvar."); } } }}
                     />
                   )}
+                  {!name && <><span className="text-[11px] text-muted-foreground">Voz não identificada</span><Button variant="link" size="sm" className="h-auto p-0 text-[11px] text-muted-foreground" onClick={async () => { try { await markExternalAudio(s.id, true); qc.invalidateQueries(); } catch { toast.error("Não foi possível salvar."); } }}>Marcar áudio externo</Button></>}
                   {part?.person_confirmed && part.person_id && (() => {
                     const saved = voiceStatus?.prints.some(v => v.person_id === part.person_id);
                     const job = voiceStatus?.jobs.find(j => j.speaker_id === s.id && j.person_id === part.person_id);
@@ -275,7 +276,7 @@ const NameField = forwardRef<HTMLInputElement, { onSave: (v: string) => Promise<
         <ul role="listbox" className="absolute left-1/2 top-full z-20 mt-1 w-44 -translate-x-1/2 border bg-background py-1 text-sm">
           {showSelf && (
             <li><button type="button" onMouseDown={(e) => { e.preventDefault(); void chooseSelf(); }}
-              className="block w-full truncate px-3 py-2 text-left hover:bg-muted">{self!.label} <span className="text-xs text-muted-foreground">(você)</span></button></li>
+              className="block w-full truncate px-3 py-2 text-left hover:bg-muted">{self?.label} <span className="text-xs text-muted-foreground">(você)</span></button></li>
           )}
           {matches.map((o) => (
             <li key={o.id}>

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { locateRecording } from "./capture-rules";
 import { enrollVoice } from "@/lib/people.functions";
+import { matchPerson } from "./people-rules";
 
 /** Fire-and-forget voice enrollment that tells the user when the voice could not be saved. */
 export function enrollSpeakerVoiceInBackground(speakerId: string, personId: string) {
@@ -88,6 +89,11 @@ export async function updateTask(id: string, patch: { title?: string; owner_text
 
 export async function mapSpeaker(speakerId: string, participantId: string | null) {
   const { error } = await supabase.from("speakers").update({ participant_id: participantId, mapping_source: "user" }).eq("id", speakerId);
+  if (error) throw new Error(error.message);
+}
+
+export async function markExternalAudio(speakerId: string, external: boolean) {
+  const { error } = await supabase.from("speakers").update({ mapping_source: external ? "external" : "provider", participant_id: null }).eq("id", speakerId);
   if (error) throw new Error(error.message);
 }
 
@@ -177,9 +183,15 @@ export async function assignSpeakerPerson(speakerId: string, target: { personId:
   } else {
     name = target.newName.replace(/\s+/g, " ").trim().slice(0, 120);
     if (!name) throw new Error("name");
-    const { data: p, error: e } = await supabase.from("people").insert({ workspace_id: sp.workspace_id, display_name: name }).select("id").single();
-    if (e || !p) throw new Error(e?.message ?? "person");
-    personId = p.id;
+    const { data: registry, error: readError } = await supabase.from("people").select("id,display_name,aliases").eq("workspace_id", sp.workspace_id);
+    if (readError) throw new Error(readError.message);
+    const matched = matchPerson(name, registry ?? []);
+    if (matched) { personId = matched.id; name = matched.display_name; }
+    else {
+      const { data: p, error: e } = await supabase.from("people").insert({ workspace_id: sp.workspace_id, display_name: name }).select("id").single();
+      if (e || !p) throw new Error(e?.message ?? "person");
+      personId = p.id;
+    }
   }
   if (sp.participant_id) {
     const r = await supabase.from("participants").update({ display_name: name, person_id: personId, person_confirmed: true }).eq("id", sp.participant_id);
