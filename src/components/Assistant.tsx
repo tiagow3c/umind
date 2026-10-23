@@ -83,7 +83,7 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
         </div>)}
         {pending && <div role="status" className="mr-auto flex w-fit items-center gap-2 rounded-lg rounded-bl-none border bg-muted px-3 py-2.5 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Pensando…</div>}
       </div>
-      <form className="shrink-0 border-t p-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+      <form className="shrink-0 p-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         {error && <p role="alert" className="mb-2 text-sm text-destructive">{error}</p>}
         <div className="rounded-md bg-muted">
           {meetingId && <div className="flex min-w-0 items-center gap-2 px-3 pt-2 text-xs text-muted-foreground" aria-label="Contexto da reunião">
