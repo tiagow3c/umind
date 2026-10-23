@@ -124,7 +124,8 @@ async function registerMeetPeople(db: Db, workspace: string, list: MeetPerson[],
     const name = p.name.trim();
     if (!isMeetPersonName(name) || seen.has(name.toLowerCase())) continue;
     seen.add(name.toLowerCase());
-    let person = matchPerson(name, registry);
+    const matched = matchPerson(name, registry);
+    let person = registry.find((p) => p.id === matched?.id) ?? null;
     if (!person) {
       const { data: np } = await db.from("people").insert({ workspace_id: workspace, display_name: name }).select("id, display_name, aliases, avatar_path").single();
       if (!np) throw new Error("person_save_failed");
