@@ -36,6 +36,20 @@ export const VoiceAvatar = forwardRef<VoiceAvatarHandle, {
     return () => { bus.removeEventListener("play", onOther); stop(); };
   }, [id]);
 
+  // Preload as soon as the voice appears, so tapping play starts right away.
+  useEffect(() => {
+    if (!rec || !sample) return;
+    let alive = true;
+    loadPlayableAudio(rec.id, rec.recording_parts, (rec.codec ?? "audio/webm").split(";")[0]!).then((url) => {
+      if (!alive) return;
+      const a = audio.current ?? new Audio();
+      audio.current = a;
+      a.preload = "auto";
+      if (a.src !== url) { a.src = url; a.load(); }
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [rec?.id, rec?.recording_parts.length, !!sample]);
+
   async function play() {
     if (state !== "idle") return stop();
     if (!rec || !sample) return;
