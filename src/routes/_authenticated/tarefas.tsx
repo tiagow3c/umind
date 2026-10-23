@@ -65,7 +65,8 @@ function TodoList() {
                 <li key={t.id} draggable onDragStart={() => { dragging.current = t.id; }}
                   className="group flex items-start gap-2 border-b border-dashed py-2.5 text-sm">
                   <button onClick={() => run(() => updateTodo(t.id, { done_at: t.done_at ? null : new Date().toISOString(), day: t.done_at ? t.day : day }))}
-                    className={cn("min-w-0 flex-1 text-left leading-snug", t.done_at && "text-muted-foreground line-through")}>{t.title}</button>
+                    title={t.title}
+                    className={cn("min-w-0 flex-1 truncate text-left leading-snug", t.done_at && "text-muted-foreground line-through")}>{t.title}</button>
                   <button aria-label="Apagar" onClick={() => run(() => deleteTodo(t.id))} className="text-muted-foreground opacity-60 hover:text-foreground md:opacity-0 md:group-hover:opacity-100"><X className="size-4" /></button>
                 </li>
               ))}
