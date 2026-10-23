@@ -85,8 +85,8 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
       </div>
       <form className="shrink-0 border-t p-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         {error && <p role="alert" className="mb-2 text-sm text-destructive">{error}</p>}
-        <div className="rounded-md border focus-within:ring-1 focus-within:ring-ring">
-          {meetingId && <div className="flex min-w-0 items-center gap-2 border-b px-3 py-2 text-xs text-muted-foreground" aria-label="Contexto da reunião">
+        <div className="rounded-md bg-muted">
+          {meetingId && <div className="flex min-w-0 items-center gap-2 px-3 pt-2 text-xs text-muted-foreground" aria-label="Contexto da reunião">
             <FileText className="size-3 shrink-0" /><span className="min-w-0 flex-1 truncate">{meeting?.title ?? "Esta reunião"}</span>
             <Button variant="ghost" size="icon" className="size-6 shrink-0" aria-label="Remover contexto da reunião" title="Remover contexto da reunião" onClick={() => { setRemovedFor(currentMeetingId); setError(null); }}><X /></Button>
           </div>}
