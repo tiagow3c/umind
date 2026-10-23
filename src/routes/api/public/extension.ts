@@ -91,7 +91,7 @@ export const Route = createFileRoute("/api/public/extension")({
   },
 });
 
-type MeetPerson = string | { name: string; photo?: string; photoUrl?: string };
+type MeetPerson = string | { name: string; photo?: string | undefined; photoUrl?: string | undefined };
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 
 async function photoBytes(p: Exclude<MeetPerson, string>): Promise<{ buf: Uint8Array; type: string } | null> {
