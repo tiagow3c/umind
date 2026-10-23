@@ -27,6 +27,18 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg.type === "check") return call("check");
     if (msg.type === "lookup") return call("lookup", null, msg.body);
     if (msg.type === "heartbeat") return call("heartbeat", msg.params);
+    if (msg.type === "participants") {
+      const key = `people:${msg.params.recording}`;
+      await chrome.storage.local.set({ [key]: msg });
+      try {
+        const result = await call("participants", msg.params, msg.body);
+        await chrome.storage.local.remove(key);
+        return result;
+      } catch (e) {
+        await chrome.storage.local.set({ [`people-error:${msg.params.recording}`]: String(e.message || e) });
+        throw e;
+      }
+    }
     if (msg.type === "start") {
       const ids = await call("start", null, msg.body);
       const capture = { recordingId: ids.recordingId, meetingId: ids.meetingId, tabId: sender.tab?.id, room: meetRoom(msg.body.meetUrl) };
@@ -85,6 +97,12 @@ async function drain(onlyRecording) {
       if (!key.startsWith("finish:") || (onlyRecording && msg.params.recording !== onlyRecording)) continue;
       await call("finish", msg.params, msg.body);
       await chrome.storage.local.remove([key, `capture:${msg.params.recording}`]);
+    }
+    // Photos must never block audio finalization. They keep their own durable queue.
+    for (const [key, msg] of Object.entries(stored)) {
+      if (!key.startsWith("people:") || (onlyRecording && msg.params.recording !== onlyRecording)) continue;
+      try { await call("participants", msg.params, msg.body); await chrome.storage.local.remove([key, `people-error:${msg.params.recording}`]); }
+      catch (e) { await chrome.storage.local.set({ [`people-error:${msg.params.recording}`]: String(e.message || e) }); }
     }
   })();
   try { await draining; } finally { draining = null; }
