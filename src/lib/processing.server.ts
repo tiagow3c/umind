@@ -1,3 +1,4 @@
+import { transcribeChunk, TranscriptionError } from "./transcription.server";
 import { inferSpeakersFromConversation, matchPerson } from "./people-rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
@@ -85,24 +86,6 @@ async function readSSE(res: Response, onEvent: (type: string, data: Record<strin
   }
 }
 
-async function transcribeChunk(audio: Blob, key: string) {
-  const form = new FormData();
-  form.append("model", TRANSCRIBE_MODEL);
-  form.append("file", new File([audio], "audio.webm", { type: audio.type }));
-  form.append("response_format", "json");
-  form.append("stream", "true");
-  form.append("languages", "pt");
-  const res = await fetch(`${GATEWAY}/audio/transcriptions`, { method: "POST", headers: { Authorization: `Bearer ${key}`, "X-Lovable-AIG-SDK": "fetch" }, body: form });
-  if (!res.ok) throw providerError("transcription", res.status, await res.text());
-  let text = "";
-  let deltas = "";
-  await readSSE(res, (type, d) => {
-    if (type === "transcript.text.delta") deltas += String(d["delta"] ?? "");
-    if (type === "transcript.text.done") text = String(d["text"] ?? "");
-  });
-  return text || deltas;
-}
-
 /** Transcribe a standalone live window recorded in parallel with the main recording. */
 export async function transcribeLiveWindow(
   admin: Admin,
@@ -110,7 +93,7 @@ export async function transcribeLiveWindow(
 ) {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) throw new Error("config");
-  const text = w.audio.size > 1000 ? (await transcribeChunk(w.audio, key)).trim() : "";
+  const text = w.audio.size > 1000 ? (await transcribeChunk(w.audio)).trim() : "";
   await admin.from("live_transcript_chunks").upsert(
     { workspace_id: w.workspaceId, meeting_id: w.meetingId, recording_id: w.recordingId, sequence: w.sequence, start_ms: w.startMs, end_ms: w.endMs, text },
     { onConflict: "recording_id,sequence" },
@@ -138,11 +121,15 @@ async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id:
   const chunks = planChunks(parts);
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) throw new StageError("missing key", "config", false);
-  const texts: string[] = [];
-  for (const chunk of chunks) {
+  const { data: saved } = await admin.from("processing_runs").select("output").eq("id", runId).single();
+  const previous = saved?.output as { chunkTexts?: string[] } | null;
+  const texts: string[] = previous?.chunkTexts ?? [];
+  for (const chunk of chunks.slice(texts.length)) {
     const audio = await downloadParts(admin, chunk, type);
     if (audio.size > MAX_TRANSCRIBE_BYTES) throw new StageError("chunk too large", "too_large", false);
-    texts.push(await transcribeChunk(audio, key));
+    texts.push(await transcribeChunk(audio));
+    const checkpoint = await admin.from("processing_runs").update({ output: { chunkTexts: texts }, lease_until: new Date(Date.now() + LEASE_MS).toISOString() }).eq("id", runId);
+    if (checkpoint.error) throw new StageError("checkpoint failed", "db", true);
     if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
   }
   const text = joinChunkTexts(texts);
@@ -151,7 +138,18 @@ async function stageTranscribe(admin: Admin, recordingId: string, meeting: { id:
 }
 
 async function stageDiarize(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
-  if (hasPyannote()) return stageDiarizePyannote(admin, recordingId, meeting, runId);
+  if (hasPyannote()) {
+    try { return await stageDiarizePyannote(admin, recordingId, meeting, runId); }
+    catch (e) {
+      // Only a confirmed failed job may use the configured fallback. Never bypass credits/access or unknown outcomes.
+      if (!(e instanceof StageError) || e.code !== "pyannote_failed" || !process.env["DEEPGRAM_API_KEY"]) throw e;
+      return stageDiarizeDeepgram(admin, recordingId, meeting, runId);
+    }
+  }
+  return stageDiarizeDeepgram(admin, recordingId, meeting, runId);
+}
+
+async function stageDiarizeDeepgram(admin: Admin, recordingId: string, meeting: { id: string; workspace_id: string }, runId: string) {
   const key = process.env["DEEPGRAM_API_KEY"];
   if (!key) return { skipped: "no_key" };
   const audio = await loadAudio(admin, recordingId);
@@ -203,26 +201,28 @@ async function stageDiarizePyannote(admin: Admin, recordingId: string, meeting: 
     if (vpError) throw new StageError("load voiceprints failed", "db", true);
     const seen = new Set<string>();
     const voiceprints = (vps ?? []).filter((v) => !seen.has(v.person_id) && seen.add(v.person_id)).slice(0, 50).map((v) => ({ label: v.person_id, voiceprint: v.voiceprint }));
+    let identityWarning: string | null = null;
     if (voiceprints.length && !state.identificationOutput) {
+      try {
       if (!state.identifyJobId) {
         state.identifyJobId = await submitIdentify(state.media, voiceprints);
         await save();
       }
       // Poll the second job in a fresh call to keep the stage bounded.
       const job = await waitJob(state.identifyJobId, 0);
-      if (!job) throw new StageError("pending", "pending", true);
-      if (job.status !== "succeeded") {
-        delete state.identifyJobId;
-        await save();
-        throw new StageError(`pyannote identification ${job.status}`, "pyannote_failed", true);
+      if (!job) identityWarning = "identity_pending";
+      if (job && job.status !== "succeeded") {
+        identityWarning = "identity_failed";
       }
-      state.identificationOutput = job.output ?? {};
-      await save();
+      if (job?.status === "succeeded") { state.identificationOutput = job.output ?? {}; await save(); }
+      } catch (e) {
+        identityWarning = e instanceof PyannoteError && (e.status === 402 || e.status === 403) ? "identity_credits" : "identity_failed";
+      }
     }
     const matches = state.identificationOutput ? matchIdentifiedSpeakers(utterances, parsePyannote(state.identificationOutput)) : {};
     if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
     await admin.from("transcripts").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, run_id: runId, provider: "pyannote", kind: "raw_pyannote", raw_text: utterances.map((u) => u.text).join(" ") });
-    return { utterances, matches, samples, jobId: state.jobId, identifyJobId: state.identifyJobId ?? null } as unknown as Record<string, Json>;
+    return { utterances, matches, samples, identityWarning, jobId: state.jobId, identifyJobId: state.identifyJobId ?? null } as unknown as Record<string, Json>;
   } catch (e) {
     if (e instanceof PyannoteError) throw providerError("pyannote", e.status || 500, e.message);
     throw e;
@@ -241,7 +241,10 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
   const hasText = turns.some((u) => u.text);
   let segments = alignTranscripts({ utterances: hasText ? turns : null, openaiText: raw?.[0]?.raw_text ?? null, durationMs: Number(rec?.duration_ms ?? 0) });
   if (!hasText && turns.length) segments = assignSpeakersByTime(segments, turns);
-  if (!segments.length) throw new StageError("empty transcript", "no_speech", false);
+  if (!segments.length) {
+    if (before?.current_transcript_id) return { transcript_id: before.current_transcript_id, segments: 0, warning: "no_speech_continuation" };
+    throw new StageError("empty transcript", "no_speech", false);
+  }
   if (!(await meetingAlive(admin, meeting.id))) throw new StageError("deleted", "cancelled", false);
 
   const { count: earlierVoices } = await admin.from("speakers").select("id", { count: "exact", head: true }).eq("meeting_id", meeting.id);
@@ -309,7 +312,7 @@ async function stageAlign(admin: Admin, recordingId: string, meeting: { id: stri
     if (!person) continue;
     const voice = viaVoice.has(l);
     // The owner recognised by voice is certain enough to never ask again.
-    const confirmed = voice && person.is_self;
+    const confirmed = false;
     const { data: part } = await admin.from("participants").insert({ workspace_id: meeting.workspace_id, meeting_id: meeting.id, display_name: person.display_name, person_id: person.id, person_confirmed: confirmed, source: voice ? "voice" : "ai" }).select("id").single();
     if (part) await admin.from("speakers").update({ participant_id: part.id, mapping_source: confirmed ? "user" : voice ? "voice" : "ai" }).eq("id", spId).is("participant_id", null);
   }
@@ -369,7 +372,7 @@ Para cada rótulo pedido, dê o nome da pessoa SOMENTE com evidência na convers
 - alguém chama uma pessoa pelo nome e o rótulo é quem responde logo em seguida (vocativo + resposta);
 - a pessoa se apresenta ("sou o Carlos", "aqui é a Ana");
 - outros se referem a ela pelo nome de forma inequívoca.
-Pessoas já identificadas aparecem pelo nome; não repita um nome já usado para outro rótulo. Sem evidência clara, name = null. Nunca adivinhe.`;
+Pessoas já identificadas aparecem pelo nome. Uma pessoa pode ter sido separada em mais de uma voz; só associe com evidência inequívoca, nunca para preencher os rótulos. Sem evidência clara, name = null. Nunca adivinhe.`;
 const SPEAKER_SCHEMA = { type: "object", additionalProperties: false, required: ["speakers"], properties: { speakers: { type: "array", items: { type: "object", additionalProperties: false, required: ["label", "name"], properties: { label: { type: "string" }, name: { type: ["string", "null"] } } } } } };
 
 const callAnalysis = (prompt: string) => callModel(SYSTEM, prompt, "meeting_analysis", ANALYSIS_JSON_SCHEMA, "medium");
@@ -641,7 +644,7 @@ export async function advanceMeeting(admin: Admin, meetingId: string, opts?: { p
       await admin.from("processing_runs").update({ status: "succeeded", output: output as Json, lease_until: null }).eq("id", run.id);
       if (job?.paused) await setJobPaused(admin, false, null);
     } catch (e) {
-      const err = e instanceof StageError ? e : new StageError(e instanceof Error ? e.message : "erro", "internal", true);
+      const err = e instanceof StageError ? e : e instanceof TranscriptionError ? new StageError(e.message, e.code, e.retryable) : new StageError(e instanceof Error ? e.message : "erro", "internal", true);
       if (err.code === "pending") {
         // external job still running: not a failure, poll again shortly without spending an attempt
         await admin.from("processing_runs").update({ status: "retry_wait", attempt: run.attempt, error_code: null, lease_until: new Date(Date.now() + 5000).toISOString() }).eq("id", run.id);
