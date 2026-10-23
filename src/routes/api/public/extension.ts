@@ -76,8 +76,15 @@ export const Route = createFileRoute("/api/public/extension")({
           return json({ ok: true });
         }
 
+        if (action === "participants") {
+          const parsed = z.object({ participants: z.array(meetPersonSchema).max(30) }).safeParse(await request.json().catch(() => null));
+          if (!parsed.success) return json({ error: "input" }, 400);
+          await registerMeetPeople(db, tk.workspace_id, parsed.data.participants);
+          return json({ ok: true });
+        }
+
         if (action === "finish") {
-          const parsed = z.object({ interrupted: z.boolean().optional(), durationMs: z.number().min(0).max(7200000).optional(), participants: z.array(z.union([z.string().max(120), z.object({ name: z.string().max(120), photo: z.string().max(400000).optional(), photoUrl: z.string().max(2000).optional() })])).max(30).optional() }).safeParse(await request.json().catch(() => ({})));
+          const parsed = z.object({ interrupted: z.boolean().optional(), durationMs: z.number().min(0).max(7200000).optional(), participants: z.array(meetPersonSchema).max(30).optional() }).safeParse(await request.json().catch(() => ({})));
           if (!parsed.success) return json({ error: "input" }, 400);
           const result = await db.rpc("finish_capture_internal", { _recording: rec.id, ...(parsed.data.interrupted ? { _reason: "tab_closed" } : {}) });
           if (result.error) return json({ error: "finish" }, 500);
@@ -92,6 +99,7 @@ export const Route = createFileRoute("/api/public/extension")({
 });
 
 type MeetPerson = string | { name: string; photo?: string | undefined; photoUrl?: string | undefined };
+const meetPersonSchema = z.union([z.string().max(120), z.object({ name: z.string().max(120), photo: z.string().max(400000).optional(), photoUrl: z.string().max(2000).optional() })]);
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 
 async function photoBytes(p: Exclude<MeetPerson, string>): Promise<{ buf: Uint8Array; type: string } | null> {
