@@ -30,6 +30,8 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
   const logs = useRef<(HTMLDivElement | null)[]>([]);
   useEffect(() => { setRemovedFor(null); setError(null); }, [pathname]);
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
+  useEffect(() => { logs.current.forEach((log) => { if (log) log.scrollTop = log.scrollHeight; }); }, [messages, pending, open]);
+
 
   async function submit() {
     const text = question.trim();
