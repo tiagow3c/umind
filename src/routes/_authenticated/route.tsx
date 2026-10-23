@@ -97,7 +97,7 @@ function AppLayout() {
         </div>
       </header>}
       {!isRecorder && <aside className={`app-side app-side--menu z-50 hidden bg-sidebar md:flex md:flex-col${menuOpen ? "" : " app-side--menu-collapsed"}`}>
-        <div className={`flex items-center justify-between md:block ${menuOpen ? "p-5" : "p-3"}`}>
+        <div className={`flex items-center justify-between md:block ${menuOpen ? "p-5" : "md:px-0 md:py-3"}`}>
           <div className={`flex items-center justify-between ${menuOpen ? "" : "md:justify-center"}`}>
             <Link to="/hoje" className={`font-serif text-3xl ${menuOpen ? "" : "md:hidden"}`} aria-label="Ata — Hoje">Ata</Link>
             <Button variant="ghost" size="icon" className="hidden md:inline-flex" title={menuOpen ? "Recolher menu" : "Expandir menu"} aria-label={menuOpen ? "Recolher menu" : "Expandir menu"} onClick={toggleMenu}>
@@ -110,7 +110,7 @@ function AppLayout() {
             </select>
           ) : activeWs ? <p className="mt-2 truncate text-xs text-muted-foreground">{activeWs.name}</p> : null)}
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:pb-0">
+        <nav className={`flex gap-1 overflow-x-auto pb-3 md:flex-col md:pb-0 ${menuOpen ? "px-3" : "md:px-0"}`}>
           {NAV.map((n) => {
             const Icon = n.icon;
             return (
@@ -118,7 +118,7 @@ function AppLayout() {
                 key={n.to}
                 to={n.to}
                 title={n.label}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent ${menuOpen ? "" : "md:justify-center"}`}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent ${menuOpen ? "" : "md:w-full md:justify-center"}`}
                 activeProps={{ className: "bg-sidebar-accent font-medium" }}
               >
                 <Icon className="size-4 shrink-0" strokeWidth={1.8} />
@@ -127,7 +127,7 @@ function AppLayout() {
             );
           })}
         </nav>
-        <div className={`hidden md:mt-8 md:block ${menuOpen ? "p-5" : "p-2"}`}>
+        <div className={`hidden md:mt-8 md:block ${menuOpen ? "p-5" : "md:px-0 md:py-2"}`}>
           {isRecorder ? <Button disabled className="w-full" title="Gravar"><Mic className="size-4" /><span className={menuOpen ? "" : "hidden"}>Gravar</span></Button> : <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
             <Link to="/reunioes/nova" title="Gravar"><Mic className="size-4" /><span className={menuOpen ? "" : "hidden"}>Gravar</span></Link>
           </Button>}
@@ -135,7 +135,7 @@ function AppLayout() {
             <Link to="/ajustes" hash="google-meet" title="Extensão do Meet"><Puzzle className="size-4" /><span className={menuOpen ? "" : "hidden"}>Extensão do Meet</span></Link>
           </Button>}
         </div>
-        <div className="mt-auto p-3"><AccountMenu name={displayName} email={user.email} compact={!menuOpen} /></div>
+        <div className={`mt-auto ${menuOpen ? "p-3" : "md:flex md:justify-center md:p-0 md:py-3"}`}><AccountMenu name={displayName} email={user.email} compact={!menuOpen} /></div>
       </aside>}
       <main className="app-main min-w-0 w-full px-5 py-7 md:px-10 md:py-12">
         <div className="mx-auto w-full min-w-0 max-w-4xl"><Outlet /></div>

@@ -168,7 +168,7 @@
   .app-shell--columns .assistant-rail--min { opacity: 0; pointer-events: none; }
   .app-shell--columns .assistant-rail--min > section { transform: translateX(32px); }
   .app-side--menu { min-height: 0; height: 100%; overflow-y: auto; }
-  .app-side--menu-collapsed { padding-left: 1rem; padding-right: 0.5rem; }
+  .app-side--menu-collapsed { padding: 0 0.25rem 0 0.75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
