@@ -1,5 +1,6 @@
 # Confiabilidade antes de novos recursos
-- [ ] Planejar correções de identificação automática e falhas de transcrição com base nas reuniões reais; auto-documentação adiada.
+- [x] Investigar identificação e transcrição nas reuniões reais e preparar plano de correções; auto-documentação adiada.
+- [ ] Implementar e validar as correções — aguarda aprovação do plano.
 
 # Correção da pyannote
 # Conexão e janela da extensão
