@@ -363,7 +363,10 @@ Regras:
   - Quando a tarefa do dono é encaminhar/repassar e-mails existentes: action.kind="forward", to_name = destinatário, search_query = termos de busca do Gmail que acham esse e-mail (palavras-chave do assunto, sem operadores inventados), body = nota curta de encaminhamento.
   - counterpart = outra pessoa envolvida (ou null).
   - Sempre chame as pessoas pelo NOME, nunca pelo parentesco ou papel. Se na conversa ou nos participantes ficar claro quem é (ex.: a filha se chama Celina), escreva "Pensar com a Celina em um dia para o nosso Vale Night", e não "com minha filha". Vale para title, counterpart, to_name e rascunhos.
-- Resumo executivo curto (até 5 frases).
+- Resumo executivo curto (até 5 frases), em prosa fluida e fácil de digerir: conecte o propósito da conversa, os assuntos centrais e o resultado concreto. Sem lista, links, marcações de trechos ou referências [n] no texto.
+- topics compõe a seção Detalhes: agrupe a discussão por assunto em vez de listar falas isoladas. Cada text começa com um título específico curto em uma linha, seguido de uma linha em branco e um ou dois parágrafos narrativos. Conecte o contexto/problema, quem trouxe os argumentos (somente nomes sustentados pela conversa), os pontos relevantes e o desfecho real. Preserve divergências, mudanças de plano e assuntos sem conclusão; não invente consenso. Não force informações ausentes nem transforme propostas em decisões.
+- Em summary e nos textos de topics, decisions, proposals e questions, nunca escreva URLs, links, pílulas, números de trechos, citações [n] ou Markdown. As referências ficam exclusivamente nos arrays evidence, preservando a rastreabilidade interna.
+- decisions, proposals e questions são sínteses curtas complementares, sem repetir toda a narrativa de topics; arrays vazios quando não houver itens sustentados. As tarefas continuam exclusivamente em tasks.
 - title: título curto e específico da reunião (até 8 palavras), sem data.
 - speakers: para cada rótulo "Falante N" presente, o nome da pessoa SOMENTE se ficar claro na conversa (ex.: alguém a chama pelo nome ou ela se apresenta); caso contrário name = null. Nunca adivinhe.`;
 

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { locateRecording } from "@/lib/capture-rules";
 import { addTaskToTodo } from "@/lib/todos";
+import { MeetingNarrative } from "@/components/MeetingNarrative";
 
 type Meeting = {
   id: string;
@@ -30,7 +31,7 @@ export function MeetingReview({ meeting }: { meeting: Meeting }) {
         <TabsTrigger value="transcricao">Transcrição</TabsTrigger>
         <TabsTrigger value="acoes">Ações</TabsTrigger>
       </TabsList>
-      <TabsContent value="resumo" className="pt-6"><Summary meeting={meeting} onEvidence={open} /></TabsContent>
+      <TabsContent value="resumo" className="pt-6"><Summary meeting={meeting} /></TabsContent>
       <TabsContent value="transcricao" className="pt-6"><Transcript meeting={meeting} focus={focus} /></TabsContent>
       <TabsContent value="acoes" className="pt-6"><Actions meeting={meeting} onEvidence={open} /></TabsContent>
     </Tabs>
@@ -59,24 +60,11 @@ function EvidenceLinks({ ids, index, onEvidence }: { ids: string[]; index: Map<s
   );
 }
 
-function Summary({ meeting, onEvidence }: { meeting: Meeting; onEvidence: (id: string) => void }) {
+function Summary({ meeting }: { meeting: Meeting }) {
   const { data: an } = useQuery(analysisQuery(meeting.id));
-  const { map } = useSegmentIndex(meeting.current_transcript_id);
   const retry = useServerFn(retryProcessing);
   const qc = useQueryClient();
   if (!an) return <p className="text-sm text-muted-foreground">{meeting.current_transcript_id ? "Transcrição disponível, análise pendente." : "Ainda sem resumo."}</p>;
-  const items = an.analysis_items;
-  const section = (kind: string, title: string) => {
-    const list = items.filter((i) => i.kind === kind).sort((a, b) => a.position - b.position);
-    return (
-      <section>
-        <h3 className="border-b pb-1 text-xl">{title}</h3>
-        {list.length === 0 ? <p className="py-3 text-sm text-muted-foreground">Nenhum item identificado.</p> : (
-          <ul className="space-y-2 py-3 text-sm">{list.map((i) => <li key={i.id}>{i.text}<EvidenceLinks ids={i.evidence_segment_ids} index={map} onEvidence={onEvidence} /></li>)}</ul>
-        )}
-      </section>
-    );
-  };
   return (
     <div className="space-y-8">
       {an.stale && (
@@ -86,14 +74,7 @@ function Summary({ meeting, onEvidence }: { meeting: Meeting; onEvidence: (id: s
         </div>
       )}
       {an.partial && <p className="rounded-md border p-3 text-sm">Atenção: a gravação ficou parcial.</p>}
-      <div>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Resumo · gerado por IA</p>
-        <p className="mt-2 font-serif text-2xl leading-snug">{an.summary}</p>
-      </div>
-      {section("topic", "Tópicos")}
-      {section("decision", "Decisões")}
-      {section("proposal", "Propostas em aberto")}
-      {section("question", "Perguntas sem resposta")}
+      <MeetingNarrative analysis={an} />
     </div>
   );
 }

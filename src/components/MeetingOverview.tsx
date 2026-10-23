@@ -11,6 +11,7 @@ import { avatarSrc } from "@/lib/people-rules";
 import { locateRecording } from "@/lib/capture-rules";
 import { fmtTime } from "@/lib/review";
 import { VoiceAvatar, speakerSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
+import { MeetingNarrative, NarrativeText } from "@/components/MeetingNarrative";
 
 type Meeting = {
   id: string;
@@ -19,11 +20,6 @@ type Meeting = {
   participants: { id: string; display_name: string; person_confirmed: boolean; person_id?: string | null }[];
   recordings: { id: string; codec: string | null; timeline_offset_ms?: number; duration_ms?: number | null; recording_parts: { object_key: string; sequence: number }[] }[];
 };
-
-function firstSentences(text: string, n = 4) {
-  const parts = text.match(/[^.!?]+[.!?]+/g) ?? [text];
-  return parts.slice(0, n).join(" ").trim();
-}
 
 export function MeetingOverview({ meeting, onFull, processing = false }: { meeting: Meeting; onFull: () => void; processing?: boolean }) {
   const { data: an } = useQuery(analysisQuery(meeting.id));
@@ -114,7 +110,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
           </div>
         )}
         {an?.summary ? (
-          <p className="text-base leading-relaxed">{firstSentences(an.summary)}</p>
+          <NarrativeText text={an.summary} />
         ) : processing ? (
           <div className="space-y-3" aria-label="Resumo sendo preparado">
             <div className="h-4 w-11/12 animate-pulse rounded bg-muted" />
@@ -123,7 +119,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
         ) : (
           <p className="text-base leading-relaxed">Resumo sendo preparado.</p>
         )}
-        {!processing && <button onClick={onFull} className="mt-6 text-sm underline underline-offset-4 hover:text-accent">Ver resumo completo</button>}
+        {!processing && <Button variant="link" onClick={onFull} className="mt-4 h-auto p-0">Transcrição e ações</Button>}
       </section>
 
       {processing && !speakers?.length && (
@@ -215,6 +211,8 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
           </ul>
         </section>
       )}
+
+      {an?.summary && <MeetingNarrative analysis={an} includeSummary={false} />}
 
       <section>
         <h2 className="text-3xl">Tarefas</h2>
