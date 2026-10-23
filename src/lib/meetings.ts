@@ -15,6 +15,7 @@ export const workspaceQuery = queryOptions({
 
 export const meetingsQuery = queryOptions({
   queryKey: ["meetings"],
+  refetchInterval: (query) => query.state.data?.some((m) => ["recording", "paused", "uploading", "processing", "review_ready"].includes(m.status)) ? 5000 : false,
   queryFn: async () =>
     ok(await supabase.from("meetings").select("*, recordings(status, duration_ms)").eq("workspace_id", await activeWorkspaceId()).order("created_at", { ascending: false })),
 });

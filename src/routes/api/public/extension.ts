@@ -49,8 +49,8 @@ export const Route = createFileRoute("/api/public/extension")({
 
         if (action === "heartbeat") {
           if (rec.finalized_at) return json({ active: false });
-          const { error } = await db.from("recordings").update({ capture_last_seen_at: new Date().toISOString() }).eq("id", rec.id).is("finalized_at", null);
-          return error ? json({ error: "heartbeat" }, 500) : json({ active: true });
+          const { data, error } = await db.from("recordings").update({ capture_last_seen_at: new Date().toISOString() }).eq("id", rec.id).is("finalized_at", null).select("id");
+          return error ? json({ error: "heartbeat" }, 500) : json({ active: !!data?.length });
         }
         if (action === "part") {
           const seq = Number(url.searchParams.get("seq"));
@@ -77,9 +77,9 @@ export const Route = createFileRoute("/api/public/extension")({
         }
 
         if (action === "finish") {
-          const parsed = z.object({ durationMs: z.number().min(0).max(7200000).optional(), participants: z.array(z.union([z.string().max(120), z.object({ name: z.string().max(120), photo: z.string().max(400000).optional(), photoUrl: z.string().max(2000).optional() })])).max(30).optional() }).safeParse(await request.json().catch(() => ({})));
+          const parsed = z.object({ interrupted: z.boolean().optional(), durationMs: z.number().min(0).max(7200000).optional(), participants: z.array(z.union([z.string().max(120), z.object({ name: z.string().max(120), photo: z.string().max(400000).optional(), photoUrl: z.string().max(2000).optional() })])).max(30).optional() }).safeParse(await request.json().catch(() => ({})));
           if (!parsed.success) return json({ error: "input" }, 400);
-          const result = await db.rpc("finish_capture_internal", { _recording: rec.id });
+          const result = await db.rpc("finish_capture_internal", { _recording: rec.id, ...(parsed.data.interrupted ? { _reason: "tab_closed" } : {}) });
           if (result.error) return json({ error: "finish" }, 500);
           // Best-effort: register Meet participants (name + photo) in the people registry; never blocks finishing.
           try { await registerMeetPeople(db, tk.workspace_id, parsed.data.participants ?? []); } catch (e) { console.error("meet people", e); }
