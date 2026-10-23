@@ -97,7 +97,7 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
 
   return (
     <>
-      {!minimized && <aside className="app-side assistant-rail hidden bg-background md:flex md:flex-col">{renderPanel("rail")}</aside>}
+      <aside className={`app-side assistant-rail hidden bg-background md:flex md:flex-col${minimized ? " assistant-rail--min" : ""}`} aria-hidden={minimized} inert={minimized || undefined}>{renderPanel("rail")}</aside>
 
       {minimized && <div className="assistant-dock fixed z-40 hidden md:block">
         <Button onClick={onToggle} variant="outline" className="gap-2 border-accent bg-background text-foreground shadow-none" aria-label="Abrir Ata AI" title="Abrir Ata AI"><MessageCircle /><span>Ata AI</span></Button>
