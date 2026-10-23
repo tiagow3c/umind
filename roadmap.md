@@ -1,4 +1,8 @@
 # Confiabilidade antes de novos recursos
+# Encerramento imediato no Meet
+- [ ] Parar captura e gravação no instante da saída confirmada; preservar envio do último áudio, atualizar pacote e testar.
+
+# Confiabilidade antes de novos recursos
 - [x] Investigar identificação e transcrição nas reuniões reais e preparar plano de correções; auto-documentação adiada.
 - [x] Corrigir envio MP4/WebM pelo SDK; recuperar as duas reuniões recusadas e conferir resumos ao reabrir.
 - [x] Cadastro de voz retomável, apenas com identidade confirmada; exibir falha e nova tentativa. Cadastro real retornou 402 (créditos), salvo e visível.
