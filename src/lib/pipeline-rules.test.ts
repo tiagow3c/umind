@@ -58,6 +58,12 @@ describe("reprocessamento de tarefas", () => {
 
 import { parsePyannote, assignSpeakersByTime, matchIdentifiedSpeakers } from "./pipeline-rules";
 describe("pyannote", () => {
+  it("rejects short timing matches even when dominant", () => {
+    expect(matchIdentifiedSpeakers([{ start_ms: 0, end_ms: 200, text: "Oi", speaker: 0 }], { utterances: [{ start_ms: 0, end_ms: 200, text: "", speaker: 1 }], matches: { "1": "tiago" } })).toEqual({});
+  });
+  it("permits two clearly matched voices belonging to the same person", () => {
+    expect(matchIdentifiedSpeakers([{ start_ms: 0, end_ms: 2000, text: "Oi", speaker: 0 }, { start_ms: 3000, end_ms: 6000, text: "Voltei", speaker: 2 }], { utterances: [{ start_ms: 0, end_ms: 6000, text: "", speaker: 1 }], matches: { "1": "tiago" } })).toEqual({ "0": "tiago", "2": "tiago" });
+  });
   it("maps separate identification labels by timing, not speaker number", () => {
     const transcribed = parsePyannote({ turnLevelTranscription: [
       { speaker: "SPEAKER_00", start: 0, end: 2, text: "Olá" },
