@@ -201,7 +201,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                     const failed = !saved && ((job && ["failed", "unknown"].includes(job.status)) || (reason && reason !== "pending"));
                     return <div className="text-center text-[11px] text-muted-foreground">
                       <span>{saved ? "Voz cadastrada" : failed ? reason === "credits" ? "Voz sem créditos" : reason === "forbidden" ? "Serviço de voz indisponível" : reason === "unknown" ? "Cadastro precisa de verificação" : reason?.includes("trecho") ? reason : "Voz não cadastrada" : "Cadastrando voz…"}</span>
-                      {failed && reason !== "unknown" && <Button variant="link" size="sm" className="h-auto whitespace-normal p-0 text-[11px]" onClick={() => { if (part.person_id) void enroll(s.id, part.person_id, true); }}>Tentar novamente</Button>}
+                      {failed && reason !== "unknown" && <Button variant="link" size="sm" className="mx-auto block h-auto whitespace-normal p-0 text-[11px]" onClick={() => { if (part.person_id) void enroll(s.id, part.person_id, true); }}>Tentar novamente</Button>}
                     </div>;
                   })()}
                   {suggested && <span className="-mt-1 text-[11px] text-muted-foreground">{s.mapping_source === "voice" ? "reconhecido pela voz" : "sugerido"}</span>}
