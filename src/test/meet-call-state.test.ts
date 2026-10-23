@@ -12,7 +12,7 @@ declare global {
 const rules = globalThis.AtaMeetCallState;
 describe("Meet ends capture without the Ata button", () => {
   it("recognizes leaving and being removed from the call", () => {
-    for (const text of ["Você saiu da reunião", "A chamada foi encerrada", "Você foi removido", "You left the meeting", "The call has ended"]) {
+    for (const text of ["Você saiu da reunião", "Você saiu da videochamada", "A videochamada terminou", "A chamada foi encerrada", "Você foi removido", "You left the meeting", "You've left the call", "The call has ended"]) {
       expect(rules.ended(text)).toBe(true);
     }
     expect(rules.ended("Você está apresentando")).toBe(false);
