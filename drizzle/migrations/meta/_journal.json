@@ -176,6 +176,13 @@
       "when": 1792681937956,
       "tag": "0024_search_respects_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792754595409,
+      "tag": "0025_resumable_voice_enrollment",
+      "breakpoints": true
     }
   ]
 }
