@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AccountMenu } from "@/components/AccountMenu";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { Assistant } from "@/components/Assistant";
-import { CalendarCheck, CalendarDays, Mic, UsersRound } from "lucide-react";
+import { CalendarCheck, CalendarDays, Mic, Puzzle, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { recoverLocalCaptures } from "@/lib/meetings";
 import { acceptPendingInvites, storedWorkspaceId, switchWorkspace, workspacesQuery } from "@/lib/workspaces";
@@ -103,6 +103,9 @@ function AppLayout() {
         <div className="hidden p-5 md:mt-8 md:block">
           {isRecorder ? <Button disabled className="w-full"><Mic className="size-4" />Gravar</Button> : <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
             <Link to="/reunioes/nova"><Mic className="size-4" />Gravar</Link>
+          </Button>}
+          {usesExtension === false && <Button asChild variant="outline" className="mt-2 w-full">
+            <Link to="/ajustes" hash="google-meet"><Puzzle className="size-4" />Extensão do Meet</Link>
           </Button>}
         </div>
         <div className="mt-auto p-3"><AccountMenu name={displayName} email={user.email} /></div>

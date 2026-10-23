@@ -79,7 +79,7 @@ function MeetExtension() {
   };
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-2xl">Google Meet</h2>
+      <h2 id="google-meet" className="scroll-mt-6 border-b pb-2 text-2xl">Google Meet</h2>
       <p className="max-w-lg text-sm text-muted-foreground">Grave chamadas direto pelo Meet, no Chrome do computador. Ao encerrar, a gravação aparece em Reuniões.</p>
       <ol className="max-w-lg list-decimal space-y-1 pl-5 text-sm">
         <li>Baixe a extensão e descompacte o arquivo.</li>
