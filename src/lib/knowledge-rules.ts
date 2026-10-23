@@ -1,4 +1,5 @@
 export const KNOWLEDGE_PAGE_SIZE = 100;
+export const openTaskStatuses = ["suggested", "accepted", "in_progress"] as const;
 
 export function normalizeMeetingReference(value: string): string | null {
   const reference = value.trim().replace(/^#/, "").toUpperCase();

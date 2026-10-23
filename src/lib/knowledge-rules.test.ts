@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analysisAvailability, KNOWLEDGE_PAGE_SIZE, meetingLookup, nextTranscriptPosition, normalizeMeetingReference } from "./knowledge-rules";
+import { analysisAvailability, KNOWLEDGE_PAGE_SIZE, meetingLookup, nextTranscriptPosition, normalizeMeetingReference, openTaskStatuses } from "./knowledge-rules";
 
 describe("referências de conhecimento", () => {
   it("resolve o mesmo código com ou sem #", () => {
@@ -34,6 +34,9 @@ describe("versões da reunião", () => {
 });
 
 describe("transcrição paginada", () => {
+  it("tarefas abertas excluem concluídas e descartadas", () => {
+    expect(openTaskStatuses).toEqual(["suggested", "accepted", "in_progress"]);
+  });
   it("continua após a última posição sem repetir o trecho", () => {
     expect(KNOWLEDGE_PAGE_SIZE).toBe(100);
     expect(nextTranscriptPosition([0, 4, 8], true)).toBe(9);

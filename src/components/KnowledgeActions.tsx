@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { loadMeetingKnowledge } from "@/lib/knowledge";
 import { referencePrompt } from "@/lib/knowledge-rules";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
 export function KnowledgeActions({ meetingId, reference }: { meetingId: string; reference: string | null }) {
@@ -41,7 +41,7 @@ export function KnowledgeActions({ meetingId, reference }: { meetingId: string; 
     <Dialog open={target !== null} onOpenChange={open => { if (!open) setTarget(null); }}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader><DialogTitle>{target === "context" ? "Contexto da reunião" : `Usar no ${target}`}</DialogTitle></DialogHeader>
-        <p className="text-sm text-muted-foreground">{target === "context" ? "Ao colar este conteúdo em outra ferramenta, você compartilha os dados abaixo com ela." : "Com o Ata conectado, basta levar a referência. Sem conexão, copie o contexto completo."}</p>
+        <DialogDescription>{target === "context" ? "Ao colar este conteúdo em outra ferramenta, você compartilha os dados abaixo com ela." : "Com o Ata conectado, basta levar a referência. Sem conexão, copie o contexto completo."}</DialogDescription>
         <Textarea aria-label="Conteúdo para a ferramenta" readOnly value={text} onFocus={e => e.target.select()} className="min-h-52 max-h-80 text-sm" />
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => { void copy(text); }} disabled={!text || busy}><Copy />Copiar</Button>
