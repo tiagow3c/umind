@@ -1,6 +1,7 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { supabaseForUser } from "../supabase";
+import { openTaskStatuses } from "../../knowledge-rules";
 
 export default defineTool({
   name: "list_tasks",
@@ -17,7 +18,8 @@ export default defineTool({
       .select("id, title, status, due_date, due_text, owner_text, meeting_id")
       .order("created_at", { ascending: false })
       .limit(100);
-    if (status !== "all") q = q.eq("status", status);
+    if (status === "done") q = q.eq("status", "done");
+    if (status === "open") q = q.in("status", openTaskStatuses);
     const { data, error } = await q;
     if (error) return { content: [{ type: "text" as const, text: error.message }], isError: true };
     const tasks = (data ?? []).map((t) => ({

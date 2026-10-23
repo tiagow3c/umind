@@ -299,6 +299,7 @@ export type Database = {
           deleted_at: string | null
           ended_at: string | null
           id: string
+          knowledge_ref: string | null
           meet_url: string | null
           owner_id: string
           people_version: number
@@ -320,6 +321,7 @@ export type Database = {
           deleted_at?: string | null
           ended_at?: string | null
           id?: string
+          knowledge_ref?: string | null
           meet_url?: string | null
           owner_id: string
           people_version?: number
@@ -341,6 +343,7 @@ export type Database = {
           deleted_at?: string | null
           ended_at?: string | null
           id?: string
+          knowledge_ref?: string | null
           meet_url?: string | null
           owner_id?: string
           people_version?: number
