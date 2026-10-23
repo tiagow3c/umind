@@ -24,21 +24,12 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [pending, setPending] = useState(false);
-  const [suggestion, setSuggestion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const ask = useServerFn(askAssistant);
   const input = useRef<HTMLTextAreaElement>(null);
   const logs = useRef<(HTMLDivElement | null)[]>([]);
   useEffect(() => { setRemovedFor(null); setError(null); }, [pathname]);
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
-  useEffect(() => { logs.current.forEach((log) => { if (log) log.scrollTop = log.scrollHeight; }); }, [messages, pending, open]);
-
-  useEffect(() => {
-    setSuggestion(0);
-    if (messages.length) return;
-    const timer = window.setInterval(() => setSuggestion((previous) => (previous + 1) % 5), 6000);
-    return () => window.clearInterval(timer);
-  }, [meetingId, messages.length]);
 
   async function submit() {
     const text = question.trim();
