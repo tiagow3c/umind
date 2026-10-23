@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
+import { Blob as NodeBlob } from "node:buffer";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const haltSource = readFileSync("extension/capture-stop.js", "utf8");
@@ -30,8 +31,7 @@ describe("immediate Meet capture shutdown", () => {
 
   async function capture() {
     document.body.innerHTML = '<button aria-label="Sair da chamada">Sair</button>';
-    const input = new EventTarget();
-    Object.assign(input, { stop: vi.fn() });
+    const input = Object.assign(new EventTarget(), { stop: vi.fn() });
     const micTrack = { stop: vi.fn() }, output = { stop: vi.fn() };
     const tab = { getTracks: () => [input], getAudioTracks: () => [input], getVideoTracks: () => [] };
     const mic = { getTracks: () => [micTrack] };
@@ -43,11 +43,11 @@ describe("immediate Meet capture shutdown", () => {
     class Recorder extends EventTarget {
       static isTypeSupported() { return true; }
       state = "inactive";
-      ondataavailable?: (event: { data: Blob }) => void;
+      ondataavailable?: (event: { data: NodeBlob }) => void;
       constructor(public stream: { getTracks: () => unknown[] }) { super(); recorder = this; }
       start() { this.state = "recording"; }
       stop = vi.fn(() => { this.state = "inactive"; });
-      final() { this.ondataavailable?.({ data: new Blob(["final-audio"]) }); this.dispatchEvent(new Event("stop")); }
+      final() { this.ondataavailable?.({ data: new NodeBlob(["final-audio"]) }); this.dispatchEvent(new Event("stop")); }
     }
     class Context {
       state = "running"; close = close;
