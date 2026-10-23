@@ -33,7 +33,6 @@ function Detalhe() {
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [full, setFull] = useState(false);
   if (!m) return <div><h1 className="text-4xl">Reunião indisponível</h1><p className="mt-2 text-muted-foreground">Ela não existe ou foi excluída.</p></div>;
   const rec = [...m.recordings].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
   const interrupted = m.recordings.some((r) => r.interruption_reason);
@@ -51,24 +50,13 @@ function Detalhe() {
   }
 
   const processingLive = m.status === "processing" && !!rec?.finalized_at;
-  if ((m.current_transcript_id || processingLive) && !full && m.status !== "failed") {
-    return (
-      <div className="space-y-6 py-4">
-        <div className="space-y-2"><div className="flex flex-wrap items-center gap-2"><SourceTag meeting={m} /><ShareToggle meeting={m} userId={user.id} /></div><h1 className="text-5xl">{m.title}</h1></div>
-        <KnowledgeActions meetingId={m.id} reference={m.knowledge_ref} />
-        {interruptionNotice}
-        {processingLive && <ProcessingPanel meetingId={m.id} status={m.status} compact />}
-        <MeetingOverview meeting={m} processing={processingLive} onFull={() => setFull(true)} />
-      </div>
-    );
-  }
+  const hasContent = !!m.current_transcript_id || processingLive;
 
   return (
-    <div className="space-y-10">
-      {full && <button onClick={() => setFull(false)} className="text-sm text-muted-foreground hover:text-foreground">← Voltar à visão geral</button>}
+    <div className="space-y-10 py-4">
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{new Date(m.created_at).toLocaleString("pt-BR")} · {m.timezone}</p>
+          <p className="text-sm text-muted-foreground">{new Date(m.created_at).toLocaleString("pt-BR")}</p>
           <h1 className="mt-1 text-5xl">{m.title}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2"><SourceTag meeting={m} /><ShareToggle meeting={m} userId={user.id} /><StatusBadge status={m.status} /></div>
@@ -76,11 +64,11 @@ function Detalhe() {
       <KnowledgeActions meetingId={m.id} reference={m.knowledge_ref} />
       {interruptionNotice}
 
-      {(m.status === "processing" || m.status === "failed") && rec?.finalized_at && <ProcessingPanel meetingId={m.id} status={m.status} />}
+      {(m.status === "processing" || m.status === "failed") && rec?.finalized_at && <ProcessingPanel meetingId={m.id} status={m.status} compact={m.status !== "failed"} />}
 
-      {m.status === "processing" && rec?.finalized_at && !m.current_transcript_id && <MeetingSkeleton />}
+      {m.status === "processing" && rec?.finalized_at && !m.current_transcript_id && !processingLive && <MeetingSkeleton />}
 
-      {m.current_transcript_id && <MeetingReview meeting={m} />}
+      {hasContent && <MeetingReview meeting={m} overview={<MeetingOverview meeting={m} processing={processingLive} />} />}
 
       {canStartCapture(m.status, m.consent_records) && (
         <Button asChild size="lg"><Link to="/reunioes/$id/gravar" params={{ id }} search={{ auto: true }}>{m.source_type === "import" ? "Importar áudio" : "Ir para o gravador"}</Link></Button>

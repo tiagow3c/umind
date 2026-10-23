@@ -20,24 +20,22 @@ type Meeting = {
   recordings: { id: string; codec: string | null; status: string; timeline_offset_ms?: number; duration_ms?: number | null; recording_parts: { object_key: string; sequence: number }[] }[];
 };
 
-export function MeetingReview({ meeting }: { meeting: Meeting }) {
+/** Single meeting page body: overview (summary, people, tasks) and transcript as tabs. */
+export function MeetingReview({ meeting, overview }: { meeting: Meeting; overview: React.ReactNode }) {
   const [tab, setTab] = useState("resumo");
-  const [focus, setFocus] = useState<string | null>(null);
-  const open = (segId: string) => { setFocus(segId); setTab("transcricao"); };
   return (
     <Tabs value={tab} onValueChange={setTab}>
       <TabsList>
         <TabsTrigger value="resumo">Resumo</TabsTrigger>
-        <TabsTrigger value="transcricao">Transcrição</TabsTrigger>
-        <TabsTrigger value="acoes">Ações</TabsTrigger>
+        <TabsTrigger value="transcricao" disabled={!meeting.current_transcript_id}>Transcrição</TabsTrigger>
       </TabsList>
-      <TabsContent value="resumo" className="pt-6"><Summary meeting={meeting} /></TabsContent>
-      <TabsContent value="transcricao" className="pt-6"><Transcript meeting={meeting} focus={focus} /></TabsContent>
-      <TabsContent value="acoes" className="pt-6"><Actions meeting={meeting} onEvidence={open} /></TabsContent>
+      <TabsContent value="resumo" className="space-y-6 pt-6"><Notices meeting={meeting} />{overview}</TabsContent>
+      <TabsContent value="transcricao" className="pt-6"><Transcript meeting={meeting} focus={null} /></TabsContent>
     </Tabs>
   );
 }
 
+// Kept for evidence-capable task lists elsewhere.
 function useSegmentIndex(transcriptId: string | null) {
   const { data } = useQuery(transcriptQuery(transcriptId));
   const map = new Map<string, number>();
@@ -60,22 +58,21 @@ function EvidenceLinks({ ids, index, onEvidence }: { ids: string[]; index: Map<s
   );
 }
 
-function Summary({ meeting }: { meeting: Meeting }) {
+function Notices({ meeting }: { meeting: Meeting }) {
   const { data: an } = useQuery(analysisQuery(meeting.id));
   const retry = useServerFn(retryProcessing);
   const qc = useQueryClient();
-  if (!an) return <p className="text-sm text-muted-foreground">{meeting.current_transcript_id ? "Transcrição disponível, análise pendente." : "Ainda sem resumo."}</p>;
+  if (!an) return null;
   return (
-    <div className="space-y-8">
+    <>
       {an.stale && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-warning p-4 text-sm">
+        <div className="flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-md border border-warning p-4 text-sm">
           <span>A transcrição mudou depois deste resumo. Ele pode estar desatualizado.</span>
           <Button size="sm" variant="outline" onClick={async () => { await retry({ data: { meetingId: meeting.id } }); qc.invalidateQueries(); }}>Gerar resumo novamente</Button>
         </div>
       )}
-      {an.partial && <p className="rounded-md border p-3 text-sm">Atenção: a gravação ficou parcial.</p>}
-      <MeetingNarrative analysis={an} />
-    </div>
+      {an.partial && <p className="max-w-3xl rounded-md border p-3 text-sm">Atenção: a gravação ficou parcial.</p>}
+    </>
   );
 }
 
