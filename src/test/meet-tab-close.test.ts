@@ -31,10 +31,10 @@ function harness() {
       action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },
     },
   });
-  const send = (msg: any) => new Promise<any>((resolve) => listeners.message(msg, { tab: { id: 7 } }, resolve));
+  const send = (msg: any) => new Promise<any>((resolve) => listeners["message"]?.(msg, { tab: { id: 7 } }, resolve));
   const settle = async () => { for (let i = 0; i < 80; i++) await Promise.resolve(); };
   const start = () => send({ type: "start", body: { meetUrl: "https://meet.google.com/abc-defg-hij" } });
-  return { stored, calls, listeners, send, start, settle, offline: (value: boolean) => { fail = value; }, close: () => { tab = null; listeners.removed(7); } };
+  return { stored, calls, listeners, send, start, settle, offline: (value: boolean) => { fail = value; }, close: () => { tab = null; listeners["removed"]?.(7); } };
 }
 
 describe("durable Meet tab closure", () => {
@@ -56,22 +56,22 @@ describe("durable Meet tab closure", () => {
     const h = harness(); await h.start(); h.offline(true);
     h.close(); await h.settle();
     expect(h.stored["finish:rec-1"].body.interrupted).toBe(true);
-    h.offline(false); h.listeners.alarm(); await h.settle();
+    h.offline(false); h.listeners["alarm"]?.(); await h.settle();
     expect(h.calls.filter((c) => c.action === "finish")).toHaveLength(1);
     expect(h.stored["finish:rec-1"]).toBeUndefined();
   });
   it("ignores tab visibility changes but ends capture on navigation", async () => {
     const h = harness(); await h.start();
-    h.listeners.updated(7, { highlighted: false }); await h.settle();
+    h.listeners["updated"]?.(7, { highlighted: false }); await h.settle();
     expect(h.calls.filter((c) => c.action === "finish")).toHaveLength(0);
-    h.listeners.updated(7, { status: "loading", url: "https://example.com" }); await h.settle();
+    h.listeners["updated"]?.(7, { status: "loading", url: "https://example.com" }); await h.settle();
     expect(h.calls.filter((c) => c.action === "finish")).toHaveLength(1);
   });
   it("preserves interrupted status when a late recorder finish arrives", async () => {
     const h = harness(); await h.start(); h.offline(true); h.close(); await h.settle();
     await h.send({ type: "finish", params: { recording: "rec-1" }, body: { durationMs: 30000 } });
     expect(h.stored["finish:rec-1"].body.interrupted).toBe(true);
-    h.offline(false); h.listeners.alarm(); await h.settle();
+    h.offline(false); h.listeners["alarm"]?.(); await h.settle();
     expect(h.calls.find((c) => c.action === "finish")?.body.durationMs).toBe(30000);
   });
 });
