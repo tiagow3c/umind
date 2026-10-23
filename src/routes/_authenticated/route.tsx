@@ -138,7 +138,7 @@ function AppLayout() {
         <div className={`mt-auto ${menuOpen ? "p-3" : "md:flex md:justify-center md:p-0 md:py-3"}`}><AccountMenu name={displayName} email={user.email} compact={!menuOpen} /></div>
       </aside>}
       <main className="app-main min-w-0 w-full px-5 py-7 md:px-10 md:py-12">
-        <div className="mx-auto w-full min-w-0 max-w-4xl"><Outlet /></div>
+        <div className={`mx-auto w-full min-w-0 ${pathname === "/tarefas" ? "max-w-none" : "max-w-4xl"}`}><Outlet /></div>
       </main>
       {!isRecorder && <nav aria-label="Navegação principal no celular" className="mobile-tab-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-background md:hidden">
         {[NAV[0], NAV[1], { to: "/reunioes/nova", label: "Gravar", icon: Mic } as const, NAV[2], NAV[3]].map((n) => {
