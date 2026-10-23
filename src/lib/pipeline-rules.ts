@@ -227,7 +227,8 @@ export function matchIdentifiedSpeakers(transcribed: Utterance[], identified: Pi
   for (const [speaker, scores] of overlaps) {
     const sorted = [...scores].sort((a, b) => b[1] - a[1]);
     const best = sorted[0];
-    if (!best || best[1] <= [...scores.values()].reduce((sum, n) => sum + n, 0) / 2) continue;
+    const total = [...scores.values()].reduce((sum, n) => sum + n, 0);
+    if (!best || best[1] < 1500 || best[1] < total * 0.8) continue;
     const person = identified.matches[String(best[0])];
     if (person) matches[String(speaker)] = person;
   }
