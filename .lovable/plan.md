@@ -43,7 +43,7 @@ Cada reunião terá um código curto e permanente, como `#ATA-8F2K7M`. No Claude
 ## Limites desta entrega
 - A criação de vídeos, documentos ou outras peças acontece no Claude ou ChatGPT, conforme os recursos dessas ferramentas; o Ata fornece o conhecimento.
 - Referências só funcionam automaticamente quando o conector estiver autorizado e disponível na conta de destino.
-- A disponibilidade de conectores varia conforme plano e configurações da ferramenta. Copiar contexto será a alternativa universal.
+- Claude oferece conectores remotos, sujeitos aos limites do plano. No ChatGPT, a conexão personalizada depende da disponibilidade na conta e das permissões do workspace; não será prometida para todos os planos ou aplicativos. Copiar contexto será a alternativa universal.
 - Não inclui auto-documentação corporativa, nova página de biblioteca, Shadow Advisor ou publicação automática.
 
 ## Detalhes técnicos
