@@ -1,3 +1,8 @@
+# Conhecimento reutilizável no Claude e ChatGPT
+- [ ] Preparar e aprovar o plano de referências curtas e contexto reutilizável das reuniões.
+- [ ] Implementar referências, contexto e ações de uso externo após aprovação do plano.
+- [ ] Ampliar as ferramentas conectadas, testar privacidade e validar o uso externo; depende de aprovação e conexão na ferramenta de destino.
+
 # Leitura narrativa das reuniões
 - [x] Apresentar resumo executivo completo e detalhes por assunto, sem links de trechos na leitura.
 - [x] Orientar novas análises para contexto, argumentos e desfecho, preservando evidências e tarefas aceitas; análises existentes não reprocessadas automaticamente.
