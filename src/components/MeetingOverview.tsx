@@ -1,3 +1,4 @@
+import { isStrayVoice } from "@/lib/people-rules";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
@@ -140,6 +141,9 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
           <h2 className="text-3xl">Participantes</h2>
           <ul className="mt-6 grid grid-cols-2 justify-items-center gap-x-6 gap-y-8 sm:mt-8 sm:flex sm:flex-wrap sm:gap-8">
             {speakers.filter((s) => {
+              const segs = tr?.segments ?? [];
+              const speech = (id: string) => segs.filter((g) => g.speaker_id === id).reduce((n, g) => n + (g.end_ms - g.start_ms), 0);
+              if (segs.length && isStrayVoice(speech(s.id), segs.reduce((n, g) => n + (g.end_ms - g.start_ms), 0), !!s.participant_id)) return false;
               // One card per person: several voices linked to the same person show once (confirmed voice first).
               const pid = meeting.participants.find((p) => p.id === s.participant_id)?.person_id;
               if (!pid) return true;

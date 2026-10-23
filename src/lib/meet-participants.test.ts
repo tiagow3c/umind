@@ -13,3 +13,10 @@ describe("Meet participants", () => {
     expect(isMeetPersonName("Rodrigo (Apresentação)")).toBe(false);
   });
 });
+
+import { isStrayVoice } from "./people-rules";
+describe("stray voices", () => {
+  it("hides a 9.7 s unnamed voice in a 30 min meeting", () => expect(isStrayVoice(9700, 1_800_000, false)).toBe(true));
+  it("keeps it once someone names it", () => expect(isStrayVoice(9700, 1_800_000, true)).toBe(false));
+  it("keeps short voices in short meetings", () => expect(isStrayVoice(9700, 120_000, false)).toBe(false));
+});
