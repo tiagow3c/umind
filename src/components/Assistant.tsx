@@ -84,9 +84,11 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
       <form className="shrink-0 p-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         {error && <p role="alert" className="mb-2 text-sm text-destructive">{error}</p>}
         <div className="rounded-md bg-muted">
-          {meetingId && <div className="flex min-w-0 items-center gap-2 px-3 pt-2 text-xs text-muted-foreground" aria-label="Contexto da reunião">
-            <FileText className="size-3 shrink-0" /><span className="min-w-0 flex-1 truncate">{meeting?.title ?? "Esta reunião"}</span>
-            <Button variant="ghost" size="icon" className="size-6 shrink-0" aria-label="Remover contexto da reunião" title="Remover contexto da reunião" onClick={() => { setRemovedFor(currentMeetingId); setError(null); }}><X /></Button>
+          {meetingId && <div className="px-3 pt-2" aria-label="Contexto da reunião">
+            <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-secondary px-2.5 py-1 text-xs text-secondary-foreground">
+              <FileText className="size-3 shrink-0" /><span className="min-w-0 truncate">{meeting?.title ?? "Esta reunião"}</span>
+              <Button variant="ghost" size="icon" className="size-4 min-h-0 shrink-0 rounded-full p-0 text-muted-foreground hover:bg-transparent hover:text-foreground" aria-label="Remover contexto da reunião" title="Remover contexto da reunião" onClick={() => { setRemovedFor(currentMeetingId); setError(null); }}><X className="size-3" /></Button>
+            </span>
           </div>}
           <Textarea ref={input} aria-label="Pergunta ao Ata AI" placeholder={meetingId ? "Pergunte sobre a reunião…" : "Pergunte ao Ata AI…"} value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={4000} rows={2} className="resize-none border-0 shadow-none focus-visible:ring-0" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(); } }} />
           <div className="flex justify-end px-2 pb-2"><Button type="submit" size="icon" className="shadow-none" title="Enviar pergunta" aria-label="Enviar pergunta" disabled={pending || !question.trim()}>{pending ? <Loader2 className="animate-spin" /> : <ArrowUp />}</Button></div>
