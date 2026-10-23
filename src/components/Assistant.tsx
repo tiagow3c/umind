@@ -73,7 +73,12 @@ export function Assistant({ minimized, onToggle }: { minimized: boolean; onToggl
 
       </header>
       <div ref={(node) => { logs.current[variant === "rail" ? 0 : 1] = node; }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" role="log" aria-live="polite" aria-label="Conversa com o Ata AI">
-        {messages.length === 0 && <p className="py-8 font-serif text-2xl text-muted-foreground">{(meetingId ? MEETING_PROMPTS : GENERAL_PROMPTS)[suggestion]}</p>}
+        {messages.length === 0 && <div className="flex min-h-full flex-col justify-end gap-4">
+          <p className="text-center font-serif text-2xl text-foreground">{(meetingId ? MEETING_PROMPTS : GENERAL_PROMPTS)[suggestion]}</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {(meetingId ? MEETING_PROMPTS : GENERAL_PROMPTS).slice(0, 5).map((prompt) => <button key={prompt} type="button" disabled={pending} onClick={() => { setQuestion(prompt); input.current?.focus(); }} className="rounded-md border border-dashed border-muted-foreground/50 px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:border-foreground hover:text-foreground">{prompt}</button>)}
+          </div>
+        </div>}
         {messages.map((message, i) => <div key={i} className={`mb-4 flex min-w-0 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
           <div className={`min-w-0 max-w-[90%] rounded-lg px-3 py-2.5 ${message.role === "user" ? "rounded-br-none bg-primary text-primary-foreground" : "rounded-bl-none border bg-muted text-foreground"}`}>
           <p className={`mb-1 text-xs ${message.role === "user" ? "text-primary-foreground" : "text-muted-foreground"}`}>{message.role === "user" ? "Você" : "Ata AI"}</p>
