@@ -1,3 +1,7 @@
+# Progresso e participantes do Meet
+- [ ] Aprovar e implementar progresso visual estimado (plano preparado).
+- [ ] Diagnosticar fotos ausentes, voz extra e Gabriel não identificado na reunião informada; preparar correção sem inventar associações.
+
 # Colunas independentes
 - [x] Aplicar áreas separadas de conteúdo e Ata AI, claro branco/cinza e mesma estrutura no escuro.
 - [x] Verificar sessão real a 1280px, 1074px e celular 390px, minimizar/reabrir e reunião no escuro; sem sobreposição/erros, teste de navegação passou e build OK.

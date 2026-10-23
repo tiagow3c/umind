@@ -14,3 +14,19 @@
 ## Verificação
 - Testar avanço inicial, monotonicidade, limite abaixo de 100% e congelamento nos estados inativos.
 - Conferir a barra em processamento no computador e celular, com estados controlados se a reunião real já estiver concluída.
+
+## Fotos e participantes do Meet
+
+### Diagnóstico
+- A captura de fotos existe, mas os nomes e imagens só chegam no envio de encerramento da extensão. Nesta reunião, o servidor encerrou por perda de contato, sem receber esse envio.
+- A transcrição detectou quatro vozes; só Tiago e Taylor receberam sugestões de nome. Gabriel é mencionado no texto, mas isso não prova qual das vozes é dele.
+- A voz extra contém cerca de 25 segundos, incluindo frases que parecem uma apresentação/vídeo: “sem depender de planilha” e “nosso time acompanha você”. É um indício de áudio reproduzido na chamada, não confirmação de uma quarta pessoa.
+
+### Correção proposta
+- Guardar nomes e fotos capturados durante a chamada na fila durável da extensão e enviá-los separadamente, sem depender do botão Encerrar nem da aba continuar aberta.
+- Preservar o último conjunto capturado também no encerramento por interrupção; registrar falhas de envio e retomar os envios pendentes, sem trocar fotos já existentes.
+- Usar nomes observados no Meet como contexto para a identificação, nunca associar uma foto a uma voz só pela ordem dos participantes.
+- Separar pessoas vinculadas de vozes ainda não identificadas na apresentação. Permitir marcar uma voz como áudio externo, conservando sua transcrição, em vez de apagar ou esconder pela duração.
+- Permitir associar a voz correta ao Gabriel após ouvi-la e unir vozes da mesma pessoa explicitamente; não escolher por ele sem evidência.
+- Testar captura interrompida com fotos pendentes, ausência de duplicatas e preservação de fotos existentes; conferir os dados reais sem forçar nomes.
+- Fotos que nunca chegaram ao Ata não podem ser recuperadas da aba já fechada, salvo se ainda houver cópia na extensão.
