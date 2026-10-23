@@ -87,7 +87,7 @@ function AppLayout() {
   const displayName = meta?.full_name || meta?.name || user.email?.split("@")[0] || "Minha conta";
   const grid = isRecorder ? "" : menuOpen
     ? assistantMin ? " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)_0px]" : " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)_340px]"
-    : assistantMin ? " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[56px_minmax(0,1fr)_0px]" : " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[56px_minmax(0,1fr)_340px]";
+    : assistantMin ? " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[44px_minmax(0,1fr)_0px]" : " md:grid md:grid-rows-[minmax(0,1fr)] md:grid-cols-[44px_minmax(0,1fr)_340px]";
   return (
     <div className={`app-shell${isRecorder ? "" : " app-shell--columns"}${grid}`} data-keyboard-open={keyboardOpen}>
       {!isRecorder && <header className="mobile-app-header sticky top-0 z-30 border-b bg-background md:hidden">
@@ -128,10 +128,10 @@ function AppLayout() {
           })}
         </nav>
         <div className={`hidden md:mt-8 md:block ${menuOpen ? "p-5" : "md:px-0 md:py-2"}`}>
-          {isRecorder ? <Button disabled className="w-full" title="Gravar"><Mic className="size-4" /><span className={menuOpen ? "" : "hidden"}>Gravar</span></Button> : <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+          {isRecorder ? <Button disabled className={`w-full ${menuOpen ? "" : "md:px-0"}`} title="Gravar"><Mic className="size-4" /><span className={menuOpen ? "" : "hidden"}>Gravar</span></Button> : <Button asChild className={`w-full bg-accent text-accent-foreground hover:bg-accent/90 ${menuOpen ? "" : "md:px-0"}`}>
             <Link to="/reunioes/nova" title="Gravar"><Mic className="size-4" /><span className={menuOpen ? "" : "hidden"}>Gravar</span></Link>
           </Button>}
-          {usesExtension === false && <Button asChild variant="outline" className="mt-2 w-full">
+          {usesExtension === false && <Button asChild variant="outline" className={`mt-2 w-full ${menuOpen ? "" : "md:px-0"}`}>
             <Link to="/ajustes" hash="google-meet" title="Extensão do Meet"><Puzzle className="size-4" /><span className={menuOpen ? "" : "hidden"}>Extensão do Meet</span></Link>
           </Button>}
         </div>

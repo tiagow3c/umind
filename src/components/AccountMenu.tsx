@@ -9,8 +9,8 @@ export function AccountMenu({ name, email, compact = false }: { name: string; em
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" aria-label="Abrir menu da conta" className={compact ? "size-11 rounded-full p-0 hover:bg-secondary" : "h-auto w-full justify-start gap-3 p-2 hover:bg-sidebar-accent"}>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent font-sans text-xs font-medium text-accent-foreground">{name.slice(0, 2).toUpperCase()}</span>
+        <Button variant="ghost" aria-label="Abrir menu da conta" className={compact ? "size-9 rounded-full p-0 hover:bg-secondary" : "h-auto w-full justify-start gap-3 p-2 hover:bg-sidebar-accent"}>
+          <span className={`flex shrink-0 items-center justify-center rounded-full bg-accent font-sans font-medium text-accent-foreground ${compact ? "size-8 text-[11px]" : "size-9 text-xs"}`}>{name.slice(0, 2).toUpperCase()}</span>
           {!compact && <span className="min-w-0 truncate text-sm text-sidebar-foreground">{name}</span>}
         </Button>
       </DropdownMenuTrigger>
