@@ -1,3 +1,7 @@
+# Meet fechado sem parar
+- [ ] Planejar encerramento durável ao fechar/sair da aba, preservar envios pendentes e atualizar automaticamente o estado na tela Hoje.
+- [ ] Implementar e testar fechamento da aba e leitura do estado atualizado; chamada real depende da extensão atualizada no Chrome.
+
 # Conhecimento reutilizável no Claude e ChatGPT
 - [x] Plano de referências e contexto aprovado.
 - [x] Referências imutáveis em reuniões existentes e novas; ações Claude/ChatGPT e copiar contexto, conexão em Ajustes e leitura autenticada verificados na reunião real, no computador e celular.
