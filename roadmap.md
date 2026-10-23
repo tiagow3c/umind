@@ -1,3 +1,8 @@
+# Leitura narrativa das reuniões
+- [ ] Apresentar resumo executivo completo e detalhes por assunto, sem links de trechos na leitura.
+- [ ] Orientar novas análises para contexto, argumentos e desfecho, preservando evidências e tarefas aceitas.
+- [ ] Verificar leitura da reunião real e navegação para transcrição e ações.
+
 # Encerramento imediato no Meet
 - [x] Parar captura e gravação no instante da saída confirmada; preservar envio do último áudio. 11 testes passaram e navegador confirmou faixas encerradas/contexto fechado antes do envio, com último trecho preservado; pacote 1.3.3 atualizado.
 - [ ] Conferir em chamada real — requer baixar o pacote atualizado em Ajustes e recarregar a extensão no Chrome do usuário.
