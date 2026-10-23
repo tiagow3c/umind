@@ -42,7 +42,7 @@
   reopen.title = "Abrir Ata";
   reopen.setAttribute("aria-label", "Abrir Ata");
   reopen.hidden = true;
-  let minimized = false, starting = false, stopping = false, previous = null, lastCallSeen = 0;
+  let minimized = false, starting = false, stopping = false, previous = null, lastCallSeen = 0, preparing = null;
   const resumeBtn = document.createElement("button");
   resumeBtn.type = "button"; resumeBtn.className = "ata-meet-action ata-meet-resume"; resumeBtn.textContent = "Retomar anterior"; resumeBtn.hidden = true;
   panel.append(resumeBtn);
@@ -73,12 +73,20 @@
   const callRules = globalThis.AtaMeetCallState;
   const inCall = () => !!document.querySelector(callRules.leaveSelector);
   const callEnded = () => callRules.ended(document.body.innerText);
+  const endCapture = () => {
+    if (preparing) { preparing.cancelled = true; void globalThis.AtaMeetCapture.halt(preparing); }
+    if (state.rec) void stop(true);
+  };
   // Observe Meet's own leave action; the Ata panel can remain minimized.
-  document.addEventListener("click", (event) => {
+  const leaveAction = (event) => {
     if (event.target instanceof Element && event.target.closest(callRules.leaveSelector)) {
       lastCallSeen = 0;
-      if (state.rec) void stop(true);
+      endCapture();
     }
+  };
+  document.addEventListener("click", leaveAction, true);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") leaveAction(event);
   }, true);
   const title = () => {
     const t = document.title.replace(/^Meet\s*[-–:]\s*/i, "").trim();
@@ -103,16 +111,24 @@
   async function start(resumeMeetingId = null) {
     if (starting || stopping || state.rec) return;
     starting = true; btn.disabled = true; resumeBtn.hidden = true;
-    try { await begin(resumeMeetingId); } finally { starting = false; btn.disabled = false; if (!state.rec) void lookup(); }
+    const attempt = { streams: [], ctx: null, cancelled: false };
+    preparing = attempt;
+    try { await begin(resumeMeetingId, attempt); } finally {
+      if (!state.rec) void globalThis.AtaMeetCapture.halt(attempt);
+      preparing = null; starting = false; btn.disabled = false; if (!state.rec) void lookup();
+    }
   }
-  async function begin(resumeMeetingId) {
+  async function begin(resumeMeetingId, attempt) {
     const { token } = await chrome.storage.local.get("token");
+    if (attempt.cancelled) return;
     if (!token) { alert("Conecte a extensão ao Ata: clique no ícone do Ata na barra do Chrome e cole o código gerado em Ajustes."); return; }
     label("Escolha esta aba e marque “Compartilhar áudio”…");
     let tab, mic;
     try {
       tab = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { suppressLocalAudioPlayback: false }, preferCurrentTab: true, selfBrowserSurface: "include", systemAudio: "include" });
     } catch { label("Gravar com Ata"); return; }
+    attempt.streams.push(tab);
+    if (attempt.cancelled) return;
     if (!tab.getAudioTracks().length) {
       tab.getTracks().forEach((t) => t.stop());
       alert("Sem áudio da chamada. Tente de novo e marque “Compartilhar áudio da guia”.");
@@ -121,8 +137,11 @@
     }
     tab.getVideoTracks().forEach((t) => t.stop());
     try { mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } }); } catch { mic = null; }
+    if (mic) attempt.streams.push(mic);
+    if (attempt.cancelled) return;
 
     const ctx = new AudioContext();
+    attempt.ctx = ctx;
     const dest = ctx.createMediaStreamDestination();
     ctx.createMediaStreamSource(new MediaStream(tab.getAudioTracks())).connect(dest);
     if (mic) ctx.createMediaStreamSource(mic).connect(dest);
@@ -137,13 +156,19 @@
       return;
     }
 
+    if (attempt.cancelled) {
+      // Start may have reached the server while the user left; close that empty session too.
+      void send({ type: "finish", params: { recording: ids.recordingId }, meetingId: ids.meetingId, body: { durationMs: 0 } }).catch(() => {});
+      return;
+    }
+
     const rec = new MediaRecorder(dest.stream, { mimeType: mime, audioBitsPerSecond: 48000 });
     state = { rec, recordingId: ids.recordingId, meetingId: ids.meetingId, seq: 1, startedAt: Date.now(), partStart: 0, streams: [tab, mic].filter(Boolean), ctx, pending: [] };
     const session = state;
     session.remainingMs = ids.remainingMs || 7200000;
     rec.ondataavailable = (ev) => {
       if (!ev.data || !ev.data.size) return;
-      const seq = session.seq++, startMs = session.partStart, endMs = Math.min(Date.now() - session.startedAt, session.remainingMs);
+      const seq = session.seq++, startMs = session.partStart, endMs = Math.min((session.stoppedAt || Date.now()) - session.startedAt, session.remainingMs);
       session.partStart = endMs;
       const p = toB64(ev.data).then((data) => send({ type: "part", params: { recording: session.recordingId, seq: String(seq), start: String(startMs), end: String(endMs) }, data }));
       session.pending.push(p); void p.catch(() => {});
@@ -164,15 +189,15 @@
     const s = state;
     if (!s.rec || stopping) return;
     stopping = true; btn.disabled = true; resumeBtn.hidden = true; clearInterval(s.heartbeat);
+    s.stoppedAt = Date.now();
     state = { ...state, rec: null };
+    const stopped = globalThis.AtaMeetCapture.halt(s);
     label("Enviando…");
     void chrome.storage.local.remove("recording");
-    if (s.rec.state !== "inactive") await new Promise((r) => { s.rec.addEventListener("stop", r, { once: true }); try { s.rec.stop(); } catch { r(); } });
-    s.streams.forEach((st) => st.getTracks().forEach((t) => t.stop()));
-    void s.ctx.close();
+    await stopped;
     await Promise.allSettled(s.pending);
     try {
-      const r = await send({ type: "finish", params: { recording: s.recordingId }, meetingId: s.meetingId, body: { durationMs: Math.min(Date.now() - s.startedAt, s.remainingMs), participants: participantNames() } });
+      const r = await send({ type: "finish", params: { recording: s.recordingId }, meetingId: s.meetingId, body: { durationMs: Math.min(s.stoppedAt - s.startedAt, s.remainingMs), participants: participantNames() } });
       label("Enviada ao Ata ✓");
       if (!automatic && r && r.meetingId && confirm("Gravação enviada ao Ata. Abrir a reunião?")) void send({ type: "open", meetingId: r.meetingId });
     } catch { label("Falha ao enviar"); }
@@ -185,6 +210,7 @@
   const monitorCall = () => {
     const ended = callEnded();
     const detected = inCall();
+    if (ended) endCapture();
     if (detected && !ended) lastCallSeen = Date.now();
     const on = !ended && (detected || (lastCallSeen > 0 && Date.now() - lastCallSeen < 6000));
     void chrome.storage.local.set({ inCallAt: on ? Date.now() : 0 });
@@ -198,16 +224,19 @@
     if (state.rec) {
       const seconds = Math.floor((Date.now() - state.startedAt) / 1000);
       if (Date.now() - state.startedAt >= state.remainingMs) void stop(true);
-      clock.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+      const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+      if (clock.textContent !== time) clock.textContent = time;
     }
     if (!on && panel.isConnected && !state.rec) { panel.remove(); reopen.remove(); minimized = false; }
-    if (state.rec && callRules.shouldEnd({ ended, hasLeaveControl: detected, lastSeen: lastCallSeen, now: Date.now() })) void stop(true);
+    if ((state.rec || preparing) && callRules.shouldEnd({ ended, hasLeaveControl: detected, lastSeen: lastCallSeen, now: Date.now() })) endCapture();
   };
   setInterval(monitorCall, 1500);
-  let checkTimer;
+  let checkQueued = false;
   new MutationObserver(() => {
-    clearTimeout(checkTimer);
-    checkTimer = setTimeout(monitorCall, 100);
-  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-label", "hidden"] });
-  window.addEventListener("beforeunload", () => { if (state.rec) void stop(); });
+    if (checkQueued) return;
+    checkQueued = true;
+    queueMicrotask(() => { checkQueued = false; monitorCall(); });
+  }).observe(document.body, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["aria-label", "hidden"] });
+  window.addEventListener("pagehide", endCapture);
+  window.addEventListener("beforeunload", endCapture);
 })();
