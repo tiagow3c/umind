@@ -10,7 +10,7 @@ export function enrollSpeakerVoiceInBackground(speakerId: string, personId: stri
   void enrollSpeakerVoice(speakerId, personId)
     .then((r) => {
       if (r === "credits") toast.error("Não consegui guardar a voz: o serviço de voz está sem créditos. A identificação automática volta quando houver créditos.");
-      else if (r) toast.error("Não consegui guardar a voz agora; tento de novo ao abrir a reunião.");
+      else if (r && r !== "pending") toast.error("Não consegui guardar a voz agora; tento de novo ao abrir a reunião.");
     })
     .catch(() => toast.error("Não consegui guardar a voz agora; tento de novo ao abrir a reunião."));
 }
@@ -218,8 +218,11 @@ function toWav(buf: AudioBuffer, startS: number, endS: number): string | null {
 
 /** Save the voice of a just-named speaker so future meetings recognise this person automatically.
  *  Returns null on success, or a short reason ("credits" when the voice service is out of credits). */
-export async function enrollSpeakerVoice(speakerId: string, personId: string): Promise<string | null> {
+export async function enrollSpeakerVoice(speakerId: string, personId: string, retry = false): Promise<string | null> {
   const fail = (why: string) => { console.warn(`[enroll] ${speakerId}: ${why}`); return why; };
+  const resume = await enrollVoice({ data: { speakerId, personId, retry } });
+  if (resume.ok) return null;
+  if (resume.reason !== "needs_audio") return resume.reason;
   const { data: sp } = await supabase.from("speakers").select("meeting_id").eq("id", speakerId).single();
   if (!sp) return fail("speaker não encontrado");
   const { data: m } = await supabase.from("meetings").select("current_transcript_id").eq("id", sp.meeting_id).single();
@@ -241,7 +244,7 @@ export async function enrollSpeakerVoice(speakerId: string, personId: string): P
     const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
     const wav = toWav(buf, located.localMs / 1000, (located.localMs + sample.end - sample.start) / 1000);
     if (!wav) return fail("trecho quase silencioso");
-    const r = await enrollVoice({ data: { speakerId, personId, wavBase64: wav } });
+    const r = await enrollVoice({ data: { speakerId, personId, wavBase64: wav, retry } });
     if (!r?.ok) return fail(r?.reason ?? "erro");
     return null;
   } finally { void ctx.close(); }
@@ -327,3 +330,15 @@ export async function priorMeetingsWith(meetingId: string, personIds: string[]) 
   const { data } = await supabase.from("participants").select("meeting_id, meetings!inner(status)").in("person_id", personIds).neq("meeting_id", meetingId).not("meetings.status", "in", "(deleting,deleted)");
   return new Set((data ?? []).map((r) => r.meeting_id)).size;
 }
+
+export const voiceEnrollmentQuery = (meetingId: string) => queryOptions({
+  queryKey: ["voice-enrollment", meetingId],
+  queryFn: async () => {
+    const [jobs, prints] = await Promise.all([
+      supabase.from("voice_enrollments").select("speaker_id, person_id, status, reason").eq("meeting_id", meetingId),
+      supabase.from("person_voiceprints").select("speaker_id, person_id"),
+    ]);
+    if (jobs.error || prints.error) throw new Error("voice_status");
+    return { jobs: jobs.data ?? [], prints: prints.data ?? [] };
+  },
+});

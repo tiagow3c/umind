@@ -1,8 +1,9 @@
+import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, missingVoicePersons, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery } from "@/lib/review";
+import { analysisQuery, reanalyzeMeeting, priorMeetingsWith, assignSelf, assignSpeakerPerson, enrollSpeakerVoice, voiceEnrollmentQuery, peopleQuery, uploadPersonPhoto, meetingTasksQuery, speakersQuery, transcriptQuery } from "@/lib/review";
 import { TaskAction } from "@/components/TaskAction";
 import { PersonPicker } from "@/components/PersonPicker";
 import { avatarSrc } from "@/lib/people-rules";
@@ -35,26 +36,31 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
 
   const self = people?.find((p) => p.is_self) ?? null;
-  // Voices linked to a person learn their voiceprint so next time they are recognised by voice.
-  // Retries on every visit while the person has no saved voice (e.g. after the voice service recovers).
+  const { data: voiceStatus } = useQuery({ ...voiceEnrollmentQuery(meeting.id), refetchInterval: 5000 });
+  const enrolling = useRef(new Set<string>());
+  const [voiceErrors, setVoiceErrors] = useState<Record<string, string>>({});
+  const enroll = async (speakerId: string, personId: string, retry = false) => {
+    if (enrolling.current.has(speakerId)) return;
+    enrolling.current.add(speakerId);
+    try {
+      const reason = await enrollSpeakerVoice(speakerId, personId, retry);
+      setVoiceErrors(old => ({ ...old, [speakerId]: reason ?? "" }));
+    } catch { setVoiceErrors(old => ({ ...old, [speakerId]: "failed" })); }
+    finally { enrolling.current.delete(speakerId); void qc.invalidateQueries({ queryKey: ["voice-enrollment", meeting.id] }); }
+  };
+  // Only confirmed associations can teach the recognizer. Pending jobs reuse the persisted id.
   useEffect(() => {
-    const targets = (speakers ?? [])
-      .map((s) => ({ speakerId: s.id, personId: meeting.participants.find((p) => p.id === s.participant_id)?.person_id }))
-      .filter((t): t is { speakerId: string; personId: string } => !!t.personId && !!samples.get(t.speakerId));
-    if (!targets.length) return;
-    void (async () => {
-      const missing = await missingVoicePersons(targets.map((t) => t.personId));
-      for (const t of targets) {
-        if (!missing.has(t.personId)) continue;
-        const key = `ata:enrolled:${t.speakerId}`;
-        if (localStorage.getItem(key)) continue;
-        localStorage.setItem(key, "1");
-        void enrollSpeakerVoice(t.speakerId, t.personId)
-          .then((r) => { if (r) localStorage.removeItem(key); })
-          .catch(() => localStorage.removeItem(key));
-      }
-    })();
-  }, [speakers, meeting.participants, samples]);
+    if (!voiceStatus) return;
+    for (const s of speakers ?? []) {
+      const part = meeting.participants.find(p => p.id === s.participant_id);
+      if (!part?.person_confirmed || !part.person_id || !samples.has(s.id)) continue;
+      if (voiceStatus.prints.some(v => v.person_id === part.person_id)) continue;
+      const job = voiceStatus.jobs.find(j => j.speaker_id === s.id && j.person_id === part.person_id);
+      if (job && job.status !== "pending") continue;
+      if (voiceErrors[s.id] && voiceErrors[s.id] !== "pending") continue;
+      void enroll(s.id, part.person_id);
+    }
+  }, [voiceStatus, speakers, meeting.participants]);
 
   const used = new Set(meeting.participants.map((p) => p.person_id).filter((x): x is string => !!x));
   const selfUsed = !!self && used.has(self.id);
@@ -188,6 +194,16 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
                       self={selfUsed ? null : { label: self ? self.display_name : "Eu", onPick: async () => { try { await assignSelf(s.id); qc.invalidateQueries(); named(); advance(s.id); } catch { toast.error("Não foi possível salvar."); } } }}
                     />
                   )}
+                  {part?.person_confirmed && part.person_id && (() => {
+                    const saved = voiceStatus?.prints.some(v => v.person_id === part.person_id);
+                    const job = voiceStatus?.jobs.find(j => j.speaker_id === s.id && j.person_id === part.person_id);
+                    const reason = voiceErrors[s.id] || job?.reason;
+                    const failed = !saved && ((job && ["failed", "unknown"].includes(job.status)) || (reason && reason !== "pending"));
+                    return <div className="text-center text-[11px] text-muted-foreground">
+                      <span>{saved ? "Voz cadastrada" : failed ? reason === "credits" ? "Voz sem créditos" : reason === "forbidden" ? "Serviço de voz indisponível" : reason === "unknown" ? "Cadastro precisa de verificação" : reason?.includes("trecho") ? reason : "Voz não cadastrada" : "Cadastrando voz…"}</span>
+                      {failed && reason !== "unknown" && <Button variant="link" size="sm" className="h-auto whitespace-normal p-0 text-[11px]" onClick={() => { if (part.person_id) void enroll(s.id, part.person_id, true); }}>Tentar novamente</Button>}
+                    </div>;
+                  })()}
                   {suggested && <span className="-mt-1 text-[11px] text-muted-foreground">{s.mapping_source === "voice" ? "reconhecido pela voz" : "sugerido"}</span>}
                 </li>
               );
