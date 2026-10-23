@@ -1,6 +1,6 @@
-# Confiabilidade antes de novos recursos
 # Encerramento imediato no Meet
-- [ ] Parar captura e gravação no instante da saída confirmada; preservar envio do último áudio, atualizar pacote e testar.
+- [x] Parar captura e gravação no instante da saída confirmada; preservar envio do último áudio. 11 testes passaram e navegador confirmou faixas encerradas/contexto fechado antes do envio, com último trecho preservado; pacote 1.3.3 atualizado.
+- [ ] Conferir em chamada real — requer baixar o pacote atualizado em Ajustes e recarregar a extensão no Chrome do usuário.
 
 # Confiabilidade antes de novos recursos
 - [x] Investigar identificação e transcrição nas reuniões reais e preparar plano de correções; auto-documentação adiada.
