@@ -1,3 +1,7 @@
+# Confiabilidade antes de novos recursos
+- [x] Investigar identificação e transcrição nas reuniões reais e preparar plano de correções; auto-documentação adiada.
+- [ ] Implementar e validar as correções — aguarda aprovação do plano.
+
 # Correção da pyannote
 # Conexão e janela da extensão
 - [x] Corrigir endereço antigo, preservar códigos em falhas temporárias e arredondar popup; versão 1.3.2 empacotada, 7 testes passaram e código real aceito no site publicado. Instalação local exige baixar e recarregar extensão.
