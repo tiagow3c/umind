@@ -91,6 +91,11 @@ export async function mapSpeaker(speakerId: string, participantId: string | null
   if (error) throw new Error(error.message);
 }
 
+export async function markExternalAudio(speakerId: string, external: boolean) {
+  const { error } = await supabase.from("speakers").update({ mapping_source: external ? "external" : "provider", participant_id: null }).eq("id", speakerId);
+  if (error) throw new Error(error.message);
+}
+
 /** Give a detected speaker a name: renames its participant or creates one. */
 export async function nameSpeaker(speakerId: string, name: string) {
   const n = name.trim().slice(0, 120);
