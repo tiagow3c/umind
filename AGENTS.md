@@ -13,12 +13,13 @@
 - Transcription uses the typed Gateway SDK with a filename matching the real audio container; completed chunk text is checkpointed on the run to avoid replaying successful chunks.
 - Voice enrollment is resumable in voice_enrollments and requires a currently confirmed speaker/person association; ambiguous external submissions are never silently replayed or used to train identity.
 - Meeting action feedback uses linked todos for task addition and tasks.action.completed_actions for confirmed email/calendar operations; opening external Gmail drafts never records confirmed sending.
-- Home-screen installation uses manifest-only PWA metadata and static icons, without app-shell caching or service workers, so preview updates remain safe.
+- PWA uses manifest/icons, no app-shell caching or service workers, for safe preview updates.
 - Meeting state transitions that need atomicity (start_recording, finalize_recording, delete_meeting) live in SQL functions; the browser calls them via RPC so rules hold for any future client (mobile).
 - All private tables carry workspace_id and are gated by RLS through is_workspace_member/meeting_visible; meetings in deleting/deleted are invisible everywhere.
 - Audio chunks are persisted in IndexedDB (src/lib/local-store.ts) before upload; uploads are idempotent per (recording_id, sequence).
 - Background work (transcription/analysis) is signalled through public.outbox_events, written in the same transaction as the state change; heavy media work belongs to an external worker, not server functions.
-- Pure business rules live in src/lib/meeting-rules.ts with vitest tests next to them.
+- Pure meeting rules live in src/lib/meeting-rules.ts with tests.
+- MeetingNarrative shares overview/review; topics hold heading + narrative, evidence stays structured and tasks separate for compatibility.
 - Transcript corrections never edit rows in place: they create a new canonical version and mark analyses stale. Accepted tasks are never replaced by reprocessing.
 - Analysis runs automatically right after transcription; naming people afterwards never re-runs it silently: the meeting page asks, and re-analysis (bump_people_version) includes summaries of earlier meetings with the same confirmed people.
 - Subdirectories have their own AGENTS.md (src/lib: pipeline, voices, search, agenda; src/routes/_authenticated: layout, recorder, pull-to-refresh); read it before changing files there.
