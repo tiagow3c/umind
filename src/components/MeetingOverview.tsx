@@ -11,7 +11,7 @@ import { avatarSrc } from "@/lib/people-rules";
 import { locateRecording } from "@/lib/capture-rules";
 import { fmtTime } from "@/lib/review";
 import { VoiceAvatar, speakerSamples, type VoiceAvatarHandle } from "@/components/VoiceAvatar";
-import { MeetingNarrative, NarrativeText } from "@/components/MeetingNarrative";
+import { CollapsibleSection, MeetingNarrative, NarrativeText } from "@/components/MeetingNarrative";
 
 type Meeting = {
   id: string;
@@ -68,6 +68,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
 
   const nameOf = (speakerId: string) =>
     meeting.participants.find((p) => p.id === speakers?.find((s) => s.id === speakerId)?.participant_id)?.display_name ?? "";
+  const needsNaming = (speakers ?? []).some((s) => !nameOf(s.id));
 
   // After the analysis exists, naming people asks before re-running it; prior meetings with them make the suggestion stronger.
   const [offer, setOffer] = useState<{ prior: number } | null>(null);
@@ -133,8 +134,7 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
       )}
 
       {speakers && speakers.length > 0 && (
-        <section>
-          <h2 className="text-3xl">Participantes e vozes</h2>
+        <CollapsibleSection title="Participantes e vozes" defaultOpen={processing || needsNaming}>
           <ul className="mt-6 grid grid-cols-2 justify-items-center gap-x-6 gap-y-8 sm:mt-8 sm:flex sm:flex-wrap sm:gap-8">
             {speakers.filter((s) => {
               const segs = tr?.segments ?? [];
@@ -210,19 +210,18 @@ export function MeetingOverview({ meeting, onFull, processing = false }: { meeti
               );
             })}
           </ul>
-        </section>
+        </CollapsibleSection>
       )}
 
       {an?.summary && <MeetingNarrative analysis={an} includeSummary={false} />}
 
-      <section>
-        <h2 className="text-3xl">Tarefas</h2>
+      <CollapsibleSection title="Tarefas" defaultOpen>
         {!tasks?.length ? (processing ? <div className="mt-6 space-y-3"><div className="h-5 w-2/3 animate-pulse rounded bg-muted" /><div className="h-5 w-1/2 animate-pulse rounded bg-muted [animation-delay:300ms]" /></div> : <p className="mt-6 text-sm text-muted-foreground">Nenhuma tarefa identificada.</p>) : (
           <ul className="mt-6 divide-y">
             {tasks.map((t) => <TaskAction key={t.id} task={t} />)}
           </ul>
         )}
-      </section>
+      </CollapsibleSection>
     </div>
   );
 }
