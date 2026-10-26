@@ -503,7 +503,7 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
   if (published.error || !published.data) throw new StageError("analysis changed", "stale_capture", true);
   const p2 = parsed as RawAnalysis & { title?: string; speakers?: { label: string; name: string | null }[] };
   const aiTitle = p2.title?.trim().slice(0, 200);
-  if (aiTitle) await admin.from("meetings").update({ title: aiTitle }).eq("id", meeting.id).in("title", [AUTO_TITLE, "Chamada do Meet", "Meet"]);
+  if (aiTitle) await admin.from("meetings").update({ title: aiTitle }).eq("id", meeting.id).in("title", [AUTO_TITLE, "Chamada do Meet", "Meet", "Nova reunião"]);
   const { data: sps } = await admin.from("speakers").select("id, provider_label, participant_id").eq("meeting_id", meeting.id);
   const { data: people } = await admin.from("people").select("id, display_name, aliases").eq("workspace_id", meeting.workspace_id);
   const registry = people ?? [];
