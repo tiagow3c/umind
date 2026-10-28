@@ -502,7 +502,10 @@ async function stageAnalyze(admin: Admin, meeting: { id: string; workspace_id: s
     _summary: v.summary, _partial: partial, _items: items, _tasks: taskRows(meeting, v.tasks, idOf, "", 1) });
   if (published.error || !published.data) throw new StageError("analysis changed", "stale_capture", true);
   const p2 = parsed as RawAnalysis & { title?: string; speakers?: { label: string; name: string | null }[] };
-  const aiTitle = p2.title?.trim().slice(0, 200);
+  const firstTopic = v.topics[0]?.text?.split(/[.:\n]/)[0]?.trim();
+  const fromSummary = v.summary?.replace(/^A conversa (tratou|abordou|discutiu) (d[aoe]s? )?/i, "").split(/[.,;]/)[0]?.trim();
+  const rawTitle = p2.title?.trim() || firstTopic || fromSummary || "";
+  const aiTitle = rawTitle ? (rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1)).slice(0, 80) : "";
   if (aiTitle) await admin.from("meetings").update({ title: aiTitle }).eq("id", meeting.id).in("title", [AUTO_TITLE, "Chamada do Meet", "Meet", "Nova reunião"]);
   const { data: sps } = await admin.from("speakers").select("id, provider_label, participant_id").eq("meeting_id", meeting.id);
   const { data: people } = await admin.from("people").select("id, display_name, aliases").eq("workspace_id", meeting.workspace_id);
