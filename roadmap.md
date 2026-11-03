@@ -1,3 +1,6 @@
+# Extensão não inicia gravação
+- [ ] Identificar por que início e consulta da chamada retornaram 400; confirmar mensagem/endereço da chamada antes de corrigir.
+
 # Progresso e participantes do Meet
 - [x] Progresso estimado aprovado e implementado; avance inicial antes da resposta, animação e pausa, 34 testes passaram e navegador confirmou 2% → 4% com resposta lenta simulada no computador/celular.
 - [x] Diagnóstico real: fotos dependiam do finish perdido; quatro vozes (uma possível mídia), Gabriel citado mas sem associação segura. Fila de fotos independente, nomes Meet como candidatos, vozes sem identidade rotuladas e marcação reversível de áudio externo; mesma pessoa selecionável em várias vozes. Sem alteração forçada na reunião real.
