@@ -10,6 +10,15 @@ describe("capture continuity", () => {
     expect(normalizeMeetUrl("https://meet.google.com/abc-defg-hij?authuser=1#x")).toBe("https://meet.google.com/abc-defg-hij");
     expect(normalizeMeetUrl("https://other.example/abc-defg-hij")).toBeNull();
   });
+  it("recognizes the reported /meet/ room URL as the same canonical room", () => {
+    expect(normalizeMeetUrl("https://meet.google.com/meet/vfo-wtkv-jan?authuser=1")).toBe("https://meet.google.com/vfo-wtkv-jan");
+    expect(normalizeMeetUrl("https://meet.google.com/meet/VFO-WTKV-JAN/#x")).toBe("https://meet.google.com/vfo-wtkv-jan");
+  });
+  it("rejects non-Meet origins and unrelated paths", () => {
+    for (const url of ["http://meet.google.com/meet/vfo-wtkv-jan", "https://meet.google.com.evil.example/meet/vfo-wtkv-jan", "https://meet.google.com/other/vfo-wtkv-jan", "https://meet.google.com/meet/vfo-wtkv-jan/extra"]) {
+      expect(normalizeMeetUrl(url)).toBeNull();
+    }
+  });
   it("counts the 120 minute limit across resumed recordings", () => {
     expect(remainingCaptureMs(90 * 60 * 1000)).toBe(30 * 60 * 1000);
     expect(remainingCaptureMs(120 * 60 * 1000)).toBe(0);

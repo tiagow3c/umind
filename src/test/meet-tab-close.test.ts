@@ -34,10 +34,32 @@ function harness() {
   const send = (msg: any) => new Promise<any>((resolve) => listeners["message"]?.(msg, { tab: { id: 7 } }, resolve));
   const settle = async () => { for (let i = 0; i < 80; i++) await Promise.resolve(); };
   const start = () => send({ type: "start", body: { meetUrl: "https://meet.google.com/abc-defg-hij" } });
-  return { stored, calls, listeners, send, start, settle, offline: (value: boolean) => { fail = value; }, close: () => { tab = null; listeners["removed"]?.(7); } };
+  return { stored, calls, listeners, send, start, settle, setTabUrl: (url: string) => { tab = { url }; }, offline: (value: boolean) => { fail = value; }, close: () => { tab = null; listeners["removed"]?.(7); } };
 }
 
 describe("durable Meet tab closure", () => {
+  it("canonicalizes /meet/ URLs for lookup and start without ending an active capture", async () => {
+    const h = harness();
+    const meetUrl = "https://meet.google.com/meet/vfo-wtkv-jan?authuser=1";
+    const canonical = "https://meet.google.com/vfo-wtkv-jan";
+    h.setTabUrl(meetUrl);
+    await h.send({ type: "lookup", body: { meetUrl } });
+    const result = await h.send({ type: "start", body: { meetUrl, requestId: "e12a2c8e-1d7d-40bb-9c11-cb524233b110" } });
+    expect(result.ok).toBe(true);
+    expect(h.calls.map((c) => c.body.meetUrl)).toEqual([canonical, canonical]);
+    expect(h.stored["capture:rec-1"].room).toBe(canonical);
+    h.listeners["alarm"]?.(); await h.settle();
+    expect(h.calls.filter((c) => c.action === "finish")).toHaveLength(0);
+    expect(h.stored["capture:rec-1"].tabId).toBe(7);
+    h.close(); await h.settle();
+    expect(h.calls.find((c) => c.action === "finish")?.body.interrupted).toBe(true);
+  });
+  it("does not dispatch an invalid room URL", async () => {
+    const h = harness();
+    const result = await h.send({ type: "start", body: { meetUrl: "https://other.example/meet/vfo-wtkv-jan" } });
+    expect(result.error).toBe("room");
+    expect(h.calls).toHaveLength(0);
+  });
   it("persists the session before replying and finishes when the tab closes", async () => {
     const h = harness();
     expect((await h.start()).ok).toBe(true);
