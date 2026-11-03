@@ -1,6 +1,6 @@
 # Extensão não inicia gravação
 - [x] Causa reproduzida: link `/meet/vfo-wtkv-jan` era recusado como sala inválida; plano aprovado e normalização corrigida no app e extensão.
-- [ ] Verificar testes de consulta/início/recuperação e empacotar extensão 1.4.3.
+- [x] 25 testes passaram: consulta/início normalizados, captura preservada na recuperação e encerramento ao fechar; extensão 1.4.3 empacotada e download local HTTP 200 conferido; build OK.
 - [ ] Conferir gravação em chamada real — depende de baixar e recarregar a extensão 1.4.3 no Chrome do usuário.
 
 # Progresso e participantes do Meet
