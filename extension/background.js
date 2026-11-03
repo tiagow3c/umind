@@ -2,6 +2,12 @@
 const APP = "https://umind.lovable.app";
 
 async function call(action, params, body, isBinary) {
+  // Send canonical room URLs so newer Meet links also work with older app deployments.
+  if (action === "lookup" || action === "start") {
+    const room = meetRoom(body?.meetUrl);
+    if (!room) throw new Error("room");
+    body = { ...body, meetUrl: room };
+  }
   const { token } = await chrome.storage.local.get("token");
   if (!token) throw new Error("no_token");
   const qs = new URLSearchParams({ action, ...(params || {}) });
@@ -110,7 +116,9 @@ async function drain(onlyRecording) {
 function meetRoom(value) {
   try {
     const url = new URL(value);
-    return url.hostname === "meet.google.com" && /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/i.test(url.pathname) ? url.origin + url.pathname.replace(/\/$/, "").toLowerCase() : null;
+    if (url.protocol !== "https:" || url.hostname !== "meet.google.com") return null;
+    const room = /^\/(?:meet\/)?([a-z]{3}-[a-z]{4}-[a-z]{3})\/?$/i.exec(url.pathname)?.[1];
+    return room ? `https://meet.google.com/${room.toLowerCase()}` : null;
   } catch { return null; }
 }
 async function interruptCapture(capture) {

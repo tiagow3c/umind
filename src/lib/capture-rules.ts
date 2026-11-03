@@ -8,7 +8,7 @@ export function normalizeMeetUrl(value: string): string | null {
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.hostname !== "meet.google.com") return null;
-    const room = /^\/([a-z]{3}-[a-z]{4}-[a-z]{3})\/?$/i.exec(url.pathname)?.[1];
+    const room = /^\/(?:meet\/)?([a-z]{3}-[a-z]{4}-[a-z]{3})\/?$/i.exec(url.pathname)?.[1];
     return room ? `https://meet.google.com/${room.toLowerCase()}` : null;
   } catch { return null; }
 }
