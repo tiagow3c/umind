@@ -16,6 +16,6 @@ describe("share rules", () => {
       { id: "2", parent_id: "1", created_at: "2" },
     ]);
     expect(t).toHaveLength(1);
-    expect(t[0].replies.map((r) => r.id)).toEqual(["2"]);
+    expect(t[0]?.replies.map((r) => r.id) ?? []).toEqual(["2"]);
   });
 });

@@ -39,7 +39,7 @@ export function ShareSummaryDialog({ meetingId }: { meetingId: string }) {
   }
   async function toggle(enabled: boolean) {
     const { error } = await supabase.rpc("set_meeting_share_enabled", { _meeting: meetingId, _enabled: enabled });
-    if (error) return toast.error("Não foi possível alterar.");
+    if (error) { toast.error("Não foi possível alterar."); return; }
     qc.invalidateQueries({ queryKey: key });
   }
 
@@ -99,11 +99,11 @@ function Reply({ meetingId, parent, onDone }: { meetingId: string; parent: strin
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   async function send() {
-    if (!text.trim()) return;
+    if (!text.trim()) return undefined;
     setBusy(true);
     const { error } = await supabase.rpc("reply_share_comment", { _meeting: meetingId, _parent: parent, _content: text });
     setBusy(false);
-    if (error) return toast.error("Não foi possível responder.");
+    if (error) { toast.error("Não foi possível responder."); return; }
     setText(""); onDone();
   }
   return <div className="flex gap-2"><Textarea rows={1} value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder="Responder…" className="min-h-9 bg-background" /><Button size="icon" aria-label="Enviar resposta" disabled={busy || !text.trim()} onClick={send}><Send className="size-4" /></Button></div>;
