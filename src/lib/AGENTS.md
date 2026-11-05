@@ -9,3 +9,4 @@
 - Voiceprint clips are peak-normalised in the browser and near-silent clips are rejected, because raw capture (no auto gain) produced degenerate voiceprints that never matched.
 - Tasks are written to the owner (people.is_self) in first person: work owned by others is stored as action.assignee="follow_up" (tested in src/lib/task-rules.ts) so it is never shown as the owner's task; action.kind="forward" carries a Gmail search_query and is executed by src/lib/gmail.functions.ts through the owner's connected Gmail.
 - Public share summaries (share.functions.ts): anon access only via token-checked SECURITY DEFINER RPCs; no anon table policies.
+- Meet auto-record (user_settings.meet_auto_record, returned by extension lookup) starts capture from the user's own click on Meet's join button, because Chrome requires a user gesture and share picker for getDisplayMedia.
