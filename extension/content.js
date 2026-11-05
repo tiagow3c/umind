@@ -47,10 +47,21 @@
   resumeBtn.type = "button"; resumeBtn.className = "ata-meet-action ata-meet-resume"; resumeBtn.textContent = "Retomar anterior"; resumeBtn.hidden = true;
   panel.append(resumeBtn);
   resumeBtn.addEventListener("click", () => void start(previous?.id));
+  let autoRecord = false, autoTried = false;
+  // Auto-record: the user's own click on Meet's join button is the gesture Chrome requires to open the share picker.
+  const JOIN = /^(participar agora|pedir para participar|join now|ask to join|participar|join)$/i;
+  document.addEventListener("click", (ev) => {
+    const b = ev.target instanceof Element ? ev.target.closest("button") : null;
+    if (!b || !autoRecord || autoTried || state.rec || starting) return;
+    if (!JOIN.test((b.innerText || b.getAttribute("aria-label") || "").trim())) return;
+    autoTried = true;
+    void start();
+  }, true);
   async function lookup() {
     try {
       const result = await send({ type: "lookup", body: { meetUrl: location.href } });
       previous = result.meeting;
+      autoRecord = !!result.autoRecord;
       resumeBtn.hidden = !previous || !!state.rec || stopping;
       resumeBtn.title = previous ? `Retomar: ${previous.title}` : "";
       if (previous && !state.rec && !stopping) { buttonText.textContent = "Gravar nova reunião"; statusText.textContent = previous.title; }
@@ -261,6 +272,7 @@
     if ((state.rec || preparing) && callRules.shouldEnd({ ended, hasLeaveControl: detected, lastSeen: lastCallSeen, now: Date.now() })) endCapture();
   };
   setInterval(monitorCall, 1500);
+  void lookup();
   let checkQueued = false;
   new MutationObserver(() => {
     if (checkQueued) return;
