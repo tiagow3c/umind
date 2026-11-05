@@ -86,9 +86,9 @@ function CommentForm({ token, parent, compact }: { token: string; parent?: strin
     e.preventDefault();
     if (!name.trim() || !text.trim()) return;
     setBusy(true);
-    const { error } = await supabase.rpc("add_public_comment", { _token: token, _name: name, _content: text, _parent: parent ?? null });
+    const { error } = await supabase.rpc("add_public_comment", { _token: token, _name: name, _content: text, _parent: parent as string });
     setBusy(false);
-    if (error) return toast.error(error.message.includes("rate_limited") ? "Muitos comentários agora. Tente em instantes." : "Não foi possível enviar.");
+    if (error) { toast.error(error.message.includes("rate_limited") ? "Muitos comentários agora. Tente em instantes." : "Não foi possível enviar."); return; }
     localStorage.setItem("ata-comment-name", name.trim());
     setText(""); if (compact) setOpen(false);
     await qc.invalidateQueries({ queryKey: ["public-summary", token] }); router.invalidate();

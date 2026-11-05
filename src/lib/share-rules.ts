@@ -10,11 +10,11 @@ export function parseShareSummary(text: string): ShareSummary | null {
   let o: Record<string, unknown>;
   try { o = JSON.parse(text.slice(start, end + 1)); } catch { return null; }
   const s: ShareSummary = {
-    intro: str(o.intro),
-    happened: str(o.happened),
-    topics: Array.isArray(o.topics) ? o.topics.map((t) => ({ title: str((t as Record<string, unknown>)?.title), explanation: str((t as Record<string, unknown>)?.explanation) })).filter((t) => t.title) : [],
-    decisions: list(o.decisions),
-    next_steps: list(o.next_steps),
+    intro: str(o['intro']),
+    happened: str(o['happened']),
+    topics: Array.isArray(o['topics']) ? o['topics'].map((t) => ({ title: str((t as Record<string, unknown>)?.['title']), explanation: str((t as Record<string, unknown>)?.['explanation']) })).filter((t) => t.title) : [],
+    decisions: list(o['decisions']),
+    next_steps: list(o['next_steps']),
   };
   return s.intro || s.happened ? s : null;
 }
