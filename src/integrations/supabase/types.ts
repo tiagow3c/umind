@@ -291,6 +291,92 @@ export type Database = {
           },
         ]
       }
+      meeting_share_comments: {
+        Row: {
+          author_name: string
+          content: string
+          created_at: string
+          id: string
+          is_owner: boolean
+          meeting_id: string
+          parent_id: string | null
+        }
+        Insert: {
+          author_name: string
+          content: string
+          created_at?: string
+          id?: string
+          is_owner?: boolean
+          meeting_id: string
+          parent_id?: string | null
+        }
+        Update: {
+          author_name?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_owner?: boolean
+          meeting_id?: string
+          parent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_share_comments_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_shares"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "meeting_share_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_share_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_shares: {
+        Row: {
+          created_at: string
+          created_by: string
+          enabled: boolean
+          meeting_id: string
+          summary: Json
+          token: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          enabled?: boolean
+          meeting_id: string
+          summary: Json
+          token?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          enabled?: boolean
+          meeting_id?: string
+          summary?: Json
+          token?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_shares_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meetings: {
         Row: {
           analysis_requested_at: string | null
@@ -1319,6 +1405,15 @@ export type Database = {
     }
     Functions: {
       accept_pending_invites: { Args: never; Returns: number }
+      add_public_comment: {
+        Args: {
+          _content: string
+          _name: string
+          _parent: string
+          _token: string
+        }
+        Returns: string
+      }
       bump_people_version: { Args: { _meeting: string }; Returns: undefined }
       cancel_invite: { Args: { _invite: string }; Returns: undefined }
       cancel_processing: { Args: { _meeting: string }; Returns: undefined }
@@ -1341,6 +1436,7 @@ export type Database = {
         Args: { _reason?: string; _recording: string }
         Returns: Database["public"]["Enums"]["meeting_status"]
       }
+      get_public_summary: { Args: { _token: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1410,6 +1506,14 @@ export type Database = {
         Args: { _user: string; _ws: string }
         Returns: undefined
       }
+      reply_share_comment: {
+        Args: { _content: string; _meeting: string; _parent: string }
+        Returns: string
+      }
+      save_meeting_share: {
+        Args: { _meeting: string; _summary: Json }
+        Returns: string
+      }
       search_items: {
         Args: { _limit?: number; _query: unknown; _ws: string }
         Returns: {
@@ -1432,6 +1536,10 @@ export type Database = {
           start_ms: number
           text: string
         }[]
+      }
+      set_meeting_share_enabled: {
+        Args: { _enabled: boolean; _meeting: string }
+        Returns: undefined
       }
       set_meeting_visibility: {
         Args: { _meeting: string; _visibility: string }
