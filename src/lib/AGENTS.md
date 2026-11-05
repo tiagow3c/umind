@@ -8,3 +8,4 @@
 - Day-column to-dos (Tarefas page, /tarefas; meeting suggestions live only inside each meeting page) live in public.todos, owned per user; rollover of unfinished items to today is computed on read in src/lib/todo-rules.ts (tested), never by rewriting rows.
 - Voiceprint clips are peak-normalised in the browser and near-silent clips are rejected, because raw capture (no auto gain) produced degenerate voiceprints that never matched.
 - Tasks are written to the owner (people.is_self) in first person: work owned by others is stored as action.assignee="follow_up" (tested in src/lib/task-rules.ts) so it is never shown as the owner's task; action.kind="forward" carries a Gmail search_query and is executed by src/lib/gmail.functions.ts through the owner's connected Gmail.
+- Public share summaries (share.functions.ts): anon access only via token-checked SECURITY DEFINER RPCs; no anon table policies.

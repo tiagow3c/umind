@@ -18,6 +18,7 @@ import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedBuscarRouteImport } from './routes/_authenticated/buscar'
 import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
+import { Route as ResumoTokenRouteImport } from './routes/resumo.$token'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedPessoasIndexRouteImport } from './routes/_authenticated/pessoas.index'
 import { Route as AuthenticatedPessoasIdRouteImport } from './routes/_authenticated/pessoas.$id'
@@ -73,6 +74,11 @@ const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
   id: '/tarefas',
   path: '/tarefas',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ResumoTokenRoute = ResumoTokenRouteImport.update({
+  id: '/resumo/$token',
+  path: '/resumo/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
+  '/resumo/$token': typeof ResumoTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/buscar': typeof AuthenticatedBuscarRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
+  '/resumo/$token': typeof ResumoTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/_authenticated/buscar': typeof AuthenticatedBuscarRoute
   '/_authenticated/hoje': typeof AuthenticatedHojeRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
+  '/resumo/$token': typeof ResumoTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/pessoas/$id': typeof AuthenticatedPessoasIdRoute
   '/_authenticated/reunioes/nova': typeof AuthenticatedReunioesNovaRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/hoje'
     | '/tarefas'
+    | '/resumo/$token'
     | '/.lovable/oauth/consent'
     | '/pessoas/$id'
     | '/reunioes/nova'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/hoje'
     | '/tarefas'
+    | '/resumo/$token'
     | '/.lovable/oauth/consent'
     | '/pessoas/$id'
     | '/reunioes/nova'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/_authenticated/buscar'
     | '/_authenticated/hoje'
     | '/_authenticated/tarefas'
+    | '/resumo/$token'
     | '/.lovable/oauth/consent'
     | '/_authenticated/pessoas/$id'
     | '/_authenticated/reunioes/nova'
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  ResumoTokenRoute: typeof ResumoTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicExtensionRoute: typeof ApiPublicExtensionRoute
   ApiPublicMobileRoute: typeof ApiPublicMobileRoute
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tarefas'
       preLoaderRoute: typeof AuthenticatedTarefasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/resumo/$token': {
+      id: '/resumo/$token'
+      path: '/resumo/$token'
+      fullPath: '/resumo/$token'
+      preLoaderRoute: typeof ResumoTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
       id: '/.lovable/oauth/consent'
@@ -442,6 +462,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  ResumoTokenRoute: ResumoTokenRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicExtensionRoute: ApiPublicExtensionRoute,
   ApiPublicMobileRoute: ApiPublicMobileRoute,
