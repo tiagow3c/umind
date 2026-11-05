@@ -1240,6 +1240,24 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          meet_auto_record: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          meet_auto_record?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          meet_auto_record?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       voice_enrollments: {
         Row: {
           job_id: string | null

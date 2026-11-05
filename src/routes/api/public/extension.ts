@@ -33,7 +33,8 @@ export const Route = createFileRoute("/api/public/extension")({
           if (!room) return json({ error: "room" }, 400);
           if (action === "lookup") {
             const { data: meeting } = await db.from("meetings").select("id,title,status,created_at").eq("owner_id", tk.user_id).eq("workspace_id", tk.workspace_id).eq("meet_url", room).not("status", "in", "(deleting,deleted)").order("created_at", { ascending: false }).limit(1).maybeSingle();
-            return json({ meeting });
+            const { data: prefs } = await db.from("user_settings").select("meet_auto_record").eq("user_id", tk.user_id).maybeSingle();
+            return json({ meeting, autoRecord: !!prefs?.meet_auto_record });
           }
           if (!body.requestId) return json({ error: "request" }, 400);
           const result = await db.rpc("meet_start_capture", { _user: tk.user_id, _workspace: tk.workspace_id, _url: room, ...(body.resumeMeetingId ? { _resume: body.resumeMeetingId } : {}), _request: body.requestId, _title: body.title, _timezone: body.timezone, _codec: body.codec });
