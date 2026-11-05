@@ -13,6 +13,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { CompanyContext, Members, WorkspaceSwitcher } from "@/components/WorkspaceSettings";
 import { KnowledgeConnection } from "@/components/KnowledgeConnection";
+import { AutoRecordSetting } from "@/components/AutoRecordSetting";
 
 export const Route = createFileRoute("/_authenticated/ajustes")({
   head: () => ({ meta: [{ property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Ajustes — Ata" }, { name: "description", content: "Conta, empresa, membros e privacidade." }, { property: "og:title", content: "Ajustes — Ata" }, { property: "og:description", content: "Conta, empresa, membros e privacidade." }] }),
@@ -95,6 +96,7 @@ function MeetExtension() {
           try { setCode((await create()).token); } catch { toast.error("Não foi possível gerar o código."); } finally { setBusy(false); }
         }}>Gerar código</Button>
       </div>
+      <AutoRecordSetting />
       {code && (
         <div className="max-w-lg space-y-2">
           <p className="text-sm">Copie agora; ele não aparece de novo.</p>
