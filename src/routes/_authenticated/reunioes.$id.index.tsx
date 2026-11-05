@@ -11,6 +11,7 @@ import { MeetingReview } from "@/components/MeetingReview";
 import { MeetingOverview } from "@/components/MeetingOverview";
 import { ShareToggle } from "@/components/ShareToggle";
 import { KnowledgeActions } from "@/components/KnowledgeActions";
+import { ShareSummaryDialog } from "@/components/ShareSummaryDialog";
 import { useState } from "react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -59,7 +60,7 @@ function Detalhe() {
           <p className="text-sm text-muted-foreground">{new Date(m.created_at).toLocaleString("pt-BR")}</p>
           <h1 className="mt-1 text-5xl">{m.title}</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2"><SourceTag meeting={m} /><ShareToggle meeting={m} userId={user.id} /><StatusBadge status={m.status} /></div>
+        <div className="flex flex-wrap items-center gap-2"><SourceTag meeting={m} /><ShareToggle meeting={m} userId={user.id} />{m.owner_id === user.id && m.current_transcript_id && <ShareSummaryDialog meetingId={m.id} />}<StatusBadge status={m.status} /></div>
       </header>
       <KnowledgeActions meetingId={m.id} reference={m.knowledge_ref} />
       {interruptionNotice}
