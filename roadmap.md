@@ -1,3 +1,8 @@
+# Início automático no Meet
+- [x] Reproduzir: botão nativo dispara captura; elemento role=button do Meet não dispara.
+- [ ] Corrigir reconhecimento de entrada, preservar gesto do Chrome e testar início automático ligado/desligado.
+- [ ] Atualizar pacote; chamada real depende de atualizar a extensão no Chrome do usuário.
+
 # Extensão não inicia gravação
 - [x] Causa reproduzida: link `/meet/vfo-wtkv-jan` era recusado como sala inválida; plano aprovado e normalização corrigida no app e extensão.
 - [x] 25 testes passaram: consulta/início normalizados, captura preservada na recuperação e encerramento ao fechar; extensão 1.4.3 empacotada e download local HTTP 200 conferido; build OK.
