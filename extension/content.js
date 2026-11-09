@@ -50,12 +50,17 @@
   let autoRecord = false, autoTried = false;
   // Auto-record: the user's own click on Meet's join button is the gesture Chrome requires to open the share picker.
   const JOIN = /^(participar agora|pedir para participar|join now|ask to join|participar|join)$/i;
-  document.addEventListener("click", (ev) => {
-    const b = ev.target instanceof Element ? ev.target.closest("button") : null;
+  const autoJoin = (ev) => {
+    const b = ev.target instanceof Element ? ev.target.closest('button, [role="button"]') : null;
     if (!b || !autoRecord || autoTried || state.rec || starting) return;
-    if (!JOIN.test((b.innerText || b.getAttribute("aria-label") || "").trim())) return;
+    const names = [b.getAttribute("aria-label"), b.innerText, b.textContent];
+    if (!names.some((name) => JOIN.test((name || "").trim()))) return;
     autoTried = true;
     void start();
+  };
+  document.addEventListener("click", autoJoin, true);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" || ev.key === " ") autoJoin(ev);
   }, true);
   async function lookup() {
     try {
